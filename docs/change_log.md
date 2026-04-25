@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-04-25 - Final public BU cleanup
+
+Semantic change:
+
+- Replaced work-looking BU codes and cap amounts with fictional public sample values.
+- Added audit coverage so the removed BU codes and cap amounts cannot return silently.
+
+Minimal diff summary:
+
+- Updated `kind.CapByBU_Keys`, `kind.CapByBU_Vals`, and `kind.CapExCap`.
+- Updated starter table BU sample values to `BU-A: Sample Unit` and `BU-B: Sample Unit`.
+- Extended public-safety audit checks.
+
+Visible impact:
+
+- Workbook behavior: public sample cap values changed to fictional placeholders.
+- Main report totals: can change when using only the public sample workbook data.
+- Subtotal flags: can change when using only the public sample workbook data.
+- Cap remaining values: can change when using only the public sample workbook data.
+- No private workbook should import this public sample cap table without replacing the fictional placeholders.
+
 ## 2026-04-25 - Starter workbook table added
 
 Semantic change:

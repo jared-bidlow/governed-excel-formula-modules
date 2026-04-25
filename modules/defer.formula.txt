@@ -59,7 +59,7 @@ IsOutYearTimeline = LAMBDA(timelineRaw, budgetYear,
     LET(y, ParseTimelineYear(timelineRaw, budgetYear), --(y >= budgetYear + 1))
 );
 
-IsBU15000 = LAMBDA(buCode, --(buCode = "15000"));
+IsPolicyExcludedBU = LAMBDA(buCode, --(buCode = "BU-B"));
 
 IsTotalComposite = LAMBDA(compText,
     --(IFERROR(TEXTAFTER(compText, " ", -1), "") = "Total")
@@ -69,13 +69,13 @@ PolicyExcludeFlag = LAMBDA(timelineRaw, budgetYear, buCode, statusText, compText
     LET(
         outYearFlag, IsOutYearTimeline(timelineRaw, budgetYear),
         holdFlag, IsHoldTimeline(timelineRaw),
-        bu15000Flag, IsBU15000(buCode),
+        policyBUFlag, IsPolicyExcludedBU(buCode),
         designStatusFlag, IsDesignStatus(statusText),
         closedStatusFlag, IsClosedStatus(statusText),
         isTotalRow, IsTotalComposite(compText),
         --(
             (
-                outYearFlag + holdFlag + bu15000Flag + designStatusFlag +
+                outYearFlag + holdFlag + policyBUFlag + designStatusFlag +
                     closedStatusFlag + isTotalRow
             ) > 0
         )
@@ -105,20 +105,20 @@ PolicyExcludeParts = LAMBDA(timelineRaw, budgetYear, buCode, statusText, compTex
     LET(
         outYearFlag, IsOutYearTimeline(timelineRaw, budgetYear),
         holdFlag, IsHoldTimeline(timelineRaw),
-        bu15000Flag, IsBU15000(buCode),
+        policyBUFlag, IsPolicyExcludedBU(buCode),
         designStatusFlag, IsDesignStatus(statusText),
         closedStatusFlag, IsClosedStatus(statusText),
         isTotalRow, IsTotalComposite(compText),
         policyExcludeFlag, --(
             (
-                outYearFlag + holdFlag + bu15000Flag + designStatusFlag +
+                outYearFlag + holdFlag + policyBUFlag + designStatusFlag +
                     closedStatusFlag + isTotalRow
             ) > 0
         ),
         HSTACK(
             outYearFlag,
             holdFlag,
-            bu15000Flag,
+            policyBUFlag,
             designStatusFlag,
             closedStatusFlag,
             isTotalRow,
@@ -660,7 +660,7 @@ Audit = LAMBDA(targetRec,
         ),
         outYearFlag, CHOOSECOLS(policyParts, 1),
         holdFlag, CHOOSECOLS(policyParts, 2),
-        bu15000Flag, CHOOSECOLS(policyParts, 3),
+        policyBUFlag, CHOOSECOLS(policyParts, 3),
         designStatusFlag, CHOOSECOLS(policyParts, 4),
         closedStatusFlag, CHOOSECOLS(policyParts, 5),
         totalCompositeFlag, CHOOSECOLS(policyParts, 6),
@@ -713,7 +713,7 @@ Audit = LAMBDA(targetRec,
             "Is Total Row",
             "Out Year",
             "Hold",
-            "BU 15000",
+            "Policy BU",
             "Design Status",
             "Closed Status",
             "Policy Exclude",
@@ -760,7 +760,7 @@ Audit = LAMBDA(targetRec,
             isTotalRow,
             outYearFlag,
             holdFlag,
-            bu15000Flag,
+            policyBUFlag,
             designStatusFlag,
             closedStatusFlag,
             policyExcludeFlag,

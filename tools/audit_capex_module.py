@@ -49,6 +49,11 @@ FORBIDDEN_TEXT = [
     joined("ER", "Number"),
     joined("Start", "Timeline"),
     joined("ER", "Flag"),
+    joined("204", "01"),
+    joined("150", "00"),
+    joined("153", "00000"),
+    joined("430", "0000"),
+    joined("Example", " BU"),
 ]
 
 FORBIDDEN_PATTERNS = [
@@ -389,6 +394,14 @@ def audit_docs(results: list[Result]) -> None:
         "starter table has monthly triples",
         r"January Projected\tJanuary Actuals\tJanuary.*December Projected\tDecember Actuals\tDecember",
         "Keep projected, actuals, and budget columns for all twelve months.",
+    )
+    check_required_regex(
+        results,
+        "samples/planning_table_starter.tsv",
+        starter_table,
+        "starter table uses fictional BU keys",
+        r"BU-A: Sample Unit.*BU-B: Sample Unit",
+        "Use fictional sample BU keys instead of real business-unit codes.",
     )
     add(
         results,

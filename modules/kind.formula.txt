@@ -26,11 +26,11 @@ Carryover_Ranks = {1, 2, 4, 5};
 
 CarryoverRank = LAMBDA(c, XLOOKUP(TRIM(c), Carryover_Keys, Carryover_Ranks, 1, 0));
 
-CapByBU_Keys = {"20401", "15000"};
+CapByBU_Keys = {"BU-A", "BU-B"};
 
-CapByBU_Vals = {15300000, 4300000};
+CapByBU_Vals = {1200000, 800000};
 
-CapExCap = 15300000;
+CapExCap = 2000000;
 
 CapTotal = SUM(CapByBU_Vals);
 

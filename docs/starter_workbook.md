@@ -20,6 +20,8 @@ Open `samples/planning_table_starter.tsv`, copy all rows, and paste into `Planni
 
 The starter includes fake rows only. Delete or replace them after confirming the formulas spill.
 
+The included BU values, such as `BU-A: Sample Unit` and `BU-B: Sample Unit`, are fictional placeholders. Replace them with your own public-safe or private workbook values before using the template for real planning.
+
 ## Why The Starter Table Is Wide
 
 The current formula contract expects a finance block with:
