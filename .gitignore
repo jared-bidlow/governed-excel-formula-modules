@@ -4,6 +4,11 @@ __pycache__/
 .venv/
 .env
 
+# Node/Office add-in local tooling
+node_modules/
+.office-addin-dev-certs/
+.dev-certs/
+
 # Excel/workbook binaries are intentionally out of scope
 *.xlsx
 *.xlsm

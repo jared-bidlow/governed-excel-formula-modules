@@ -349,6 +349,10 @@ def audit_docs(results: list[Result]) -> None:
     release = read_text(ROOT / "docs" / "public_release_checklist.md")
     starter = read_text(ROOT / "docs" / "starter_workbook.md")
     push_helper = read_text(ROOT / "tools" / "push_public.ps1")
+    addin_smoke = read_text(ROOT / "tools" / "start_addin_smoke_test.ps1")
+    addin_server = read_text(ROOT / "tools" / "start_addin_dev_server.ps1")
+    addin_stop = read_text(ROOT / "tools" / "stop_addin_smoke_test.ps1")
+    gitignore = read_text(ROOT / ".gitignore")
     starter_table = read_text(ROOT / "samples" / "planning_table_starter.tsv")
     cap_starter = read_text(ROOT / "samples" / "cap_setup_starter.tsv")
     starter_rows = [line.split("\t") for line in starter_table.splitlines() if line.strip()]
@@ -384,6 +388,30 @@ def audit_docs(results: list[Result]) -> None:
         "README states application boundary",
         r"multi-user transactions, permissions, APIs, durable storage",
         "Keep the public Excel rationale honest about application boundaries.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
+        "README documents add-in smoke helper",
+        r"start_addin_smoke_test\.ps1",
+        "Tell users the one-command Office.js smoke-test path.",
+    )
+    check_required_regex(
+        results,
+        ".gitignore",
+        gitignore,
+        "gitignore excludes node local tooling",
+        r"node_modules/",
+        "Keep local Office.js npm tooling out of source control.",
+    )
+    check_required_regex(
+        results,
+        ".gitignore",
+        gitignore,
+        "gitignore excludes local add-in cert files",
+        r"\.office-addin-dev-certs/",
+        "Keep generated local certificates out of source control.",
     )
     check_required_regex(
         results,
@@ -489,6 +517,45 @@ def audit_docs(results: list[Result]) -> None:
             pattern,
             "Keep the public push helper guarded by validation and remote sync.",
         )
+    for file_name, text, checks in [
+        (
+            "tools/start_addin_smoke_test.ps1",
+            addin_smoke,
+            [
+                ("runs static audit", r"python tools\\audit_capex_module\.py"),
+                ("runs formula lint", r"python tools\\lint_formulas\.py modules\\\*\.formula\.txt"),
+                ("uses Excel desktop sideload", r"office-addin-debugging start.*--app excel"),
+                ("falls back without npm", r"npm is not on PATH.*sideload addin\\manifest\.xml manually"),
+                ("starts server helper", r"start_addin_dev_server\.ps1"),
+            ],
+        ),
+        (
+            "tools/start_addin_dev_server.ps1",
+            addin_server,
+            [
+                ("creates trusted local certificate", r"New-SelfSignedCertificate.*Import-Certificate"),
+                ("uses local certificate package", r"localhost\.pfx.*localhost\.cer"),
+                ("serves repo root with TLS stream", r"TcpListener.*SslStream"),
+                ("serves taskpane files", r"addin/taskpane\.html"),
+            ],
+        ),
+        (
+            "tools/stop_addin_smoke_test.ps1",
+            addin_stop,
+            [
+                ("stops Office debugging session", r"office-addin-debugging stop"),
+            ],
+        ),
+    ]:
+        for check, pattern in checks:
+            check_required_regex(
+                results,
+                file_name,
+                text,
+                f"add-in helper {check}",
+                pattern,
+                "Keep the Office.js smoke-test helpers usable from a clean checkout.",
+            )
     check_required_regex(
         results,
         "docs/starter_workbook.md",
@@ -677,6 +744,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records Office.js starter",
         r"Office\.js add-in starter",
         "Record the add-in starter change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records add-in smoke helper",
+        r"Automated add-in smoke-test helper",
+        "Record the automated add-in smoke-test helper.",
     )
 
 

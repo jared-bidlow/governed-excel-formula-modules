@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-04-25 - Automated add-in smoke-test helper
+
+Semantic change:
+
+- Added Windows PowerShell helpers for running the local Office.js smoke test with less manual setup.
+- Made the server-only path PowerShell-native so it does not require Node/npm.
+- Kept the add-in as a setup and validation layer; workbook formulas remain the calculation engine.
+
+Minimal diff summary:
+
+- Added `tools/start_addin_smoke_test.ps1`, `tools/start_addin_dev_server.ps1`, and `tools/stop_addin_smoke_test.ps1`.
+- Updated README and Office add-in docs with the one-command smoke-test path.
+- Extended audit coverage for the add-in helper scripts.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Office.js add-in starter
 
 Semantic change:

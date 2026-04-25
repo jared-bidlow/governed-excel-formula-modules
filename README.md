@@ -43,7 +43,11 @@ governed-excel-formula-modules/
 |   \-- cap_setup_starter.tsv
 \-- tools/
     +-- audit_capex_module.py
-    \-- lint_formulas.py
+    +-- lint_formulas.py
+    +-- start_addin_smoke_test.ps1
+    +-- start_addin_dev_server.ps1
+    +-- stop_addin_smoke_test.ps1
+    \-- push_public.ps1
 ```
 
 ## Quick Checks
@@ -112,6 +116,18 @@ Paste the planning table into `Planning Table!A2`, paste the cap table into `Cap
 The `addin/` folder contains a minimal Excel task-pane add-in. It creates starter sheets, installs workbook defined names from the text formula modules, and validates the workbook contract.
 
 Use it as a packaging starter, not as a replacement calculation engine. The add-in installs native Excel formulas; the planning logic still lives in workbook named formulas after installation.
+
+To run the local smoke test on Windows:
+
+```powershell
+.\tools\start_addin_smoke_test.ps1
+```
+
+That helper runs the static checks, starts a local HTTPS server, and asks Excel desktop to sideload `addin/manifest.xml` when npm is available. If npm is not available, it still starts the local server and prints the manual sideload fallback. When the test session is done:
+
+```powershell
+.\tools\stop_addin_smoke_test.ps1
+```
 
 See `docs/office_addin.md`.
 

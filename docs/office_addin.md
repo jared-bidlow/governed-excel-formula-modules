@@ -16,7 +16,36 @@ The add-in is an installer and validator. It does not replace the formula module
 
 ## Local Trial Shape
 
-Serve the repository root from a local HTTPS host on port `3000`, then sideload `addin/manifest.xml` into Excel.
+Run the smoke-test helper from the repo root:
+
+```powershell
+.\tools\start_addin_smoke_test.ps1
+```
+
+The helper:
+
+- runs the static repo checks,
+- creates/reuses a local trusted certificate for the server-only fallback,
+- starts the local HTTPS server on `localhost` port `3000`,
+- asks Excel desktop to sideload `addin/manifest.xml` when npm is available.
+
+After Excel opens, use the task pane button:
+
+```text
+Setup + Install + Validate
+```
+
+When the test session is done, run:
+
+```powershell
+.\tools\stop_addin_smoke_test.ps1
+```
+
+If npm is not installed, or the Office debugging tool is blocked on a machine, use the server-only helper and sideload the manifest manually:
+
+```powershell
+.\tools\start_addin_dev_server.ps1
+```
 
 The manifest points Excel to:
 
