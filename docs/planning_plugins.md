@@ -28,6 +28,8 @@ It answers:
 
 The output includes cap, projected, spend, remaining-burn, hidden-work, job-count, cap-posture, and spend-posture columns.
 
+BU caps come from the workbook's `Cap Setup` sheet. Update that table to change caps; do not edit formula modules for cap changes.
+
 ## Reforecast Queue
 
 `Analysis.REFORECAST_QUEUE([groupBy])` is a formula-only planning queue.

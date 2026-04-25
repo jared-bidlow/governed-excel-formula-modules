@@ -29,7 +29,7 @@ FORBIDDEN_TEXT = [
     joined("C:", "\\", "Truth"),
     joined("C:", "\\", "Users", "\\", "e187258"),
     joined("One", "Drive - ", "P", "P", "L"),
-    joined("2026 Capital Budget v", ".xlsx"),
+    joined("202", "6 Capital Budget v", ".xlsx"),
     joined("Expanded_", "Validation_Workbook"),
     joined("Records", "Governance"),
     joined("q", "Share_", "ReviewGate_", "LinkedIn"),
@@ -56,6 +56,12 @@ FORBIDDEN_TEXT = [
     joined("153", "00000"),
     joined("430", "0000"),
     joined("Example", " BU"),
+    joined("Capex_", "Tracker_", "2026"),
+    joined("CAPEX", "_REPORT"),
+    joined("2026 ", "Projected"),
+    joined("CapByBU", "_Keys"),
+    joined("CapByBU", "_Vals"),
+    joined("Cap", "Ex", "Cap"),
 ]
 
 FORBIDDEN_PATTERNS = [
@@ -80,13 +86,15 @@ REQUIRED_FORMULAS = {
         "GetActuals12",
     ],
     "modules/kind.formula.txt": [
+        "CapTable",
+        "PortfolioCap",
         "CapConsumeMask",
         "CapByBU",
         "FlagsOut",
         "HiddenMaskLogic",
     ],
-    "modules/Capex_Tracker_2026.formula.txt": [
-        "CAPEX_REPORT",
+    "modules/capital_planning_report.formula.txt": [
+        "CAPITAL_PLANNING_REPORT",
     ],
     "modules/analysis.formula.txt": [
         "BU_CAP_SCORECARD_AXIS",
@@ -97,7 +105,7 @@ REQUIRED_FORMULAS = {
 }
 
 NAMED_FORMULA_BUDGETS = [
-    ("modules/Capex_Tracker_2026.formula.txt", "CAPEX_REPORT"),
+    ("modules/capital_planning_report.formula.txt", "CAPITAL_PLANNING_REPORT"),
     ("modules/analysis.formula.txt", "BU_CAP_SCORECARD_AXIS"),
     ("modules/analysis.formula.txt", "BU_CAP_SCORECARD"),
     ("modules/analysis.formula.txt", "REFORECAST_QUEUE_AXIS"),
@@ -299,6 +307,7 @@ def audit_docs(results: list[Result]) -> None:
     release = read_text(ROOT / "docs" / "public_release_checklist.md")
     starter = read_text(ROOT / "docs" / "starter_workbook.md")
     starter_table = read_text(ROOT / "samples" / "planning_table_starter.tsv")
+    cap_starter = read_text(ROOT / "samples" / "cap_setup_starter.tsv")
     starter_rows = [line.split("\t") for line in starter_table.splitlines() if line.strip()]
 
     check_required_regex(
@@ -335,6 +344,14 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "README.md",
+        readme,
+        "README explains cap setup",
+        r"Cap Setup.*samples/cap_setup_starter\.tsv.*kind\.CapByBU",
+        "Tell public users how to set BU caps without editing formula modules.",
+    )
+    check_required_regex(
+        results,
         "docs/operating_contract.md",
         operating,
         "operating contract states source-code pattern",
@@ -348,6 +365,14 @@ def audit_docs(results: list[Result]) -> None:
         "operating contract states runtime position",
         r"Excel is the runtime because this pattern is meant for planning teams",
         "Document why Excel is the public template runtime.",
+    )
+    check_required_regex(
+        results,
+        "docs/operating_contract.md",
+        operating,
+        "operating contract keeps caps workbook-driven",
+        r"BU cap values should be changed in the workbook's `Cap Setup` sheet",
+        "Keep cap limits in workbook input tables, not module constants.",
     )
     check_required_regex(
         results,
@@ -372,6 +397,14 @@ def audit_docs(results: list[Result]) -> None:
         "change log records public sanitization",
         r"Public template sanitization started",
         "Record the public-template sanitization pass.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records cap setup contract",
+        r"Workbook-driven cap setup",
+        "Record the workbook-driven cap setup change.",
     )
     check_required_regex(
         results,
@@ -401,6 +434,14 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "docs/starter_workbook.md",
         starter,
+        "starter guide explains cap setup paste target",
+        r"Cap Setup!A2",
+        "Document where to paste the cap setup starter table.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
         "starter guide explains monthly triples",
         r"Blank values are acceptable\. Missing columns are not\.",
         "Document why the wide monthly finance block exists.",
@@ -410,7 +451,7 @@ def audit_docs(results: list[Result]) -> None:
         "samples/planning_table_starter.tsv",
         starter_table,
         "starter table has annual projection",
-        r"2026 Projected",
+        r"Annual Projected",
         "Keep the paste-ready Planning Table starter aligned with get.GetFinanceBlock.",
     )
     check_required_regex(
@@ -436,6 +477,51 @@ def audit_docs(results: list[Result]) -> None:
         "starter table row width",
         "all rows have 67 tab-delimited columns" if starter_rows else "starter table is empty",
         "Keep every starter row aligned to the 67-column Planning Table contract.",
+    )
+    check_required_regex(
+        results,
+        "samples/cap_setup_starter.tsv",
+        cap_starter,
+        "cap setup starter has required columns",
+        r"\ABU\tCap\r?\n",
+        "Provide a paste-ready BU cap starter table.",
+    )
+    check_required_regex(
+        results,
+        "samples/cap_setup_starter.tsv",
+        cap_starter,
+        "cap setup starter uses fake BU examples",
+        r"BU-A\t1200000.*BU-B\t800000",
+        "Keep cap starter data fake and generic.",
+    )
+
+
+def audit_cap_setup_contract(results: list[Result]) -> None:
+    kind = read_text(MODULES / "kind.formula.txt")
+
+    check_required_regex(
+        results,
+        "modules/kind.formula.txt",
+        kind,
+        "cap setup reads workbook sheet",
+        r"CapTable\s*=\s*LAMBDA\(.*'Cap Setup'!\$A\$2:\$B\$100",
+        "Read BU caps from the public workbook's Cap Setup sheet.",
+    )
+    check_required_regex(
+        results,
+        "modules/kind.formula.txt",
+        kind,
+        "portfolio cap sums cap table",
+        r"PortfolioCap\s*=\s*SUM\(N\(CHOOSECOLS\(CapTable\(\),\s*2\)\)\)",
+        "Define the portfolio cap from Cap Setup values.",
+    )
+    check_required_regex(
+        results,
+        "modules/kind.formula.txt",
+        kind,
+        "BU cap lookup uses BU key path",
+        r"CapByBU\s*=\s*LAMBDA\(bu,.*TEXTBEFORE\(bu & \"\",\s*\":\".*XLOOKUP\(TRIM\(buKey\),\s*CapBUKeys,\s*CapBUVals",
+        "Use the BU code before a colon as the cap-table lookup key.",
     )
 
 
@@ -469,6 +555,7 @@ def main() -> int:
     audit_public_safety(results, files)
     audit_formula_files(results)
     audit_docs(results)
+    audit_cap_setup_contract(results)
     audit_reforecast_contract(results)
 
     for result in results:

@@ -1,4 +1,4 @@
-PHASE_2026 = LAMBDA(total,
+PHASE_ANNUAL = LAMBDA(total,
     LET(
         jan, ROUND(total, 0.04),
         feb, ROUND(total, 0.05),
@@ -16,7 +16,7 @@ PHASE_2026 = LAMBDA(total,
     )
 );
 
-PHASE_2026_SINGLE = LAMBDA(total, target,
+PHASE_ANNUAL_SINGLE = LAMBDA(total, target,
     LET(
         t, LOWER(target),
         pJan, 0.04,

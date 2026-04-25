@@ -4,7 +4,7 @@
 
 Use this runbook to draft a 2027 monthly spend plan that fits the finance-provided monthly envelope while keeping detail by region, site, and job.
 
-This process does not change the 2026 CapEx tracker contract. It uses the existing `Analysis` module as the starting view for current jobs, then builds a separate 2027 planning table.
+This process does not change the current capital-planning report contract. It uses the existing `Analysis` module as the starting view for current jobs, then builds a separate 2027 planning table.
 
 ## Inputs
 
@@ -50,9 +50,9 @@ Recommended columns:
 - `DraftStartMonth`
 - `PhaseTemplate`
 - `IncludeInPlan`
-- `2026Projected`
-- `2026YTDSpend`
-- `Remaining2026`
+- `CurrentAnnualProjected`
+- `CurrentYTDSpend`
+- `CurrentRemaining`
 - `2027AnnualAsk`
 - `Notes`
 
@@ -115,7 +115,7 @@ For each existing job, carry these fields into `JobMaster2027`:
 - `PM`
 - `Category`
 - `Project Description`
-- `2026 Projected`
+- `Annual Projected`
 - `YTD Spend`
 - `Remaining`
 - `Status`
@@ -165,7 +165,7 @@ Do not assume `Remaining` from the analysis view is automatically the 2027 ask.
 
 For each job, choose an explicit `2027AnnualAsk` based on:
 
-- expected 2026 year-end close,
+- expected current-year close,
 - carryover need,
 - execution readiness,
 - finance priority,
@@ -204,10 +204,10 @@ The two driver columns in `JobMonthlyPlan2027` are:
 
 ### JobMaster2027 helper formula
 
-Use this in `Remaining2026`:
+Use this in `CurrentRemaining`:
 
 ```excel
-=MAX(0, [@[2026Projected]] - [@[2026YTDSpend]])
+=MAX(0, [@[CurrentAnnualProjected]] - [@[CurrentYTDSpend]])
 ```
 
 ### Lookup columns in JobMonthlyPlan2027

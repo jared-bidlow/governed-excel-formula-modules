@@ -10,6 +10,7 @@ Use this as a lightweight validation checklist after formula changes.
 | In-service row has no projected or actual dollars | The row is excluded as deadweight. |
 | In-service row has actual spend above projection | Hidden burn contributes to BU cap context. |
 | BU subtotal exceeds effective cap | Over-cap flag and shadow price appear on the subtotal row. |
+| `Cap Setup` value changes for a BU | BU cap remaining and cap posture update without editing formula modules. |
 | Detail row has normal active spend within projection | Detail flags remain line-level and no reforecast action is created by that fact alone. |
 
 ## BU Cap Scorecard

@@ -1,6 +1,6 @@
 # Burndown Screen Runbook
 
-Use `Analysis.BURNDOWN_SCREEN([groupBy])` as the meeting burndown view when a director or operations lead needs to understand how much 2026 work remains, which filters are currently in effect, and which jobs are driving the remaining burn.
+Use `Analysis.BURNDOWN_SCREEN([groupBy])` as the meeting burndown view when a director or operations lead needs to understand how much current-year work remains, which filters are currently in effect, and which jobs are driving the remaining burn.
 
 ## What This Screen Is For
 
@@ -45,7 +45,7 @@ Use those helpers when someone needs to investigate a bucket, not as the default
 
 ## What Not To Over-Interpret
 
-- This screen does not replace `CAPEX_REPORT` for cap-feasibility decisions.
+- This screen does not replace `CAPITAL_PLANNING_REPORT` for cap-feasibility decisions.
 - Hidden dollars explain meeting filters; they are not automatically removed from cap accountability.
 - `Cut Candidate` is a meeting aid for a target cut amount; it is not an approval workflow.
 - Future-tier buckets depend on the current future-tier helper logic and any `Future Tier Override` values in the workbook.

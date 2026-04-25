@@ -26,18 +26,24 @@ Carryover_Ranks = {1, 2, 4, 5};
 
 CarryoverRank = LAMBDA(c, XLOOKUP(TRIM(c), Carryover_Keys, Carryover_Ranks, 1, 0));
 
-CapByBU_Keys = {"BU-A", "BU-B"};
+CapTable = LAMBDA(
+    LET(
+        RawCapTable, TRIMRANGE_KEEPBLANKS('Cap Setup'!$A$2:$B$100),
+        IF(INDEX(RawCapTable, 1, 1) = "BU", DROP(RawCapTable, 1), RawCapTable)
+    )
+);
 
-CapByBU_Vals = {1200000, 800000};
+PortfolioCap = SUM(N(CHOOSECOLS(CapTable(), 2)));
 
-CapExCap = 2000000;
-
-CapTotal = SUM(CapByBU_Vals);
+CapTotal = PortfolioCap;
 
 CapByBU = LAMBDA(bu,
     LET(
         buKey, TEXTBEFORE(bu & "", ":", , , 1),
-        XLOOKUP(TRIM(buKey), CapByBU_Keys, CapByBU_Vals, NA(), 0)
+        Caps, CapTable(),
+        CapBUKeys, TRIM(CHOOSECOLS(Caps, 1) & ""),
+        CapBUVals, N(CHOOSECOLS(Caps, 2)),
+        XLOOKUP(TRIM(buKey), CapBUKeys, CapBUVals, NA(), 0)
     )
 );
 
@@ -267,7 +273,7 @@ GroupMetricPack = LAMBDA(GroupRows,
         GroupHdr, CHOOSEROWS(GroupRows, 2),
         GroupBodyRows, DROP(DROP(GroupRows, 2), -1),
         IdxDesc, XMATCH("Project Description", GroupHdr),
-        IdxProj, XMATCH("2026 Projected", GroupHdr),
+        IdxProj, XMATCH("Annual Projected", GroupHdr),
         IdxAct, XMATCH("YTD Actuals", GroupHdr),
         IdxStatus, XMATCH("Status", GroupHdr),
         IdxEarly, XMATCH("EarlySpend", GroupHdr),
@@ -368,7 +374,7 @@ TotalMetricPack = LAMBDA(GrandTotal, PflCapBinding, YTDActuals,
             1,
             IF(
                 GrandTotal > PflCapBinding,
-                "Info CapEx of " & TEXT(PflCapBinding, "#,##0.0,,") & "M",
+                "Info Capital cap of " & TEXT(PflCapBinding, "#,##0.0,,") & "M",
                 TEXT(PflCapBinding, "#,##0.000,,")
             ),
             TEXT(CapRemActuals, "#,##0.0,,") & "M",
@@ -446,7 +452,7 @@ FlagsOut = LAMBDA(
             HSTACK(IF(closed, "✔ Closed", ""), IF(closed, "", earlyTxt), baseTxt),
             LAMBDA(r, TEXTJOIN(" | ", TRUE, r))
         ),
-        subTxt, IF(cap_remaining_ctx < 0, "⚠ Over CapEx", ""),
+        subTxt, IF(cap_remaining_ctx < 0, "Over Capital Cap", ""),
         IF(isSubtotal, subTxt, detailTxt)
     )
 );

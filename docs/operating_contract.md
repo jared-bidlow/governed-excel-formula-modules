@@ -46,7 +46,7 @@ Out of scope:
 The sample import order is:
 
 ```text
-get -> kind -> Capex_Tracker_2026 -> Analysis
+get -> kind -> CapitalPlanning -> Analysis
 ```
 
 The modules illustrate these responsibilities:
@@ -54,9 +54,19 @@ The modules illustrate these responsibilities:
 | Module | Role |
 |---|---|
 | `get` | Workbook range extraction helpers. |
-| `kind` | Shared calculation, grouping, flag, and display helpers. |
-| `Capex_Tracker_2026` | Main cap-feasibility report formula. |
+| `kind` | Shared calculation, cap lookup, grouping, flag, and display helpers. |
+| `CapitalPlanning` | Main `CAPITAL_PLANNING_REPORT()` formula. |
 | `Analysis` | Optional planning plugins and drilldown screens. |
+
+## Workbook Input Contract
+
+The formula modules assume generic workbook inputs, not private workbook state:
+
+- `Planning Table` contains job rows and the finance block.
+- `Cap Setup` contains the `BU` and `Cap` columns used by `kind.CapByBU(...)`.
+- `Planning Review` contains meeting controls and report spill areas.
+
+BU cap values should be changed in the workbook's `Cap Setup` sheet. They should not be edited inside `modules/kind.formula.txt`.
 
 ## Formula Safety Rules
 

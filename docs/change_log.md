@@ -1,5 +1,27 @@
 # Change Log
 
+## 2026-04-25 - Workbook-driven cap setup
+
+Semantic change:
+
+- Moved public cap setup from module constants to a workbook input contract.
+- Renamed the dated main-report module to the generic `CapitalPlanning` contract and `CAPITAL_PLANNING_REPORT()` entry point.
+- Replaced the public projection header with `Annual Projected`.
+
+Minimal diff summary:
+
+- Added `samples/cap_setup_starter.tsv`.
+- Updated `docs/starter_workbook.md`, README, and the import map to explain `Cap Setup`.
+- Updated `kind.CapTable`, `kind.PortfolioCap`, and `kind.CapByBU(...)` to read from `Cap Setup`.
+- Updated docs and audit checks so old dated tracker wording and hardcoded cap arrays do not return.
+
+Visible impact:
+
+- Main report totals: can change only when workbook `Cap Setup` values differ from previous constants.
+- Subtotal flags: cap-related subtotal flags can change only from changed `Cap Setup` values.
+- Cap remaining values: now come from workbook cap inputs rather than module constants.
+- Candidate logic and planning-screen math: no intended change.
+
 ## 2026-04-25 - Excel runtime rationale documented
 
 Semantic change:
@@ -47,7 +69,7 @@ Semantic change:
 
 Minimal diff summary:
 
-- Updated `kind.CapByBU_Keys`, `kind.CapByBU_Vals`, and `kind.CapExCap`.
+- Updated the sample BU cap definitions.
 - Updated starter table BU sample values to `BU-A: Sample Unit` and `BU-B: Sample Unit`.
 - Extended public-safety audit checks.
 

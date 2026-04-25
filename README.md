@@ -21,7 +21,7 @@ governed-excel-formula-modules/
 +-- modules/
 |   +-- get.formula.txt
 |   +-- kind.formula.txt
-|   +-- Capex_Tracker_2026.formula.txt
+|   +-- capital_planning_report.formula.txt
 |   +-- analysis.formula.txt
 |   \-- supporting workbook modules
 +-- docs/
@@ -33,7 +33,8 @@ governed-excel-formula-modules/
 |   +-- workbook_import_map.md
 |   \-- change_log.md
 +-- samples/
-|   \-- planning_table_starter.tsv
+|   +-- planning_table_starter.tsv
+|   \-- cap_setup_starter.tsv
 \-- tools/
     +-- audit_capex_module.py
     \-- lint_formulas.py
@@ -88,17 +89,20 @@ The paste-ready starter table is in:
 
 ```text
 samples/planning_table_starter.tsv
+samples/cap_setup_starter.tsv
 ```
 
-Paste it into `Planning Table!A2`, set `Planning Review!M2` to a month abbreviation such as `Mar`, then import the formula modules.
+Paste the planning table into `Planning Table!A2`, paste the cap table into `Cap Setup!A2`, set `Planning Review!M2` to a month abbreviation such as `Mar`, then import the formula modules.
 
 ## Core Pattern
 
 The example workbook logic is split into modules:
 
 - `get` owns workbook range extraction helpers.
-- `kind` owns shared calculation and display helpers.
-- `Capex_Tracker_2026` owns the main cap-feasibility report formula.
+- `kind` owns shared calculation, cap lookup, grouping, flag, and display helpers.
+- `CapitalPlanning` owns the main `CAPITAL_PLANNING_REPORT()` formula.
 - `Analysis` owns optional planning screens such as `BU_CAP_SCORECARD()` and `REFORECAST_QUEUE([groupBy])`.
+
+Cap limits are workbook inputs. Create a `Cap Setup` sheet, paste `samples/cap_setup_starter.tsv` into `Cap Setup!A2`, and replace the fake caps with your own planning limits. `kind.CapByBU(...)` maps the BU code before any colon in `Planning Table[BU]` to that cap table, and `kind.PortfolioCap` sums the table.
 
 The important implementation idea is the boundary, not the sample vocabulary: keep complex Excel logic in importable text modules, keep workbook binaries out of Git, and make formula behavior reviewable with docs and static checks.

@@ -7,14 +7,14 @@ FromArrayv = LET(
     grpVals, CHOOSECOLS(rows, 1),
     iCat, XMATCH("Category", hdr),
     iDesc, XMATCH("Project Description", hdr),
-    iProj, XMATCH("2026 Projected", hdr),
+    iProj, XMATCH("Annual Projected", hdr),
     iYTD, XMATCH("YTD Actuals*", hdr, 2),
     baseHdrs, {
         "GroupType",
         "GroupValue",
         "Category",
         "ProjDesc",
-        "2026Proj",
+        "AnnualProj",
         "ActualsYTD"
     },
     baseData, HSTACK(
@@ -69,7 +69,7 @@ MEETING_NOTE_DESC = LAMBDA(ProjectDesc, YTD,
         idxPM, XMATCH("PM", hdr, 0),
         idxPlanningNotes, XMATCH("Planning Notes", hdr, 0),
         idxTimeline, XMATCH("Timeline", hdr, 0),
-        idxProj, XMATCH("2026 Projected", hdr, 0),
+        idxProj, XMATCH("Annual Projected", hdr, 0),
         /*Optional: Revised Group(won’t error if missing)*/idxRG, IFERROR(
             XMATCH("Revised Group", hdr, 0),
             0
@@ -255,7 +255,7 @@ Existing = LET(
     idxBudgetPM, XMATCH("PM", budgetHdr, 0),
     idxBudgetPlanningNotes, XMATCH("Planning Notes", budgetHdr, 0),
     idxBudgetComments, XMATCH("Comments", budgetHdr, 0),
-    idxBudgetProj, XMATCH("2026 Projected", budgetHdr, 0),
+    idxBudgetProj, XMATCH("Annual Projected", budgetHdr, 0),
     idxBudgetTimeline,
         XMATCH("Timeline", budgetHdr, 0
     ),
@@ -270,7 +270,7 @@ Existing = LET(
     colTimeline, CHOOSECOLS(budgetData, idxBudgetTimeline),
     colProj, CHOOSECOLS(budgetData, idxBudgetProj),
 
-    /*=====CapEx report spill=====*/
+    /*=====Capital report spill=====*/
     projsRaw, 'Planning Review'!$A$4#,
     projsHdr, TAKE(projsRaw, 1),
     projsHdrBase, IFERROR(TEXTBEFORE(projsHdr, CHAR(10)), projsHdr),

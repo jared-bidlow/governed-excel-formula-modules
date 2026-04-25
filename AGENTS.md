@@ -21,7 +21,7 @@ The example formula modules are:
 
 - `modules/get.formula.txt`
 - `modules/kind.formula.txt`
-- `modules/Capex_Tracker_2026.formula.txt`
+- `modules/capital_planning_report.formula.txt`
 - `modules/analysis.formula.txt`
 
 Keep the formula modules importable as workbook named formulas. If a formula gets too large, split it into helper formulas rather than widening one named formula past Excel's practical limits.

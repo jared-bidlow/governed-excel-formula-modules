@@ -13,7 +13,7 @@ BuildGroupedRows = LAMBDA(
         /*Header map*/Hdr, TAKE(BudgetRows, 1),
         IdxCat, XMATCH("Category", Hdr, 0),
         IdxDesc, XMATCH("Project Description", Hdr, 0),
-        IdxProj, XMATCH("2026 Projected", Hdr, 0),
+        IdxProj, XMATCH("Annual Projected", Hdr, 0),
         IdxChargeable, XMATCH("Chargeable", Hdr, 0),
         IdxAuth, XMATCH("Current Authorized Amount", Hdr, 0),
         IdxPm, XMATCH("PM", Hdr, 0),
@@ -95,7 +95,7 @@ BuildGroupedRows = LAMBDA(
     )
 );
 
-CAPEX_REPORT = LAMBDA(
+CAPITAL_PLANNING_REPORT = LAMBDA(
     LET(
         /*Source blocks*/FinanceBlock, get.GetFinanceBlock(),
         BudgetRows, get.GetBudgetDetailRows(),
@@ -133,7 +133,7 @@ CAPEX_REPORT = LAMBDA(
         BURaw, DROP(CHOOSECOLS(BudgetRows, IdxBU), 1),
         StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
         BUCode, TEXTBEFORE(BURaw, ":", , , 1),
-        /*Portfolio and BU cap context*/PflCapBinding, kind.CapExCap,
+        /*Portfolio and BU cap context*/PflCapBinding, kind.PortfolioCap,
         CapByBUVec, kind.CapByBU(BUCode),
         /*Time-series inputs*/Projections, get.GetProjections(FinanceBlock),
         Actuals12, get.GetActuals12(FinanceBlock),

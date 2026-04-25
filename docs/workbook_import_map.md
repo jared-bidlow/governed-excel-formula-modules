@@ -4,7 +4,7 @@ Manual workbook import is the default workflow for this template.
 
 Treat URL imports as snapshots unless the workbook owner has verified live refresh from source.
 
-For a blank-workbook trial, use `docs/starter_workbook.md` and paste `samples/planning_table_starter.tsv` into `Planning Table!A2` before importing formulas.
+For a blank-workbook trial, use `docs/starter_workbook.md`, paste `samples/planning_table_starter.tsv` into `Planning Table!A2`, and paste `samples/cap_setup_starter.tsv` into `Cap Setup!A2` before importing formulas.
 
 ## Canonical Modules
 
@@ -12,8 +12,18 @@ For a blank-workbook trial, use `docs/starter_workbook.md` and paste `samples/pl
 |---|---|---|
 | `get` | `modules/get.formula.txt` | Import when workbook extraction helpers change. |
 | `kind` | `modules/kind.formula.txt` | Import before report or analysis formulas when helper logic changes. |
-| `Capex_Tracker_2026` | `modules/Capex_Tracker_2026.formula.txt` | Import after `kind` so helper references resolve. |
+| `CapitalPlanning` | `modules/capital_planning_report.formula.txt` | Import after `kind` so helper references resolve. |
 | `Analysis` | `modules/analysis.formula.txt` | Import after `get` and `kind` when optional planning screens change. |
+
+## Workbook Input Sheets
+
+| Sheet | Required setup |
+|---|---|
+| `Planning Table` | Holds job rows and the finance block. The first annual projection header should be `Annual Projected`. |
+| `Cap Setup` | Holds BU cap limits. Paste `samples/cap_setup_starter.tsv` into `Cap Setup!A2`, then replace the fake caps. |
+| `Planning Review` | Holds meeting controls such as the as-of month and output spill areas. |
+
+`kind.CapByBU(...)` reads `Cap Setup`, not hardcoded module constants. The BU value in `Planning Table[BU]` can include a description after a colon; only the code before the colon is used for cap lookup.
 
 ## Supporting Modules
 

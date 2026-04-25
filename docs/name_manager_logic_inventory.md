@@ -20,7 +20,7 @@ Excel Name Manager can contain both imported module formulas and workbook-local 
 |---|---|
 | `get.*` | `modules/get.formula.txt` |
 | `kind.*` | `modules/kind.formula.txt` |
-| `Capex_Tracker_2026.*` | `modules/Capex_Tracker_2026.formula.txt` |
+| `CapitalPlanning.*` | `modules/capital_planning_report.formula.txt` |
 | `Analysis.*` | `modules/analysis.formula.txt` |
 
 ## Public Template Boundary

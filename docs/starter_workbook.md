@@ -9,6 +9,7 @@ Create these worksheets:
 | Sheet | Purpose |
 |---|---|
 | `Planning Table` | Source rows for jobs, forecasts, actuals, budget, status, and grouping. |
+| `Cap Setup` | Business-unit cap limits used by `kind.CapByBU` and `kind.PortfolioCap`. |
 | `Planning Review` | Output/control sheet for report formulas and the as-of month cell. |
 | `Decision Staging` | Optional sheet for staged writeback examples. |
 
@@ -18,9 +19,13 @@ On `Planning Review`, put an as-of month abbreviation such as `Mar` in cell `M2`
 
 Open `samples/planning_table_starter.tsv`, copy all rows, and paste into `Planning Table!A2`.
 
+Open `samples/cap_setup_starter.tsv`, copy all rows, and paste into `Cap Setup!A2`.
+
 The starter includes fake rows only. Delete or replace them after confirming the formulas spill.
 
 The included BU values, such as `BU-A: Sample Unit` and `BU-B: Sample Unit`, are fictional placeholders. Replace them with your own public-safe or private workbook values before using the template for real planning.
+
+The cap setup values are also fake. Replace `Cap Setup[Cap]` with the limits for your workbook. `kind.CapByBU(...)` reads the BU code before any colon in `Planning Table[BU]`, and `kind.PortfolioCap` is the sum of the cap table.
 
 ## Why The Starter Table Is Wide
 
@@ -53,7 +58,7 @@ Blank values are acceptable. Missing columns are not.
 
 For a first test, users can leave most monthly projected and monthly budget cells blank. The most important values are:
 
-- `2026 Projected`
+- `Annual Projected`
 - `Current Authorized Amount`
 - monthly `Actuals` through the as-of month
 - `Status`
@@ -67,7 +72,7 @@ The scorecard and report become more meaningful when the monthly budget columns 
 Import formula modules in this order:
 
 ```text
-get -> kind -> Capex_Tracker_2026 -> Analysis
+get -> kind -> CapitalPlanning -> Analysis
 ```
 
 Then try these formulas on `Planning Review`:
