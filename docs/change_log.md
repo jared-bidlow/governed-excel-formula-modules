@@ -21,6 +21,24 @@ Visible impact:
 - Subtotal flags: no intended change.
 - Cap remaining values: no intended change.
 
+## 2026-04-25 - Promote workbook-local compatibility helpers
+
+Semantic change:
+
+- Added `TRIMRANGE_KEEPBLANKS` and `RBYROW` to the tracked formula modules so clean workbooks do not depend on hidden workbook-local LAMBDAs.
+- Extended the Office.js validator and static audit to require those compatibility helpers.
+
+Minimal diff summary:
+
+- Updated `modules/get.formula.txt`, `modules/kind.formula.txt`, `addin/taskpane.js`, docs, and audit coverage.
+
+Visible impact:
+
+- Workbook behavior: existing formulas should resolve in a clean workbook after module install.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Fix Office manifest validation
 
 Semantic change:

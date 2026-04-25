@@ -21,7 +21,11 @@
   const reviewSheet = "Planning Review";
   const requiredSheets = ["Planning Table", "Cap Setup", reviewSheet];
   const requiredNames = [
+    "TRIMRANGE_KEEPBLANKS",
+    "RBYROW",
+    "get.TRIMRANGE_KEEPBLANKS",
     "get.GetFinanceBlock",
+    "kind.RBYROW",
     "kind.CapByBU",
     "kind.PortfolioCap",
     "CapitalPlanning.CAPITAL_PLANNING_REPORT",

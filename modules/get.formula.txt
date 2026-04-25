@@ -1,3 +1,12 @@
+TRIMRANGE_KEEPBLANKS = LAMBDA(
+    rng,
+    LET(
+        t, TRIMRANGE(rng, 2, 0),
+        src, IF(rng = "", "", rng),
+        TAKE(src, ROWS(t), COLUMNS(t))
+    )
+);
+
 GetBudgetHeaders = LAMBDA('Planning Table'!$A$2:$BO$2);
 
 GetBudgetBodyRaw = LAMBDA(TRIMRANGE_KEEPBLANKS('Planning Table'!$A$3:$BO$234));

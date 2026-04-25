@@ -12,7 +12,7 @@ The add-in is an installer and validator. It does not replace the formula module
 - Installs workbook defined names through the Excel JavaScript API.
 - Adds module-qualified names such as `kind.CapByBU` and `Analysis.REFORECAST_QUEUE`.
 - Adds unqualified compatibility aliases for the first occurrence of each formula name.
-- Validates required sheets, names, and starter headers.
+- Validates required sheets, names, starter headers, and compatibility helpers such as `TRIMRANGE_KEEPBLANKS` and `RBYROW`.
 
 ## Local Trial Shape
 

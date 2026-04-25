@@ -25,6 +25,8 @@ For a blank-workbook trial, use `docs/starter_workbook.md`, paste `samples/plann
 
 `kind.CapByBU(...)` reads `Cap Setup`, not hardcoded module constants. The BU value in `Planning Table[BU]` can include a description after a colon; only the code before the colon is used for cap lookup.
 
+The `get` and `kind` modules also include small compatibility helpers that older workbook copies may have held as workbook-local names, including `TRIMRANGE_KEEPBLANKS` and `RBYROW`. Importing the modules, or using the Office.js installer, should create those names in a blank workbook.
+
 ## Supporting Modules
 
 | Workbook name | Repo source | Dependency note |

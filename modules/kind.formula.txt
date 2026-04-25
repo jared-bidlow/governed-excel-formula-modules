@@ -26,6 +26,17 @@ Carryover_Ranks = {1, 2, 4, 5};
 
 CarryoverRank = LAMBDA(c, XLOOKUP(TRIM(c), Carryover_Keys, Carryover_Ranks, 1, 0));
 
+RBYROW = LAMBDA(
+    ar,
+    fn,
+    LET(
+        a, IF(ar = "", "", ar),
+        c, --(COLUMNS(a) = 1),
+        r, REDUCE(0, SEQUENCE(ROWS(a)), LAMBDA(v, i, VSTACK(v, fn(INDEX(a, i, c))))),
+        DROP(IFNA(r, ""), 1)
+    )
+);
+
 CapTable = LAMBDA(
     LET(
         RawCapTable, TRIMRANGE_KEEPBLANKS('Cap Setup'!$A$2:$B$100),

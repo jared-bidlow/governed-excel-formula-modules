@@ -108,12 +108,14 @@ FORBIDDEN_EXTENSIONS = {
 
 REQUIRED_FORMULAS = {
     "modules/get.formula.txt": [
+        "TRIMRANGE_KEEPBLANKS",
         "GetFinanceBlock",
         "GetBudgetDetailRows",
         "GetProjections",
         "GetActuals12",
     ],
     "modules/kind.formula.txt": [
+        "RBYROW",
         "CapTable",
         "PortfolioCap",
         "CapConsumeMask",
@@ -770,6 +772,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("installs qualified module names", r"name:\s*`\$\{moduleFile\.prefix\}\.\$\{item\.name\}`"),
         ("handles unqualified alias collisions", r"unqualifiedAliases"),
         ("validates required names", r"requiredNames"),
+        ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
         ("strips module comments", r"stripBlockComments"),
     ]
     for check, pattern in taskpane_checks:
