@@ -88,20 +88,3 @@ The example workbook logic is split into modules:
 - `Analysis` owns optional planning screens such as `BU_CAP_SCORECARD()` and `REFORECAST_QUEUE([groupBy])`.
 
 The important implementation idea is the boundary, not the sample vocabulary: keep complex Excel logic in importable text modules, keep workbook binaries out of Git, and make formula behavior reviewable with docs and static checks.
-
-## Public-Release Boundary
-
-This template intentionally excludes:
-
-- real workbook files,
-- real business-unit names,
-- real project/job records,
-- employee or vendor names,
-- live source paths,
-- company-specific Power Query code,
-- internal planning notes,
-- generated workbook artifacts.
-
-Use fake sample data and generic workbook names when adapting the pattern.
-
-Before publishing a copy of this template, run through `docs/public_release_checklist.md` and create a clean-history export. Do not publish this working repository history directly.
