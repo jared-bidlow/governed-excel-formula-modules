@@ -703,8 +703,11 @@ def audit_addin_contract(results: list[Result]) -> None:
 
     manifest_checks = [
         ("is task pane app", r"xsi:type=\"TaskPaneApp\""),
+        ("uses supported manifest version", r"<Version>1\.0\.0\.0</Version>"),
         ("targets Excel workbook", r"<Host Name=\"Workbook\""),
         ("uses read-write document permission", r"<Permissions>ReadWriteDocument</Permissions>"),
+        ("uses PNG icon", r"<IconUrl DefaultValue=\"https://localhost:3000/addin/assets/icon-32\.png\""),
+        ("uses PNG high resolution icon", r"<HighResolutionIconUrl DefaultValue=\"https://localhost:3000/addin/assets/icon-64\.png\""),
         ("has local taskpane source", r"<SourceLocation DefaultValue=\"https://localhost:3000/addin/taskpane\.html\""),
     ]
     for check, pattern in manifest_checks:
@@ -769,6 +772,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "operating contract states add-in boundary",
         r"Office\.js add-in under `addin/` is a packaging and installation layer",
         "Keep the add-in role separate from formula logic.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records manifest validation fix",
+        r"Fix Office manifest validation",
+        "Record the Office manifest validation fix.",
     )
     check_required_regex(
         results,

@@ -1,5 +1,25 @@
 # Change Log
 
+## 2026-04-25 - Fix Office manifest validation
+
+Semantic change:
+
+- Updated the Office add-in manifest so Microsoft manifest validation accepts the local sideload package.
+- Replaced SVG manifest icons with PNG icons and raised the manifest version to `1.0.0.0`.
+
+Minimal diff summary:
+
+- Updated `addin/manifest.xml`.
+- Replaced add-in SVG icon placeholders with PNG icon assets.
+- Extended audit coverage for manifest version and icon extensions.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Add npm smoke-test package metadata
 
 Semantic change:
