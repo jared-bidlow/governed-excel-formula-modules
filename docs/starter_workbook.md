@@ -82,6 +82,14 @@ Then try these formulas on `Planning Review`:
 =Analysis.BU_CAP_SCORECARD()
 ```
 
+After those spill successfully, the other implemented planning screens are:
+
+```excel
+=Analysis.PM_SPEND_REPORT()
+=Analysis.WORKING_BUDGET_SCREEN()
+=Analysis.BURNDOWN_SCREEN()
+```
+
 ## Add-In Option
 
 The `addin/` folder provides an Office.js starter that can create the sheets, paste the starter data, install the named formulas, and validate the workbook contract from a task pane.

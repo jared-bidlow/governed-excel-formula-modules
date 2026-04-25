@@ -8,10 +8,48 @@ Planning plugins are formula-only views. They do not edit workbook data, approve
 
 | Plugin | Status | Entry point | Decision it supports |
 |---|---|---|---|
+| PM Spend Report | Implemented | `Analysis.PM_SPEND_REPORT([groupBy])` | Which existing jobs, PMs, and groups are carrying projected, spent, remaining, and zero-spend work. |
+| Working Budget Screen | Implemented | `Analysis.WORKING_BUDGET_SCREEN()` | Which current jobs need carry, cut, authorization, or reforecast review before a working budget is drafted. |
 | BU Cap Scorecard | Implemented | `Analysis.BU_CAP_SCORECARD()` | How each business unit is measuring against cap, projected work, YTD budget, and YTD spend. |
 | Reforecast Queue | Implemented | `Analysis.REFORECAST_QUEUE([groupBy])` | Which jobs need forecast changes, hold review, or authorization cleanup. |
+| Burndown Screen | Implemented | `Analysis.BURNDOWN_SCREEN([groupBy])` | How much current-year work remains under the active meeting filters and which jobs explain it. |
 | Cut/Deferral Pack | Future candidate | Future `Analysis` wrapper | Which low-spend or low-lock jobs can reduce near-term burn. |
 | Carryover Draft | Future candidate | Future `Analysis` screen | Which remaining work should seed the next planning cycle. |
+
+## PM Spend Report
+
+`Analysis.PM_SPEND_REPORT([groupBy])` is an existing-work summary and detail screen.
+
+Default group:
+
+- `Category`
+
+Fallback behavior:
+
+- If `[groupBy]` is omitted, use `Category`.
+- If `[groupBy]` does not match a budget header, fall back to `Category`.
+- If `[groupBy]` is `PM`, use `Category` because PM is already the second summary key.
+
+The screen has three sections:
+
+- `Group Totals by <Group>`
+- `PM Summary by <Group>`
+- `Jobs by <Group>`
+
+Use it when the next planning task needs a job-level source list with projected dollars, YTD spend, remaining dollars, status, and `Pot Skip` projected dollars.
+
+## Working Budget Screen
+
+`Analysis.WORKING_BUDGET_SCREEN()` is a formula-only screening view for current jobs before a separate working-budget table is drafted.
+
+The screen has two sections:
+
+- `Working Budget Totals by Planning Hint`
+- `Working Budget Detail`
+
+It classifies rows into planning hints such as `Pot Skip Review`, `Authorized Hold Review`, `Unplanned Spend Review`, `Reforecast / Over Projected`, `Carry Forecast Review`, or `Monitor`.
+
+Use it to choose what needs human review before building a monthly plan. It does not create or update the planning table.
 
 ## BU Cap Scorecard
 
@@ -63,6 +101,22 @@ Candidate actions:
 | `Add Forecast` | Projected amount is zero and YTD spend is positive | Add a forecast for unplanned actual spend. |
 | `Cut / Hold Review` | Projected amount is positive and YTD spend is zero | Decide whether zero-spend projected work should remain, move, or be cut. |
 | `Release / Hold Auth` | Authorized amount is positive while projection and spend are zero | Decide whether unused authorization should remain available or be released. |
+
+## Burndown Screen
+
+`Analysis.BURNDOWN_SCREEN([groupBy])` is a meeting view for remaining current-year burn.
+
+Default group:
+
+- `BU`
+
+The screen shows:
+
+- controls in effect, including group, as-of month, future filter, closed-row filter, cut target, jobs in scope, and hidden dollars;
+- a director summary by selected group;
+- ranked job detail for the rows driving remaining burn.
+
+Use `docs/burndown_screen_runbook.md` for the operator reading guide.
 
 ## Interpretation Boundary
 

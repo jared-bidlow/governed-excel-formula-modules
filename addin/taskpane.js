@@ -35,8 +35,11 @@
     "kind.CapByBU",
     "kind.PortfolioCap",
     "CapitalPlanning.CAPITAL_PLANNING_REPORT",
+    "Analysis.PM_SPEND_REPORT",
+    "Analysis.WORKING_BUDGET_SCREEN",
     "Analysis.BU_CAP_SCORECARD",
-    "Analysis.REFORECAST_QUEUE"
+    "Analysis.REFORECAST_QUEUE",
+    "Analysis.BURNDOWN_SCREEN"
   ];
 
   const logEl = document.getElementById("log");

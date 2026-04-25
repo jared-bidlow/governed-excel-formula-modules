@@ -13,6 +13,25 @@ Use this as a lightweight validation checklist after formula changes.
 | `Cap Setup` value changes for a BU | BU cap remaining and cap posture update without editing formula modules. |
 | Detail row has normal active spend within projection | Detail flags remain line-level and no reforecast action is created by that fact alone. |
 
+## PM Spend Report
+
+| Scenario | Expected behavior |
+|---|---|
+| `[groupBy]` is omitted | `Analysis.PM_SPEND_REPORT()` groups by `Category`. |
+| `[groupBy]` is a valid non-PM header such as `Region` | Group totals, PM summary rows, and job detail use that selected group. |
+| `[groupBy]` is `PM` | The screen falls back to `Category` because PM is already the second summary key. |
+| A projected job has zero YTD spend | The detail row shows `Pot Skip` and carries the projected amount into `Pot Skip Projected`. |
+
+## Working Budget Screen
+
+| Scenario | Expected behavior |
+|---|---|
+| Projected amount is positive and YTD spend is zero | The row is marked `Pot Skip Review`. |
+| Authorized amount is positive while projection and spend are zero | The row is marked `Authorized Hold Review`. |
+| Projection is zero and YTD spend is positive | The row is marked `Unplanned Spend Review`. |
+| YTD spend exceeds projection | The row is marked `Reforecast / Over Projected`. |
+| No working-budget candidates exist | The screen returns `No working-budget candidates found in the active accounting universe`. |
+
 ## BU Cap Scorecard
 
 | Scenario | Expected behavior |
@@ -37,6 +56,16 @@ Use this as a lightweight validation checklist after formula changes.
 | Reforecast candidates exist | `Reforecast Queue Totals` starts with a `Grand Total` decision-dollar row before action totals. |
 | Multiple candidate jobs exist under one selected group | `Reforecast Queue by <Group>, Job, and Action` shows job rows plus a built-in group subtotal. |
 | Reforecast detail has multiple candidates | Detail rows sort by priority, then largest decision dollars, then group and project description. |
+
+## Burndown Screen
+
+| Scenario | Expected behavior |
+|---|---|
+| `[groupBy]` is omitted | `Analysis.BURNDOWN_SCREEN()` groups by `BU`. |
+| Rows survive the active meeting filters | The screen starts with `Burndown Controls In Effect`, then shows the group summary and ranked detail. |
+| No rows survive the active meeting filters | The screen returns `No cap-consuming rows found for meeting burndown`. |
+| Future or closed-row controls hide projected work | Hidden dollars appear in the controls section and the group summary. |
+| A cut target is entered | Candidate rows are labeled against the cut target without changing source data. |
 
 ## Public Safety
 

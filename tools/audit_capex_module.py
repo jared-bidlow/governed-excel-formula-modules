@@ -106,6 +106,25 @@ FORBIDDEN_EXTENSIONS = {
     ".zip",
 }
 
+ANALYSIS_PUBLIC_FORMULAS = [
+    "PM_SPEND_REPORT",
+    "WORKING_BUDGET_SCREEN",
+    "REFORECAST_QUEUE_AXIS",
+    "REFORECAST_QUEUE",
+    "BU_CAP_SCORECARD_AXIS",
+    "BU_CAP_SCORECARD",
+    "BURNDOWN_AXIS",
+    "BURNDOWN_BASE",
+    "BURNDOWN_WS_HORIZON",
+    "BURNDOWN_WS_STATUS",
+    "BURNDOWN_WS_SIGNAL",
+    "BURNDOWN_DIRECTOR_SUMMARY_FROM_AXIS",
+    "BURNDOWN_DIRECTOR_SUMMARY",
+    "BURNDOWN_SCREEN_TOP_FROM_AXIS",
+    "BURNDOWN_SCREEN_DETAIL_FROM_AXIS",
+    "BURNDOWN_SCREEN",
+]
+
 REQUIRED_FORMULAS = {
     "modules/controls.formula.txt": [
         "PM_Filter_Dropdowns",
@@ -132,21 +151,12 @@ REQUIRED_FORMULAS = {
     "modules/capital_planning_report.formula.txt": [
         "CAPITAL_PLANNING_REPORT",
     ],
-    "modules/analysis.formula.txt": [
-        "BU_CAP_SCORECARD_AXIS",
-        "BU_CAP_SCORECARD",
-        "REFORECAST_QUEUE_AXIS",
-        "REFORECAST_QUEUE",
-    ],
+    "modules/analysis.formula.txt": ANALYSIS_PUBLIC_FORMULAS,
 }
 
 NAMED_FORMULA_BUDGETS = [
     ("modules/capital_planning_report.formula.txt", "CAPITAL_PLANNING_REPORT"),
-    ("modules/analysis.formula.txt", "BU_CAP_SCORECARD_AXIS"),
-    ("modules/analysis.formula.txt", "BU_CAP_SCORECARD"),
-    ("modules/analysis.formula.txt", "REFORECAST_QUEUE_AXIS"),
-    ("modules/analysis.formula.txt", "REFORECAST_QUEUE"),
-]
+] + [("modules/analysis.formula.txt", name) for name in ANALYSIS_PUBLIC_FORMULAS]
 
 
 @dataclass
@@ -526,11 +536,43 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/planning_plugins.md",
+        planning,
+        "planning plugins document PM spend report",
+        r"PM Spend Report.*`Analysis\.PM_SPEND_REPORT\(\[groupBy\]\)`",
+        "Document the PM spend report in the public plugin menu.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_plugins.md",
+        planning,
+        "planning plugins document working budget screen",
+        r"Working Budget Screen.*`Analysis\.WORKING_BUDGET_SCREEN\(\)`",
+        "Document the working budget screen in the public plugin menu.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_plugins.md",
+        planning,
+        "planning plugins document burndown screen",
+        r"Burndown Screen.*`Analysis\.BURNDOWN_SCREEN\(\[groupBy\]\)`",
+        "Document the burndown screen in the public plugin menu.",
+    )
+    check_required_regex(
+        results,
         "docs/scenario_matrix.md",
         scenarios,
         "scenario matrix covers public safety",
         r"Public Safety",
         "Include public safety scenarios.",
+    )
+    check_required_regex(
+        results,
+        "docs/scenario_matrix.md",
+        scenarios,
+        "scenario matrix covers implemented planning screens",
+        r"PM Spend Report.*Working Budget Screen.*Burndown Screen",
+        "Keep scenario coverage aligned with implemented Analysis screens.",
     )
     check_required_regex(
         results,
@@ -555,6 +597,14 @@ def audit_docs(results: list[Result]) -> None:
         "change log records cap setup contract",
         r"Workbook-driven cap setup",
         "Record the workbook-driven cap setup change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records planning screen inventory",
+        r"Document implemented planning-screen inventory",
+        "Record the planning-screen documentation and audit inventory update.",
     )
     check_required_regex(
         results,
@@ -798,6 +848,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("handles unqualified alias collisions", r"unqualifiedAliases"),
         ("validates required names", r"requiredNames"),
         ("validates workbook control names", r"PM_Filter_Dropdowns.*Future_Filter_Mode.*HideClosed_Status.*Burndown_Cut_Target"),
+        ("validates implemented analysis screens", r"Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN"),
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
         ("strips module comments", r"stripBlockComments"),
     ]

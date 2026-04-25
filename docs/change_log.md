@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-04-25 - Document implemented planning-screen inventory
+
+Semantic change:
+
+- Brought the public planning-plugin menu in line with the `Analysis` formulas already present in the template.
+- Extended the static audit and add-in validator so implemented planning screens remain importable and documented.
+- Added scenario coverage for PM spend, working-budget, and burndown screens.
+
+Minimal diff summary:
+
+- Updated `docs/planning_plugins.md`, `docs/scenario_matrix.md`, and `docs/starter_workbook.md`.
+- Updated `addin/taskpane.js` to validate the implemented Analysis entry points.
+- Updated `tools/audit_capex_module.py` to require the Analysis formulas, docs, scenarios, and changelog entry.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Guard starter report subtotal errors
 
 Semantic change:
