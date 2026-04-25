@@ -239,7 +239,7 @@ def audit_public_safety(results: list[Result], files: list[Path]) -> None:
             "Remove workbook/generated binaries from the public template.",
         )
 
-        if path.suffix.lower() not in {".md", ".txt", ".py", ".formula", ".tsv", ".csv"} and path.name not in {"AGENTS.md", "README.md", "ApplyNotes", "BadgeReportExampleOnly"}:
+        if path.suffix.lower() not in {".md", ".txt", ".py", ".ps1", ".formula", ".tsv", ".csv"} and path.name not in {"AGENTS.md", "README.md", "ApplyNotes", "BadgeReportExampleOnly"}:
             continue
         text = read_text(path)
         for needle in FORBIDDEN_TEXT:
@@ -306,6 +306,7 @@ def audit_docs(results: list[Result]) -> None:
     changelog = read_text(ROOT / "docs" / "change_log.md")
     release = read_text(ROOT / "docs" / "public_release_checklist.md")
     starter = read_text(ROOT / "docs" / "starter_workbook.md")
+    push_helper = read_text(ROOT / "tools" / "push_public.ps1")
     starter_table = read_text(ROOT / "samples" / "planning_table_starter.tsv")
     cap_starter = read_text(ROOT / "samples" / "cap_setup_starter.tsv")
     starter_rows = [line.split("\t") for line in starter_table.splitlines() if line.strip()]
@@ -422,6 +423,30 @@ def audit_docs(results: list[Result]) -> None:
         r"no private workbook files",
         "Document the no-private-workbook release gate.",
     )
+    check_required_regex(
+        results,
+        "docs/public_release_checklist.md",
+        release,
+        "release checklist documents push helper",
+        r"tools\\push_public\.ps1",
+        "Document the local push helper for the public export repo.",
+    )
+    for check, pattern in [
+        ("runs audit", r"python tools\\audit_capex_module\.py"),
+        ("runs formula lint", r"python tools\\lint_formulas\.py modules\\\*\.formula\.txt"),
+        ("runs whitespace check", r"git diff --check"),
+        ("fetches before push", r"git fetch origin"),
+        ("rebases when behind", r"git rebase \$upstream"),
+        ("pushes selected branch", r"git push origin \$Branch"),
+    ]:
+        check_required_regex(
+            results,
+            "tools/push_public.ps1",
+            push_helper,
+            f"push helper {check}",
+            pattern,
+            "Keep the public push helper guarded by validation and remote sync.",
+        )
     check_required_regex(
         results,
         "docs/starter_workbook.md",

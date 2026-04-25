@@ -51,6 +51,12 @@ python tools/lint_formulas.py modules/*.formula.txt
 
 The audit is intentionally text-only. It does not open Excel, edit workbook binaries, or require workbook data.
 
+To validate, commit, rebase, and push the public repo in one local command:
+
+```powershell
+.\tools\push_public.ps1 -Message "Update public formula template"
+```
+
 ## Why Excel
 
 Excel is the right runtime for this pattern when the real work is planning, review, and decision support by people who already live in workbooks.

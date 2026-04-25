@@ -1,5 +1,24 @@
 # Change Log
 
+## 2026-04-25 - Public push helper added
+
+Semantic change:
+
+- Added a local public-export helper that runs validation, commits, rebases, and pushes the public repo.
+
+Minimal diff summary:
+
+- Added `tools/push_public.ps1`.
+- Documented the helper in the README and public release checklist.
+- Extended audit coverage so the helper continues to run audit, formula lint, whitespace check, fetch/rebase, and push.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Workbook-driven cap setup
 
 Semantic change:

@@ -19,3 +19,13 @@ Do not publish this working repository directly.
 Create a clean-history export from tracked plain-text files only, initialize a fresh Git repository in that export, then run the same release checks again before the first public commit.
 
 Recommended public repo name: `governed-excel-formula-modules`.
+
+## Local Push Helper
+
+From the clean public export repo, run:
+
+```powershell
+.\tools\push_public.ps1 -Message "Update public formula template"
+```
+
+The helper runs the audit, formula lint, whitespace check, commit, fetch/rebase, and push sequence. It should not be run from a private drafting branch.
