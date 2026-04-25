@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-04-25 - Search helper label cleanup
+
+Semantic change:
+
+- Removed legacy source/job shorthand wording from the search helper and replaced it with public `Job ID` wording.
+
+Minimal diff summary:
+
+- Updated `Search.Projects_Health` messages and local variable names.
+- Added audit coverage to forbid legacy source/job shorthand wording.
+
+Visible impact:
+
+- Workbook behavior: health-message wording changed only.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Final public BU cleanup
 
 Semantic change:
