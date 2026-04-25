@@ -610,6 +610,7 @@ def audit_docs(results: list[Result]) -> None:
                 ("creates trusted local certificate", r"New-SelfSignedCertificate.*Import-Certificate"),
                 ("uses local certificate package", r"localhost\.pfx.*localhost\.cer"),
                 ("serves repo root with TLS stream", r"TcpListener.*SslStream"),
+                ("bounds stalled local requests", r"RequestTimeoutMs.*ReceiveTimeout.*AuthenticateAsServerAsync"),
                 ("serves taskpane files", r"addin/taskpane\.html"),
             ],
         ),

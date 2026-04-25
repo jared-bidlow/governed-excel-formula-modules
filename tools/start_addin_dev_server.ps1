@@ -1,6 +1,7 @@
 param(
     [int]$Port = 3000,
     [string]$HostName = "localhost",
+    [int]$RequestTimeoutMs = 5000,
     [switch]$SkipCertInstall
 )
 
@@ -121,10 +122,22 @@ $listener.Start()
 try {
     while ($true) {
         $client = $listener.AcceptTcpClient()
+        $client.ReceiveTimeout = $RequestTimeoutMs
+        $client.SendTimeout = $RequestTimeoutMs
         $ssl = $null
         try {
             $ssl = New-Object System.Net.Security.SslStream($client.GetStream(), $false)
-            $ssl.AuthenticateAsServer($certificate, $false, [System.Security.Authentication.SslProtocols]::Tls12, $false)
+            $ssl.ReadTimeout = $RequestTimeoutMs
+            $ssl.WriteTimeout = $RequestTimeoutMs
+            $authTask = $ssl.AuthenticateAsServerAsync(
+                $certificate,
+                $false,
+                [System.Security.Authentication.SslProtocols]::Tls12,
+                $false
+            )
+            if (-not $authTask.Wait($RequestTimeoutMs)) {
+                throw "TLS handshake timed out after $RequestTimeoutMs ms"
+            }
 
             $reader = New-Object System.IO.StreamReader($ssl, [Text.Encoding]::ASCII, $false, 1024, $true)
             $requestLine = $reader.ReadLine()

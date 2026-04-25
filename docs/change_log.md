@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-04-25 - Bound local add-in server stalls
+
+Semantic change:
+
+- Added TCP, TLS, and stream timeouts to the local Office.js dev server so one stalled local request cannot block the smoke-test host.
+- Extended audit coverage for the dev-server timeout guard.
+
+Minimal diff summary:
+
+- Updated `tools/start_addin_dev_server.ps1`, `tools/audit_capex_module.py`, and this changelog.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Technical review guide added
 
 Semantic change:
