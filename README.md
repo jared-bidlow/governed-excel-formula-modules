@@ -29,8 +29,11 @@ governed-excel-formula-modules/
 |   +-- planning_plugins.md
 |   +-- public_release_checklist.md
 |   +-- scenario_matrix.md
+|   +-- starter_workbook.md
 |   +-- workbook_import_map.md
 |   \-- change_log.md
++-- samples/
+|   \-- planning_table_starter.tsv
 \-- tools/
     +-- audit_capex_module.py
     \-- lint_formulas.py
@@ -46,6 +49,18 @@ python tools/lint_formulas.py modules/*.formula.txt
 ```
 
 The audit is intentionally text-only. It does not open Excel, edit workbook binaries, or require workbook data.
+
+## Start From A Blank Workbook
+
+For a first local trial, create a blank workbook and follow `docs/starter_workbook.md`.
+
+The paste-ready starter table is in:
+
+```text
+samples/planning_table_starter.tsv
+```
+
+Paste it into `Planning Table!A2`, set `Planning Review!M2` to a month abbreviation such as `Mar`, then import the formula modules.
 
 ## Core Pattern
 

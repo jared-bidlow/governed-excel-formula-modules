@@ -224,7 +224,7 @@ def audit_public_safety(results: list[Result], files: list[Path]) -> None:
             "Remove workbook/generated binaries from the public template.",
         )
 
-        if path.suffix.lower() not in {".md", ".txt", ".py", ".formula"} and path.name not in {"AGENTS.md", "README.md", "ApplyNotes", "BadgeReportExampleOnly"}:
+        if path.suffix.lower() not in {".md", ".txt", ".py", ".formula", ".tsv", ".csv"} and path.name not in {"AGENTS.md", "README.md", "ApplyNotes", "BadgeReportExampleOnly"}:
             continue
         text = read_text(path)
         for needle in FORBIDDEN_TEXT:
@@ -290,6 +290,9 @@ def audit_docs(results: list[Result]) -> None:
     scenarios = read_text(ROOT / "docs" / "scenario_matrix.md")
     changelog = read_text(ROOT / "docs" / "change_log.md")
     release = read_text(ROOT / "docs" / "public_release_checklist.md")
+    starter = read_text(ROOT / "docs" / "starter_workbook.md")
+    starter_table = read_text(ROOT / "samples" / "planning_table_starter.tsv")
+    starter_rows = [line.split("\t") for line in starter_table.splitlines() if line.strip()]
 
     check_required_regex(
         results,
@@ -354,6 +357,46 @@ def audit_docs(results: list[Result]) -> None:
         "release checklist blocks private workbook material",
         r"no private workbook files",
         "Document the no-private-workbook release gate.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide explains paste target",
+        r"Planning Table!A2",
+        "Document where to paste the starter table.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide explains monthly triples",
+        r"Blank values are acceptable\. Missing columns are not\.",
+        "Document why the wide monthly finance block exists.",
+    )
+    check_required_regex(
+        results,
+        "samples/planning_table_starter.tsv",
+        starter_table,
+        "starter table has annual projection",
+        r"2026 Projected",
+        "Keep the paste-ready Planning Table starter aligned with get.GetFinanceBlock.",
+    )
+    check_required_regex(
+        results,
+        "samples/planning_table_starter.tsv",
+        starter_table,
+        "starter table has monthly triples",
+        r"January Projected\tJanuary Actuals\tJanuary.*December Projected\tDecember Actuals\tDecember",
+        "Keep projected, actuals, and budget columns for all twelve months.",
+    )
+    add(
+        results,
+        bool(starter_rows) and all(len(row) == 67 for row in starter_rows),
+        "samples/planning_table_starter.tsv",
+        "starter table row width",
+        "all rows have 67 tab-delimited columns" if starter_rows else "starter table is empty",
+        "Keep every starter row aligned to the 67-column Planning Table contract.",
     )
 
 

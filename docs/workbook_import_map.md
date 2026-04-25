@@ -4,6 +4,8 @@ Manual workbook import is the default workflow for this template.
 
 Treat URL imports as snapshots unless the workbook owner has verified live refresh from source.
 
+For a blank-workbook trial, use `docs/starter_workbook.md` and paste `samples/planning_table_starter.tsv` into `Planning Table!A2` before importing formulas.
+
 ## Canonical Modules
 
 | Workbook name | Repo source | Manual update note |

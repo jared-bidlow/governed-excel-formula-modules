@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-04-25 - Starter workbook table added
+
+Semantic change:
+
+- Added a paste-ready public starter table so new users can create a blank workbook trial without inventing the source-table shape.
+- Documented why the current finance block needs three columns per month.
+
+Minimal diff summary:
+
+- Added `samples/planning_table_starter.tsv`.
+- Added `docs/starter_workbook.md`.
+- Updated README and workbook import map with the starter flow.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- New users get a concrete `Planning Table` shape for local testing.
+
 ## 2026-04-25 - Public release hardening second pass
 
 Semantic change:
