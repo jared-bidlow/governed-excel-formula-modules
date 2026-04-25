@@ -67,7 +67,7 @@ Then use:
 Insert Demo Outputs
 ```
 
-That button validates the workbook first, then places demo formulas at fixed locations:
+That button validates the workbook first, checks `Planning Review!A4:N200` for cells that would block the main report spill, then places demo formulas at fixed locations. If `Planning Review!A4` already contains the expected main report formula and is not showing `#SPILL!`, the button is safe to rerun.
 
 | Sheet | Cell | Formula |
 |---|---|---|

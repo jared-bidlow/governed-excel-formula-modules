@@ -119,7 +119,7 @@ The module-qualified `Controls.*` names remain defaults and documentation fallba
 
 Keep `Planning Review!A4:N200` clear for the main report spill. Keep `Planning Review!O4:R200` clear for the note-context example formulas. The visible control band stays above row 4 so it does not block the report spill.
 
-Use the task-pane `Insert Demo Outputs` button after setup and validation if you want the public demo sheets created automatically. It inserts the main report at `Planning Review!A4` and places the Analysis screens at `A4` on separate sheets named `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, and `Burndown`.
+Use the task-pane `Insert Demo Outputs` button after setup and validation if you want the public demo sheets created automatically. Before it writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis screens at `A4` on separate sheets named `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, and `Burndown`.
 
 ## Add-In Option
 

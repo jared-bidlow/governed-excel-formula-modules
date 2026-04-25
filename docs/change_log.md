@@ -1,5 +1,27 @@
 # Change Log
 
+## 2026-04-25 - Guard main report demo spill range
+
+Semantic change:
+
+- Added a task-pane guard before `Insert Demo Outputs` writes the main report formula to `Planning Review!A4`.
+- The guard checks `Planning Review!A4:N200` and reports the first cell that would block the main report spill.
+- If `Planning Review!A4` already contains the expected main report formula and is not showing `#SPILL!`, the button remains safe to rerun.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js`.
+- Updated starter workbook and Office add-in docs.
+- Updated static audit coverage for the pre-insert spill guard.
+
+Visible impact:
+
+- Workbook behavior: spill blockers now fail with a specific task-pane error before the main demo output is inserted.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Move visible controls above report spill
 
 Semantic change:

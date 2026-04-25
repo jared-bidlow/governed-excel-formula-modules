@@ -665,6 +665,14 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/change_log.md",
+        changelog,
+        "change log records main report spill guard",
+        r"Guard main report demo spill range",
+        "Record the demo-output spill guard.",
+    )
+    check_required_regex(
+        results,
         "docs/public_release_checklist.md",
         release,
         "release checklist requires clean-history export",
@@ -803,6 +811,14 @@ def audit_docs(results: list[Result]) -> None:
         "starter guide documents demo outputs",
         r"Insert Demo Outputs.*BU Cap Scorecard.*Reforecast Queue.*PM Spend Report.*Working Budget.*Burndown",
         "Document the optional demo output sheets.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents demo spill guard",
+        r"Insert Demo Outputs.*Planning Review!A4:N200.*block the spill",
+        "Document the pre-insert main report spill guard.",
     )
     check_required_regex(
         results,
@@ -973,6 +989,8 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("defines demo outputs", r"demoOutputs\s*=\s*\[.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Analysis\.BU_CAP_SCORECARD.*Analysis\.REFORECAST_QUEUE.*Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN"),
         ("binds demo output action", r"bind\(\"insertDemoOutputs\",\s*insertDemoOutputs\)"),
         ("inserts demo output formulas", r"insertDemoOutputs.*validateWorkbook\(\).*placeDemoOutput"),
+        ("checks main report spill range", r'getRange\("A4:N200"\).*load\(\["values", "formulas"\]\).*assertMainReportSpillReady'),
+        ("reports demo spill blockers", r"assertMainReportSpillReady.*blocks the main report spill"),
         ("renders demo output summary", r"renderDemoOutputSummary.*Demo outputs inserted"),
         ("strips module comments", r"stripBlockComments"),
     ]
@@ -1057,6 +1075,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "add-in docs document demo outputs",
         r"Insert Demo Outputs.*Planning Review.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Burndown.*Analysis\.BURNDOWN_SCREEN",
         "Document the optional demo output insertion action.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document demo spill guard",
+        r"checks `Planning Review!A4:N200`.*block the main report spill.*safe to rerun",
+        "Document the pre-insert main report spill guard.",
     )
     check_required_regex(
         results,

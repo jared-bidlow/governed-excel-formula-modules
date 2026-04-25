@@ -307,6 +307,13 @@
       await ensureSheets(context, unique(demoOutputs.map((output) => output.sheet)));
       await context.sync();
 
+      const mainOutput = demoOutputs.find((output) => output.sheet === reviewSheet);
+      const review = context.workbook.worksheets.getItem(reviewSheet);
+      const mainSpillRange = review.getRange("A4:N200");
+      mainSpillRange.load(["values", "formulas"]);
+      await context.sync();
+      assertMainReportSpillReady(mainSpillRange.values, mainSpillRange.formulas, mainOutput.formula);
+
       for (const output of demoOutputs) {
         placeDemoOutput(context.workbook.worksheets.getItem(output.sheet), output);
       }
@@ -527,6 +534,44 @@
         throw new Error(`${control.name} should point to ${control.formula}; found ${item.formula}.`);
       }
     }
+  }
+
+  function assertMainReportSpillReady(values, formulas, expectedFormula) {
+    const anchorFormulaMatches = normalizeFormula(formulas[0][0]) === normalizeFormula(expectedFormula);
+    if (anchorFormulaMatches && !isSpillError(values[0][0])) {
+      return;
+    }
+
+    for (let rowIndex = 0; rowIndex < values.length; rowIndex += 1) {
+      for (let columnIndex = 0; columnIndex < values[rowIndex].length; columnIndex += 1) {
+        if (anchorFormulaMatches && rowIndex === 0 && columnIndex === 0) {
+          continue;
+        }
+        if (hasCellContent(values[rowIndex][columnIndex]) || hasCellContent(formulas[rowIndex][columnIndex])) {
+          const address = `Planning Review!${columnName(columnIndex + 1)}${rowIndex + 4}`;
+          throw new Error(`${address} blocks the main report spill. Clear Planning Review!A4:N200 or rerun Create Starter Sheets before Insert Demo Outputs.`);
+        }
+      }
+    }
+  }
+
+  function hasCellContent(value) {
+    return value !== null && value !== undefined && String(value).trim() !== "";
+  }
+
+  function isSpillError(value) {
+    return String(value || "").trim().toUpperCase() === "#SPILL!";
+  }
+
+  function columnName(columnNumber) {
+    let number = columnNumber;
+    let name = "";
+    while (number > 0) {
+      const remainder = (number - 1) % 26;
+      name = String.fromCharCode(65 + remainder) + name;
+      number = Math.floor((number - 1) / 26);
+    }
+    return name;
   }
 
   function normalizeFormula(formula) {
