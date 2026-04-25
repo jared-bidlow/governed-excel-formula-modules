@@ -1,5 +1,25 @@
 # Change Log
 
+## 2026-04-25 - Add npm smoke-test package metadata
+
+Semantic change:
+
+- Added minimal Node package metadata so Microsoft Office add-in debugging tools can run from the repo root.
+- Kept npm as local tooling only; workbook formulas remain the calculation engine.
+- Made add-in smoke helpers find the standard Windows Node install even before a shell PATH refresh.
+
+Minimal diff summary:
+
+- Added `package.json` with add-in smoke, server, stop, and dev-server scripts.
+- Updated README, Office add-in docs, and audit coverage for the npm smoke-test path.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Automated add-in smoke-test helper
 
 Semantic change:

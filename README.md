@@ -41,6 +41,7 @@ governed-excel-formula-modules/
 +-- samples/
 |   +-- planning_table_starter.tsv
 |   \-- cap_setup_starter.tsv
++-- package.json
 \-- tools/
     +-- audit_capex_module.py
     +-- lint_formulas.py
@@ -123,7 +124,15 @@ To run the local smoke test on Windows:
 .\tools\start_addin_smoke_test.ps1
 ```
 
-That helper runs the static checks, starts a local HTTPS server, and asks Excel desktop to sideload `addin/manifest.xml` when npm is available. If npm is not available, it still starts the local server and prints the manual sideload fallback. When the test session is done:
+That helper runs the static checks, starts a local HTTPS server, and asks Excel desktop to sideload `addin/manifest.xml` when npm is available. If npm is not available, it still starts the local server and prints the manual sideload fallback.
+
+With Node/npm installed, the same smoke path is also available as:
+
+```powershell
+npm run addin:smoke
+```
+
+When the test session is done:
 
 ```powershell
 .\tools\stop_addin_smoke_test.ps1

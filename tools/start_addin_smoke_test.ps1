@@ -18,8 +18,21 @@ function Invoke-Checked {
     }
 }
 
+function Use-InstalledNodePath {
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    $nodeInstall = Join-Path $env:ProgramFiles "nodejs"
+    $npmCmd = Join-Path $nodeInstall "npm.cmd"
+    if (Test-Path $npmCmd) {
+        $env:Path = "$nodeInstall;$env:Path"
+    }
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
+Use-InstalledNodePath
 
 if (-not $SkipStaticChecks) {
     Invoke-Checked "repo audit" {

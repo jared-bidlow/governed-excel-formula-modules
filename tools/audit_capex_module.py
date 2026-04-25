@@ -353,6 +353,7 @@ def audit_docs(results: list[Result]) -> None:
     addin_server = read_text(ROOT / "tools" / "start_addin_dev_server.ps1")
     addin_stop = read_text(ROOT / "tools" / "stop_addin_smoke_test.ps1")
     gitignore = read_text(ROOT / ".gitignore")
+    package_json = read_text(ROOT / "package.json")
     starter_table = read_text(ROOT / "samples" / "planning_table_starter.tsv")
     cap_starter = read_text(ROOT / "samples" / "cap_setup_starter.tsv")
     starter_rows = [line.split("\t") for line in starter_table.splitlines() if line.strip()]
@@ -399,11 +400,40 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "README.md",
+        readme,
+        "README documents npm smoke helper",
+        r"npm run addin:smoke",
+        "Tell users the npm Office.js smoke-test path.",
+    )
+    for check, pattern in [
+        ("defines smoke script", r'"addin:smoke"\s*:\s*"powershell .*start_addin_smoke_test\.ps1"'),
+        ("defines dev-server script", r'"dev-server"\s*:\s*"powershell .*start_addin_dev_server\.ps1"'),
+        ("declares Office debugging tool", r'"office-addin-debugging"\s*:'),
+    ]:
+        check_required_regex(
+            results,
+            "package.json",
+            package_json,
+            f"package metadata {check}",
+            pattern,
+            "Keep package metadata aligned with the Office.js smoke-test helpers.",
+        )
+    check_required_regex(
+        results,
         ".gitignore",
         gitignore,
         "gitignore excludes node local tooling",
         r"node_modules/",
         "Keep local Office.js npm tooling out of source control.",
+    )
+    check_required_regex(
+        results,
+        ".gitignore",
+        gitignore,
+        "gitignore excludes npm lockfile",
+        r"package-lock\.json",
+        "Keep generated npm lock metadata out of this public formula-template repo.",
     )
     check_required_regex(
         results,
@@ -525,6 +555,7 @@ def audit_docs(results: list[Result]) -> None:
                 ("runs static audit", r"python tools\\audit_capex_module\.py"),
                 ("runs formula lint", r"python tools\\lint_formulas\.py modules\\\*\.formula\.txt"),
                 ("uses Excel desktop sideload", r"office-addin-debugging start.*--app excel"),
+                ("recovers installed Node path", r"Use-InstalledNodePath.*ProgramFiles.*nodejs"),
                 ("falls back without npm", r"npm is not on PATH.*sideload addin\\manifest\.xml manually"),
                 ("starts server helper", r"start_addin_dev_server\.ps1"),
             ],
@@ -545,6 +576,7 @@ def audit_docs(results: list[Result]) -> None:
             [
                 ("stops Office debugging session", r"office-addin-debugging stop"),
                 ("stops fallback server by port", r"Get-NetTCPConnection -LocalPort \$Port.*Stop-Process"),
+                ("recovers installed Node path", r"Use-InstalledNodePath.*ProgramFiles.*nodejs"),
             ],
         ),
     ]:
@@ -753,6 +785,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records add-in smoke helper",
         r"Automated add-in smoke-test helper",
         "Record the automated add-in smoke-test helper.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records npm smoke metadata",
+        r"Add npm smoke-test package metadata",
+        "Record the npm smoke-test package metadata.",
     )
 
 

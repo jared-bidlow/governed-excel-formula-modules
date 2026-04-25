@@ -22,6 +22,12 @@ Run the smoke-test helper from the repo root:
 .\tools\start_addin_smoke_test.ps1
 ```
 
+With Node/npm installed, this equivalent npm script is also available:
+
+```powershell
+npm run addin:smoke
+```
+
 The helper:
 
 - runs the static repo checks,
@@ -39,6 +45,12 @@ When the test session is done, run:
 
 ```powershell
 .\tools\stop_addin_smoke_test.ps1
+```
+
+or:
+
+```powershell
+npm run addin:stop
 ```
 
 If npm is not installed, or the Office debugging tool is blocked on a machine, use the server-only helper and sideload the manifest manually:

@@ -4,8 +4,21 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Use-InstalledNodePath {
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    $nodeInstall = Join-Path $env:ProgramFiles "nodejs"
+    $npmCmd = Join-Path $nodeInstall "npm.cmd"
+    if (Test-Path $npmCmd) {
+        $env:Path = "$nodeInstall;$env:Path"
+    }
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
+Use-InstalledNodePath
 
 $connections = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
 $processIds = $connections | Select-Object -ExpandProperty OwningProcess -Unique
