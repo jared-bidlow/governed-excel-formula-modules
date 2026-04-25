@@ -39,10 +39,48 @@
     { key: "yesNo", header: "Yes No" }
   ];
   const visibleControlNames = [
-    { name: "PM_Filter_Dropdowns", address: "K3", formula: "='Planning Review'!$K$3" },
-    { name: "Future_Filter_Mode", address: "K4", formula: "='Planning Review'!$K$4" },
-    { name: "HideClosed_Status", address: "K5", formula: "='Planning Review'!$K$5" },
-    { name: "Burndown_Cut_Target", address: "K6", formula: "='Planning Review'!$K$6" }
+    { name: "PM_Filter_Dropdowns", address: "B2", formula: "='Planning Review'!$B$2" },
+    { name: "Future_Filter_Mode", address: "C2", formula: "='Planning Review'!$C$2" },
+    { name: "HideClosed_Status", address: "D2", formula: "='Planning Review'!$D$2" },
+    { name: "Burndown_Cut_Target", address: "E2", formula: "='Planning Review'!$E$2" }
+  ];
+  const demoOutputs = [
+    {
+      sheet: reviewSheet,
+      title: "Capital Planning Report",
+      formula: "=CapitalPlanning.CAPITAL_PLANNING_REPORT()",
+      note: "Main report spill starts at A4."
+    },
+    {
+      sheet: "BU Cap Scorecard",
+      title: "BU Cap Scorecard",
+      formula: "=Analysis.BU_CAP_SCORECARD()",
+      note: "Cap and spend posture by BU."
+    },
+    {
+      sheet: "Reforecast Queue",
+      title: "Reforecast Queue",
+      formula: "=Analysis.REFORECAST_QUEUE()",
+      note: "Grouped action queue for forecast review."
+    },
+    {
+      sheet: "PM Spend Report",
+      title: "PM Spend Report",
+      formula: "=Analysis.PM_SPEND_REPORT()",
+      note: "Existing-work summary and job detail."
+    },
+    {
+      sheet: "Working Budget",
+      title: "Working Budget Screen",
+      formula: "=Analysis.WORKING_BUDGET_SCREEN()",
+      note: "Current-job screening before budget drafting."
+    },
+    {
+      sheet: "Burndown",
+      title: "Burndown Screen",
+      formula: "=Analysis.BURNDOWN_SCREEN()",
+      note: "Meeting view of remaining burn and drivers."
+    }
   ];
   const requiredNames = [
     "PM_Filter_Dropdowns",
@@ -78,6 +116,7 @@
     bind("setupWorkbook", setupWorkbook);
     bind("installModules", installModules);
     bind("validateWorkbook", validateWorkbook);
+    bind("insertDemoOutputs", insertDemoOutputs);
     bind("runAll", runAll);
     writeLog("Ready.");
     setButtons(true);
@@ -229,7 +268,7 @@
       const planningHeaders = planning.getRange("A2:BO2");
       const capHeaders = capSetup.getRange("A2:B2");
       const capRows = capSetup.getRange("A3:B100");
-      const reviewControls = review.getRange("K3:K6");
+      const reviewControls = review.getRange("B2:E2");
       const reviewMonths = review.getRange("M2:N2");
 
       planningHeaders.load("values");
@@ -259,20 +298,60 @@
     appendLog(renderValidationSummary(summary));
   }
 
+  async function insertDemoOutputs() {
+    appendLog("Validating before inserting demo outputs...");
+    await validateWorkbook();
+    appendLog("Inserting demo output formulas...");
+
+    await Excel.run(async (context) => {
+      await ensureSheets(context, unique(demoOutputs.map((output) => output.sheet)));
+      await context.sync();
+
+      for (const output of demoOutputs) {
+        placeDemoOutput(context.workbook.worksheets.getItem(output.sheet), output);
+      }
+
+      context.workbook.worksheets.getItem(reviewSheet).activate();
+      await context.sync();
+    });
+
+    appendLog(renderDemoOutputSummary());
+  }
+
   async function ensureRequiredSheets(context) {
+    await ensureSheets(context, requiredSheets);
+  }
+
+  async function ensureSheets(context, sheetNames) {
     const existingSheets = {};
-    for (const sheetName of requiredSheets) {
+    for (const sheetName of sheetNames) {
       const sheet = context.workbook.worksheets.getItemOrNullObject(sheetName);
       sheet.load("name");
       existingSheets[sheetName] = sheet;
     }
     await context.sync();
 
-    for (const sheetName of requiredSheets) {
+    for (const sheetName of sheetNames) {
       if (existingSheets[sheetName].isNullObject) {
         context.workbook.worksheets.add(sheetName);
       }
     }
+  }
+
+  function placeDemoOutput(sheet, output) {
+    if (output.sheet === reviewSheet) {
+      sheet.getRange("A4").formulas = [[output.formula]];
+      return;
+    }
+
+    sheet.getRange("A1:Z300").clear(Excel.ClearApplyTo.all);
+    sheet.getRange("A1").values = [[output.title]];
+    sheet.getRange("A2").values = [[output.note]];
+    sheet.getRange("A4").formulas = [[output.formula]];
+    sheet.getRange("A1").format.font.bold = true;
+    sheet.getRange("A1").format.font.size = 16;
+    sheet.getRange("A2").format.font.italic = true;
+    sheet.getRange("A:Z").format.autofitColumns();
   }
 
   async function bindVisibleControlNames(context) {
@@ -335,15 +414,12 @@
 
   function formatPlanningReview(sheet) {
     sheet.freezePanes.freezeRows(3);
+    sheet.getRange("A1:N3").clear(Excel.ClearApplyTo.all);
+    sheet.getRange("J2:K6").clear(Excel.ClearApplyTo.all);
     sheet.getRange("A1").values = [["Planning Review"]];
-    sheet.getRange("A2").values = [["Main report spill starts at A4. Columns O:R are reserved for notes."]];
-    sheet.getRange("J2:K6").values = [
-      ["Control", "Value"],
-      ["Group", "BU"],
-      ["Future Filter", "All"],
-      ["Closed Rows", "SHOW"],
-      ["Burndown Cut Target", 0]
-    ];
+    sheet.getRange("B1:E1").values = [["Group", "Future Filter", "Closed Rows", "Burndown Cut Target"]];
+    sheet.getRange("A2:E2").values = [["Controls", "BU", "All", "SHOW", 0]];
+    sheet.getRange("A3").values = [["Main report spill starts at A4. Columns O:R are reserved for notes."]];
     sheet.getRange("M1:N2").values = [
       ["Report As Of", "Defer As Of"],
       ["Mar", "Mar"]
@@ -351,17 +427,17 @@
 
     sheet.getRange("A1").format.font.bold = true;
     sheet.getRange("A1").format.font.size = 16;
-    sheet.getRange("J2:K2").format.font.bold = true;
+    sheet.getRange("B1:E1").format.font.bold = true;
     sheet.getRange("M1:N1").format.font.bold = true;
-    sheet.getRange("J2:K6").format.fill.color = "#F3F6FA";
-    sheet.getRange("K3:K6").format.fill.color = "#FFF2CC";
+    sheet.getRange("A2:E2").format.fill.color = "#F3F6FA";
+    sheet.getRange("B2:E2").format.fill.color = "#FFF2CC";
     sheet.getRange("M2:N2").format.fill.color = "#FFF2CC";
-    applyNumberFormat(sheet.getRange("K6"), 1, 1, "$#,##0");
-    applyListValidation(sheet.getRange("K3"), validationSource("B"));
-    applyListValidation(sheet.getRange("K4"), validationSource("C"));
-    applyListValidation(sheet.getRange("K5"), validationSource("D"));
+    applyNumberFormat(sheet.getRange("E2"), 1, 1, "$#,##0");
+    applyListValidation(sheet.getRange("B2"), validationSource("B"));
+    applyListValidation(sheet.getRange("C2"), validationSource("C"));
+    applyListValidation(sheet.getRange("D2"), validationSource("D"));
     applyListValidation(sheet.getRange("M2:N2"), validationSource("A"));
-    applyNonNegativeValidation(sheet.getRange("K6"));
+    applyNonNegativeValidation(sheet.getRange("E2"));
     sheet.getRange("A:N").format.autofitColumns();
   }
 
@@ -424,9 +500,9 @@
 
   function assertVisibleControls(controlValues, monthValues) {
     assertAllowed("PM_Filter_Dropdowns", controlValues[0][0], validationLists.groupFields);
-    assertAllowed("Future_Filter_Mode", controlValues[1][0], validationLists.futureFilters);
-    assertAllowed("HideClosed_Status", controlValues[2][0], validationLists.closedRows);
-    if (!(Number(controlValues[3][0]) >= 0)) {
+    assertAllowed("Future_Filter_Mode", controlValues[0][1], validationLists.futureFilters);
+    assertAllowed("HideClosed_Status", controlValues[0][2], validationLists.closedRows);
+    if (!(Number(controlValues[0][3]) >= 0)) {
       throw new Error("Burndown_Cut_Target control must be a non-negative number.");
     }
     assertAllowed("Planning Review!M2", monthValues[0][0], validationLists.months);
@@ -467,6 +543,17 @@
       `- Visible controls bound: ${summary.controlCount}/${visibleControlNames.length}`,
       `- Dropdown lists ready: ${summary.dropdownListCount}`
     ].join("\n");
+  }
+
+  function renderDemoOutputSummary() {
+    return [
+      "Demo outputs inserted:",
+      ...demoOutputs.map((output) => `- ${output.sheet}: A4 -> ${output.formula}`)
+    ].join("\n");
+  }
+
+  function unique(values) {
+    return Array.from(new Set(values));
   }
 
   async function replaceName(context, name, formula, comment) {

@@ -1,5 +1,48 @@
 # Change Log
 
+## 2026-04-25 - Move visible controls above report spill
+
+Semantic change:
+
+- Moved the editable `Planning Review` control values from `K3:K6` to the top control band at `B2:E2`.
+- Kept `M2:N2` as the report/defer as-of month cells because the formula modules read those addresses.
+- The starter setup clears the old `J2:K6` panel so rerunning setup removes stale cells that can block the `A4` report spill.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js`.
+- Updated starter workbook, import-map, and Office add-in docs.
+- Updated static audit coverage for the spill-safe control layout.
+
+Visible impact:
+
+- Workbook behavior: the main report formula at `Planning Review!A4` has an unobstructed `A:N` spill path.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Add demo output insertion action
+
+Semantic change:
+
+- Added a task-pane action that validates the starter workbook, creates demo output sheets, and inserts the implemented report formulas at fixed `A4` spill points.
+- The action leaves setup and validation separate, so operators can choose when to create the demo output sheets.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.html` and `addin/taskpane.js`.
+- Updated starter workbook and Office add-in docs.
+- Updated static audit coverage for the demo-output action.
+
+Visible impact:
+
+- Workbook behavior: optional demo sheets can be created from the task pane.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Add task-pane validation summary
 
 Semantic change:

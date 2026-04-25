@@ -31,12 +31,12 @@ The `Controls` module defines default workbook-control names used by the public 
 
 | Name | Visible control cell |
 |---|---|
-| `PM_Filter_Dropdowns` | `'Planning Review'!$K$3` |
-| `Future_Filter_Mode` | `'Planning Review'!$K$4` |
-| `HideClosed_Status` | `'Planning Review'!$K$5` |
-| `Burndown_Cut_Target` | `'Planning Review'!$K$6` |
+| `PM_Filter_Dropdowns` | `'Planning Review'!$B$2` |
+| `Future_Filter_Mode` | `'Planning Review'!$C$2` |
+| `HideClosed_Status` | `'Planning Review'!$D$2` |
+| `Burndown_Cut_Target` | `'Planning Review'!$E$2` |
 
-The starter also reserves `Planning Review!M2` for report and analysis as-of month logic and `Planning Review!N2` for `defer` examples.
+The starter also reserves `Planning Review!M2` for report and analysis as-of month logic and `Planning Review!N2` for `defer` examples. The control band sits above row 4 so `Planning Review!A4:N200` remains clear for the main report spill.
 
 The `get` and `kind` modules also include small compatibility helpers that older workbook copies may have held as workbook-local names, including `TRIMRANGE_KEEPBLANKS` and `RBYROW`. Importing the modules, or using the Office.js installer, should create those names in a blank workbook.
 

@@ -99,25 +99,27 @@ The public control cells are:
 
 | Cell | Control | Default | Used by |
 |---|---|---|---|
-| `K3` | Group selector | `BU` | Main report grouping through `PM_Filter_Dropdowns`. |
-| `K4` | Future filter | `All` | Main report, scorecard, and burndown future-scope filters. |
-| `K5` | Closed rows | `SHOW` | Main report, scorecard, and burndown closed-row filters. |
-| `K6` | Burndown cut target | `0` | Burndown candidate labeling. |
+| `B2` | Group selector | `BU` | Main report grouping through `PM_Filter_Dropdowns`. |
+| `C2` | Future filter | `All` | Main report, scorecard, and burndown future-scope filters. |
+| `D2` | Closed rows | `SHOW` | Main report, scorecard, and burndown closed-row filters. |
+| `E2` | Burndown cut target | `0` | Burndown candidate labeling. |
 | `M2` | Report as-of month | `Mar` | Main report and `Analysis` screens. |
 | `N2` | Defer as-of month | `Mar` | `defer` module examples. |
 
 After formula installation, the unqualified workbook names point to the visible controls:
 
 ```text
-PM_Filter_Dropdowns -> 'Planning Review'!$K$3
-Future_Filter_Mode -> 'Planning Review'!$K$4
-HideClosed_Status -> 'Planning Review'!$K$5
-Burndown_Cut_Target -> 'Planning Review'!$K$6
+PM_Filter_Dropdowns -> 'Planning Review'!$B$2
+Future_Filter_Mode -> 'Planning Review'!$C$2
+HideClosed_Status -> 'Planning Review'!$D$2
+Burndown_Cut_Target -> 'Planning Review'!$E$2
 ```
 
 The module-qualified `Controls.*` names remain defaults and documentation fallbacks.
 
-Keep `Planning Review!A4` clear for the main report spill. Keep `Planning Review!O4:R200` clear for the note-context example formulas.
+Keep `Planning Review!A4:N200` clear for the main report spill. Keep `Planning Review!O4:R200` clear for the note-context example formulas. The visible control band stays above row 4 so it does not block the report spill.
+
+Use the task-pane `Insert Demo Outputs` button after setup and validation if you want the public demo sheets created automatically. It inserts the main report at `Planning Review!A4` and places the Analysis screens at `A4` on separate sheets named `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, and `Burndown`.
 
 ## Add-In Option
 

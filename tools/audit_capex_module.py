@@ -649,6 +649,22 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/change_log.md",
+        changelog,
+        "change log records demo output insertion",
+        r"Add demo output insertion action",
+        "Record the optional demo output insertion action.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records spill-safe control layout",
+        r"Move visible controls above report spill",
+        "Record the spill-safe Planning Review control layout.",
+    )
+    check_required_regex(
+        results,
         "docs/public_release_checklist.md",
         release,
         "release checklist requires clean-history export",
@@ -699,6 +715,7 @@ def audit_docs(results: list[Result]) -> None:
                 ("guards stale dev server reuse", r"Stop-StaleDevServer.*probeUrl.*taskpane\.js.*Invoke-WebRequest.*Stop-Process"),
                 ("falls back without npm", r"npm is not on PATH.*sideload addin\\manifest\.xml manually"),
                 ("starts server helper", r"start_addin_dev_server\.ps1"),
+                ("documents demo output smoke step", r"Setup \+ Install \+ Validate, then Insert Demo Outputs"),
             ],
         ),
         (
@@ -768,7 +785,7 @@ def audit_docs(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter,
         "starter guide documents visible controls",
-        r"`K3`.*`PM_Filter_Dropdowns`.*`K6`.*Burndown_Cut_Target",
+        r"`B2`.*`PM_Filter_Dropdowns`.*`E2`.*Burndown_Cut_Target",
         "Document the visible Planning Review control panel.",
     )
     check_required_regex(
@@ -776,8 +793,16 @@ def audit_docs(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter,
         "starter guide preserves output ranges",
-        r"`Planning Review!A4`.*`Planning Review!O4:R200`",
+        r"`Planning Review!A4:N200`.*`Planning Review!O4:R200`.*does not block the report spill",
         "Keep spill and notes ranges reserved in the starter guide.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents demo outputs",
+        r"Insert Demo Outputs.*BU Cap Scorecard.*Reforecast Queue.*PM Spend Report.*Working Budget.*Burndown",
+        "Document the optional demo output sheets.",
     )
     check_required_regex(
         results,
@@ -792,7 +817,7 @@ def audit_docs(results: list[Result]) -> None:
         "docs/workbook_import_map.md",
         import_map,
         "import map documents visible control bindings",
-        r"`PM_Filter_Dropdowns`.*\$K\$3.*`Burndown_Cut_Target`.*\$K\$6",
+        r"`PM_Filter_Dropdowns`.*\$B\$2.*`Burndown_Cut_Target`.*\$E\$2",
         "Document worksheet-visible control name bindings.",
     )
     check_required_regex(
@@ -924,7 +949,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("uses Excel.run", r"Excel\.run"),
         ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review.*Validation Lists"),
         ("defines validation lists", r"validationLists\s*=\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo"),
-        ("defines visible controls", r"visibleControlNames.*PM_Filter_Dropdowns.*K3.*Burndown_Cut_Target.*K6"),
+        ("defines visible controls", r"visibleControlNames.*PM_Filter_Dropdowns.*B2.*Burndown_Cut_Target.*E2"),
         ("loads workbook controls", r"../modules/controls\.formula\.txt"),
         ("loads formula modules", r"../modules/kind\.formula\.txt.*../modules/analysis\.formula\.txt"),
         ("installs workbook names", r"context\.workbook\.names\.add"),
@@ -939,10 +964,16 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("applies dropdown validation", r"applyListValidation.*dataValidation\.rule"),
         ("applies non-negative validation", r"applyNonNegativeValidation.*greaterThanOrEqualTo"),
         ("validates starter header order", r"assertHeaderOrder\(planningHeaders\.values\[0\], expectedPlanningHeaders"),
+        ("validates spill-safe control band", r'review\.getRange\("B2:E2"\)'),
         ("validates visible controls", r"assertVisibleControls\(reviewControls\.values, reviewMonths\.values\)"),
         ("validates bound control names", r"assertControlNamesBound\(controlNameItems\)"),
         ("validates cap setup rows", r"assertCapRowsAreValid\(capRows\.values\)"),
         ("renders validation summary", r"renderValidationSummary.*Sheets present.*Workbook names installed.*Dropdown lists ready"),
+        ("clears stale spill blockers", r'getRange\("J2:K6"\)\.clear'),
+        ("defines demo outputs", r"demoOutputs\s*=\s*\[.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Analysis\.BU_CAP_SCORECARD.*Analysis\.REFORECAST_QUEUE.*Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN"),
+        ("binds demo output action", r"bind\(\"insertDemoOutputs\",\s*insertDemoOutputs\)"),
+        ("inserts demo output formulas", r"insertDemoOutputs.*validateWorkbook\(\).*placeDemoOutput"),
+        ("renders demo output summary", r"renderDemoOutputSummary.*Demo outputs inserted"),
         ("strips module comments", r"stripBlockComments"),
     ]
     for check, pattern in taskpane_checks:
@@ -965,6 +996,14 @@ def audit_addin_contract(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "addin/taskpane.html",
+        taskpane_html,
+        "task pane has demo output button",
+        r'id="insertDemoOutputs".*Insert Demo Outputs',
+        "Expose the optional demo output insertion action.",
+    )
+    check_required_regex(
+        results,
         "docs/office_addin.md",
         addin_doc,
         "add-in docs state installer boundary",
@@ -984,7 +1023,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document visible controls",
-        r"`Planning Review` controls in `K3:K6`.*`M2:N2`",
+        r"`Planning Review` controls in `B2:E2`.*`M2:N2`",
         "Document the visible starter workbook controls.",
     )
     check_required_regex(
@@ -992,7 +1031,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document control rebinding",
-        r"PM_Filter_Dropdowns -> 'Planning Review'!\$K\$3.*Burndown_Cut_Target -> 'Planning Review'!\$K\$6",
+        r"PM_Filter_Dropdowns -> 'Planning Review'!\$B\$2.*Burndown_Cut_Target -> 'Planning Review'!\$E\$2",
         "Document that unqualified controls point to visible cells.",
     )
     check_required_regex(
@@ -1000,7 +1039,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs preserve output ranges",
-        r"leaves `A4` open.*leaves `O4:R200` open",
+        r"leaves `A4:N200` open.*leaves `O4:R200` open",
         "Document preserved spill and note ranges.",
     )
     check_required_regex(
@@ -1010,6 +1049,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "add-in docs document validation summary",
         r"Validation summary:.*Sheets present.*Workbook names installed.*Dropdown lists ready",
         "Document the operator-facing validation summary.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document demo outputs",
+        r"Insert Demo Outputs.*Planning Review.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Burndown.*Analysis\.BURNDOWN_SCREEN",
+        "Document the optional demo output insertion action.",
     )
     check_required_regex(
         results,

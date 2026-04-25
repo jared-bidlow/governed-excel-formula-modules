@@ -90,7 +90,7 @@ if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
 }
 
 Write-Host "==> starting Excel desktop sideload smoke test"
-Write-Host "==> after Excel opens, use the task pane button: Setup + Install + Validate"
+Write-Host "==> after Excel opens, use: Setup + Install + Validate, then Insert Demo Outputs"
 
 npx --yes office-addin-debugging start addin\manifest.xml desktop --app excel --no-debug --no-live-reload --dev-server "$serverCommand" --dev-server-port $Port
 exit $LASTEXITCODE
