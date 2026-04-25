@@ -70,6 +70,34 @@ FORBIDDEN_PATTERNS = [
     (re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I), "email address"),
 ]
 
+SCAN_TEXT_SUFFIXES = {
+    ".css",
+    ".csv",
+    ".html",
+    ".js",
+    ".json",
+    ".md",
+    ".ps1",
+    ".py",
+    ".svg",
+    ".tsv",
+    ".txt",
+    ".xml",
+    ".formula",
+}
+
+ALLOWED_ADDIN_URL_PREFIXES = (
+    "http://schemas.microsoft.com/office/appforoffice/1.1",
+    "http://www.w3.org/2000/svg",
+    "http://www.w3.org/2001/XMLSchema-instance",
+    "https://localhost:3000",
+    "https://appsforoffice.microsoft.com/lib/1/hosted/office.js",
+)
+
+PATTERN_DEFINITION_FILES = {
+    Path("tools/audit_capex_module.py"),
+}
+
 FORBIDDEN_EXTENSIONS = {
     ".xlsx",
     ".xlsm",
@@ -239,7 +267,7 @@ def audit_public_safety(results: list[Result], files: list[Path]) -> None:
             "Remove workbook/generated binaries from the public template.",
         )
 
-        if path.suffix.lower() not in {".md", ".txt", ".py", ".ps1", ".formula", ".tsv", ".csv"} and path.name not in {"AGENTS.md", "README.md", "ApplyNotes", "BadgeReportExampleOnly"}:
+        if path.suffix.lower() not in SCAN_TEXT_SUFFIXES and path.name not in {"AGENTS.md", "README.md", "ApplyNotes", "BadgeReportExampleOnly"}:
             continue
         text = read_text(path)
         for needle in FORBIDDEN_TEXT:
@@ -251,7 +279,21 @@ def audit_public_safety(results: list[Result], files: list[Path]) -> None:
                 "forbidden text absent",
                 f"Remove or replace private/internal text: {needle}",
             )
+        rel_path = path.relative_to(ROOT)
+        if rel_path in PATTERN_DEFINITION_FILES:
+            continue
         for pattern, label_name in FORBIDDEN_PATTERNS:
+            if label_name == "URL" and "addin" in rel_path.parts:
+                urls = re.findall(r"https?://[^\s\"'<>]+", text, flags=re.I)
+                add(
+                    results,
+                    all(url.startswith(ALLOWED_ADDIN_URL_PREFIXES) for url in urls),
+                    label,
+                    "public safety allows only add-in development URLs",
+                    "add-in URLs are allowlisted",
+                    "Use only the local add-in development host or Office.js CDN URL in add-in files.",
+                )
+                continue
             add(
                 results,
                 pattern.search(text) is None,
@@ -550,6 +592,94 @@ def audit_cap_setup_contract(results: list[Result]) -> None:
     )
 
 
+def audit_addin_contract(results: list[Result]) -> None:
+    manifest = read_text(ROOT / "addin" / "manifest.xml")
+    taskpane = read_text(ROOT / "addin" / "taskpane.js")
+    taskpane_html = read_text(ROOT / "addin" / "taskpane.html")
+    addin_doc = read_text(ROOT / "docs" / "office_addin.md")
+    readme = read_text(ROOT / "README.md")
+    operating = read_text(ROOT / "docs" / "operating_contract.md")
+    changelog = read_text(ROOT / "docs" / "change_log.md")
+
+    manifest_checks = [
+        ("is task pane app", r"xsi:type=\"TaskPaneApp\""),
+        ("targets Excel workbook", r"<Host Name=\"Workbook\""),
+        ("uses read-write document permission", r"<Permissions>ReadWriteDocument</Permissions>"),
+        ("has local taskpane source", r"<SourceLocation DefaultValue=\"https://localhost:3000/addin/taskpane\.html\""),
+    ]
+    for check, pattern in manifest_checks:
+        check_required_regex(
+            results,
+            "addin/manifest.xml",
+            manifest,
+            f"Office.js manifest {check}",
+            pattern,
+            "Keep the Office.js manifest usable for local sideload testing.",
+        )
+
+    taskpane_checks = [
+        ("loads Office.js", r"Office\.onReady"),
+        ("uses Excel.run", r"Excel\.run"),
+        ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review"),
+        ("loads formula modules", r"../modules/kind\.formula\.txt.*../modules/analysis\.formula\.txt"),
+        ("installs workbook names", r"context\.workbook\.names\.add"),
+        ("installs qualified module names", r"name:\s*`\$\{moduleFile\.prefix\}\.\$\{item\.name\}`"),
+        ("handles unqualified alias collisions", r"unqualifiedAliases"),
+        ("validates required names", r"requiredNames"),
+        ("strips module comments", r"stripBlockComments"),
+    ]
+    for check, pattern in taskpane_checks:
+        check_required_regex(
+            results,
+            "addin/taskpane.js",
+            taskpane,
+            f"task pane {check}",
+            pattern,
+            "Keep the add-in as a formula-module installer and validator.",
+        )
+
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
+        "task pane imports Office.js",
+        r"appsforoffice\.microsoft\.com/lib/1/hosted/office\.js",
+        "Load the official Office.js host library.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs state installer boundary",
+        r"installer and validator.*does not replace the formula modules",
+        "Document that JavaScript is not the calculation engine.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
+        "README mentions Office.js starter",
+        r"Office\.js Add-In Starter",
+        "Surface the add-in packaging path in the README.",
+    )
+    check_required_regex(
+        results,
+        "docs/operating_contract.md",
+        operating,
+        "operating contract states add-in boundary",
+        r"Office\.js add-in under `addin/` is a packaging and installation layer",
+        "Keep the add-in role separate from formula logic.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records Office.js starter",
+        r"Office\.js add-in starter",
+        "Record the add-in starter change.",
+    )
+
+
 def audit_reforecast_contract(results: list[Result]) -> None:
     analysis = read_text(MODULES / "analysis.formula.txt")
     reforecast = extract_named_formula(analysis, "REFORECAST_QUEUE")
@@ -581,6 +711,7 @@ def main() -> int:
     audit_formula_files(results)
     audit_docs(results)
     audit_cap_setup_contract(results)
+    audit_addin_contract(results)
     audit_reforecast_contract(results)
 
     for result in results:

@@ -81,3 +81,9 @@ Then try these formulas on `Planning Review`:
 =Analysis.REFORECAST_QUEUE()
 =Analysis.BU_CAP_SCORECARD()
 ```
+
+## Add-In Option
+
+The `addin/` folder provides an Office.js starter that can create the sheets, paste the starter data, install the named formulas, and validate the workbook contract from a task pane.
+
+See `docs/office_addin.md` for the packaging boundary.

@@ -1,5 +1,25 @@
 # Change Log
 
+## 2026-04-25 - Office.js add-in starter
+
+Semantic change:
+
+- Added a minimal Excel Office.js task-pane add-in scaffold for installing formula modules and starter sheets.
+- Kept formula modules as the calculation engine; JavaScript is only the packaging, setup, and validation layer.
+
+Minimal diff summary:
+
+- Added `addin/manifest.xml`, task pane HTML/CSS/JS, and text SVG icon placeholders.
+- Added `docs/office_addin.md`.
+- Updated README, starter workbook docs, operating contract, and audit coverage.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Public push helper added
 
 Semantic change:

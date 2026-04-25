@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Formula Modules</title>
+  <link rel="stylesheet" href="./taskpane.css">
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Formula Modules</h1>
+      <p>Install native Excel formulas and starter sheets into this workbook.</p>
+    </header>
+
+    <section class="actions" aria-label="Actions">
+      <button id="setupWorkbook" type="button">Create Starter Sheets</button>
+      <button id="installModules" type="button">Install Formula Modules</button>
+      <button id="validateWorkbook" type="button">Validate Workbook</button>
+      <button id="runAll" type="button" class="primary">Setup + Install + Validate</button>
+    </section>
+
+    <section>
+      <h2>Status</h2>
+      <pre id="log" aria-live="polite">Waiting for Excel...</pre>
+    </section>
+  </main>
+  <script src="./taskpane.js"></script>
+</body>
+</html>

@@ -18,6 +18,11 @@ It keeps workbook formulas in plain-text modules, pairs them with scenario docum
 governed-excel-formula-modules/
 +-- AGENTS.md
 +-- README.md
++-- addin/
+|   +-- manifest.xml
+|   +-- taskpane.html
+|   +-- taskpane.js
+|   \-- assets/
 +-- modules/
 |   +-- get.formula.txt
 |   +-- kind.formula.txt
@@ -30,6 +35,7 @@ governed-excel-formula-modules/
 |   +-- public_release_checklist.md
 |   +-- scenario_matrix.md
 |   +-- starter_workbook.md
+|   +-- office_addin.md
 |   +-- workbook_import_map.md
 |   \-- change_log.md
 +-- samples/
@@ -77,13 +83,14 @@ This repo works as a public source-code template:
 
 - the text audit and formula lint pass from a clean checkout,
 - the formula modules are importable plain-text examples,
+- the Office.js starter add-in can install the modules into workbook names,
 - the starter table gives a blank workbook the expected source-table shape,
 - public-safety checks block private labels, paths, workbook binaries, and old sample codes.
 
 This repo is not a turnkey workbook:
 
 - it does not ship an `.xlsx` file,
-- it does not automate Excel Name Manager import,
+- the Office.js add-in is a starter installer, not a production Marketplace package,
 - it does not prove runtime recalculation inside every Excel tenant,
 - a real workbook owner still needs to map their own table names, headers, caps, and review process.
 
@@ -99,6 +106,14 @@ samples/cap_setup_starter.tsv
 ```
 
 Paste the planning table into `Planning Table!A2`, paste the cap table into `Cap Setup!A2`, set `Planning Review!M2` to a month abbreviation such as `Mar`, then import the formula modules.
+
+## Office.js Add-In Starter
+
+The `addin/` folder contains a minimal Excel task-pane add-in. It creates starter sheets, installs workbook defined names from the text formula modules, and validates the workbook contract.
+
+Use it as a packaging starter, not as a replacement calculation engine. The add-in installs native Excel formulas; the planning logic still lives in workbook named formulas after installation.
+
+See `docs/office_addin.md`.
 
 ## Core Pattern
 

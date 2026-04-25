@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Formula Modules">
+  <rect width="32" height="32" rx="6" fill="#185abd"/>
+  <path d="M8 9h16v3H8zM8 15h10v3H8zM8 21h16v3H8z" fill="#fff"/>
+  <path d="M20 14l4 3-4 3z" fill="#9fd89f"/>
+</svg>

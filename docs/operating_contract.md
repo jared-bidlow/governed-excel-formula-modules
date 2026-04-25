@@ -68,6 +68,12 @@ The formula modules assume generic workbook inputs, not private workbook state:
 
 BU cap values should be changed in the workbook's `Cap Setup` sheet. They should not be edited inside `modules/kind.formula.txt`.
 
+## Add-In Packaging Contract
+
+The Office.js add-in under `addin/` is a packaging and installation layer.
+
+It may create starter sheets, paste sample table shapes, install workbook defined names, and validate required workbook contracts. It should not move planning logic out of native Excel formulas.
+
 ## Formula Safety Rules
 
 - Keep named formulas within workbook import limits.

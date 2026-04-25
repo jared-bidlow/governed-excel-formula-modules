@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:type="TaskPaneApp">
+  <Id>7b58f579-1fd1-4c43-91c1-6f49a0b8385c</Id>
+  <Version>0.1.0.0</Version>
+  <ProviderName>Governed Excel Formula Modules</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Formula Modules" />
+  <Description DefaultValue="Install governed Excel formula modules and starter sheets into a workbook." />
+  <IconUrl DefaultValue="https://localhost:3000/addin/assets/icon-32.svg" />
+  <HighResolutionIconUrl DefaultValue="https://localhost:3000/addin/assets/icon-64.svg" />
+  <SupportUrl DefaultValue="https://localhost:3000/addin/taskpane.html" />
+  <AppDomains>
+    <AppDomain>https://localhost:3000</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Workbook" />
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://localhost:3000/addin/taskpane.html" />
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+</OfficeApp>
