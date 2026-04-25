@@ -544,6 +544,7 @@ def audit_docs(results: list[Result]) -> None:
             addin_stop,
             [
                 ("stops Office debugging session", r"office-addin-debugging stop"),
+                ("stops fallback server by port", r"Get-NetTCPConnection -LocalPort \$Port.*Stop-Process"),
             ],
         ),
     ]:
