@@ -50,6 +50,22 @@ python tools/lint_formulas.py modules/*.formula.txt
 
 The audit is intentionally text-only. It does not open Excel, edit workbook binaries, or require workbook data.
 
+## Current Readiness
+
+This repo works as a public source-code template:
+
+- the text audit and formula lint pass from a clean checkout,
+- the formula modules are importable plain-text examples,
+- the starter table gives a blank workbook the expected source-table shape,
+- public-safety checks block private labels, paths, workbook binaries, and old sample codes.
+
+This repo is not a turnkey workbook:
+
+- it does not ship an `.xlsx` file,
+- it does not automate Excel Name Manager import,
+- it does not prove runtime recalculation inside every Excel tenant,
+- a real workbook owner still needs to map their own table names, headers, caps, and review process.
+
 ## Start From A Blank Workbook
 
 For a first local trial, create a blank workbook and follow `docs/starter_workbook.md`.
