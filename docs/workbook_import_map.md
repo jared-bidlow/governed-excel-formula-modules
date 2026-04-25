@@ -23,10 +23,20 @@ For a blank-workbook trial, use `docs/starter_workbook.md`, paste `samples/plann
 | `Planning Table` | Holds job rows and the finance block. The first annual projection header should be `Annual Projected`. |
 | `Cap Setup` | Holds BU cap limits. Paste `samples/cap_setup_starter.tsv` into `Cap Setup!A2`, then replace the fake caps. |
 | `Planning Review` | Holds meeting controls such as the as-of month and output spill areas. |
+| `Validation Lists` | Holds dropdown values for the public starter workbook. |
 
 `kind.CapByBU(...)` reads `Cap Setup`, not hardcoded module constants. The BU value in `Planning Table[BU]` can include a description after a colon; only the code before the colon is used for cap lookup.
 
-The `Controls` module defines default workbook-control names used by the public report screens: `PM_Filter_Dropdowns`, `Future_Filter_Mode`, `HideClosed_Status`, and `Burndown_Cut_Target`. Replace those names with worksheet-linked controls later if you want interactive dropdown cells.
+The `Controls` module defines default workbook-control names used by the public report screens: `PM_Filter_Dropdowns`, `Future_Filter_Mode`, `HideClosed_Status`, and `Burndown_Cut_Target`. The Office.js starter leaves the module-qualified `Controls.*` names as defaults, then rebinds the unqualified control names to visible cells on `Planning Review`:
+
+| Name | Visible control cell |
+|---|---|
+| `PM_Filter_Dropdowns` | `'Planning Review'!$K$3` |
+| `Future_Filter_Mode` | `'Planning Review'!$K$4` |
+| `HideClosed_Status` | `'Planning Review'!$K$5` |
+| `Burndown_Cut_Target` | `'Planning Review'!$K$6` |
+
+The starter also reserves `Planning Review!M2` for report and analysis as-of month logic and `Planning Review!N2` for `defer` examples.
 
 The `get` and `kind` modules also include small compatibility helpers that older workbook copies may have held as workbook-local names, including `TRIMRANGE_KEEPBLANKS` and `RBYROW`. Importing the modules, or using the Office.js installer, should create those names in a blank workbook.
 

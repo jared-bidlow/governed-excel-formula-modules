@@ -1,5 +1,65 @@
 # Change Log
 
+## 2026-04-25 - Add task-pane validation summary
+
+Semantic change:
+
+- Added a compact task-pane status summary after workbook validation succeeds.
+- The summary reports sheets present, workbook names installed, Planning Table header count, configured cap rows, visible controls, and dropdown lists.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js`.
+- Updated add-in docs and audit coverage.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Guard stale add-in dev server reuse
+
+Semantic change:
+
+- Made the Office.js smoke helper verify that port 3000 is serving the current checkout before Excel sideload starts.
+- If another checkout is serving stale task-pane files on the smoke-test port, the helper stops that listener so the current repo can start its own dev server.
+
+Minimal diff summary:
+
+- Updated `tools/start_addin_smoke_test.ps1`.
+- Updated audit coverage for stale-server detection.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Add starter workbook UX setup
+
+Semantic change:
+
+- Extended the Office.js starter so a blank workbook gets formatted starter sheets, visible planning controls, dropdown-backed validation lists, and stronger workbook validation.
+- Rebound unqualified workbook-control names to visible cells on `Planning Review` after formula installation while leaving module-qualified `Controls.*` defaults intact.
+- Documented the starter workbook layout, control cells, validation-list sheet, and preserved output ranges.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js`.
+- Updated starter workbook, Office add-in, import-map, operating-contract, changelog, and audit documentation checks.
+- Updated `tools/audit_capex_module.py` to enforce the visible-control setup and validation contract.
+
+Visible impact:
+
+- Workbook behavior: controls become visible and dropdown-backed in the starter workbook.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Document implemented planning-screen inventory
 
 Semantic change:

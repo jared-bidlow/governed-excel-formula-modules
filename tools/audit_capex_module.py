@@ -367,6 +367,7 @@ def audit_docs(results: list[Result]) -> None:
     release = read_text(ROOT / "docs" / "public_release_checklist.md")
     starter = read_text(ROOT / "docs" / "starter_workbook.md")
     review = read_text(ROOT / "docs" / "technical_review_guide.md")
+    import_map = read_text(ROOT / "docs" / "workbook_import_map.md")
     push_helper = read_text(ROOT / "tools" / "push_public.ps1")
     addin_smoke = read_text(ROOT / "tools" / "start_addin_smoke_test.ps1")
     addin_server = read_text(ROOT / "tools" / "start_addin_dev_server.ps1")
@@ -528,6 +529,22 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/operating_contract.md",
+        operating,
+        "operating contract states validation-list sheet",
+        r"`Validation Lists` contains dropdown source values",
+        "Keep the starter workbook layout contract visible.",
+    )
+    check_required_regex(
+        results,
+        "docs/operating_contract.md",
+        operating,
+        "operating contract states visible controls",
+        r"visible controls on `Planning Review`.*unqualified control names",
+        "Document that public starter controls are worksheet-visible.",
+    )
+    check_required_regex(
+        results,
         "docs/planning_plugins.md",
         planning,
         "planning plugins document reforecast pivot",
@@ -608,6 +625,30 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/change_log.md",
+        changelog,
+        "change log records starter UX setup",
+        r"Add starter workbook UX setup",
+        "Record visible workbook controls, dropdowns, formatting, and validation.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records stale server guard",
+        r"Guard stale add-in dev server reuse",
+        "Record the smoke-test stale-server guard.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records validation summary",
+        r"Add task-pane validation summary",
+        "Record the task-pane validation summary.",
+    )
+    check_required_regex(
+        results,
         "docs/public_release_checklist.md",
         release,
         "release checklist requires clean-history export",
@@ -655,6 +696,7 @@ def audit_docs(results: list[Result]) -> None:
                 ("runs formula lint", r"python tools\\lint_formulas\.py modules\\\*\.formula\.txt"),
                 ("uses Excel desktop sideload", r"office-addin-debugging start.*--app excel"),
                 ("recovers installed Node path", r"Use-InstalledNodePath.*ProgramFiles.*nodejs"),
+                ("guards stale dev server reuse", r"Stop-StaleDevServer.*probeUrl.*taskpane\.js.*Invoke-WebRequest.*Stop-Process"),
                 ("falls back without npm", r"npm is not on PATH.*sideload addin\\manifest\.xml manually"),
                 ("starts server helper", r"start_addin_dev_server\.ps1"),
             ],
@@ -712,6 +754,46 @@ def audit_docs(results: list[Result]) -> None:
         "starter guide explains monthly triples",
         r"Blank values are acceptable\. Missing columns are not\.",
         "Document why the wide monthly finance block exists.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents validation lists",
+        r"`Validation Lists`.*Dropdown source values",
+        "Document the dropdown-source sheet in the starter workbook guide.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents visible controls",
+        r"`K3`.*`PM_Filter_Dropdowns`.*`K6`.*Burndown_Cut_Target",
+        "Document the visible Planning Review control panel.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide preserves output ranges",
+        r"`Planning Review!A4`.*`Planning Review!O4:R200`",
+        "Keep spill and notes ranges reserved in the starter guide.",
+    )
+    check_required_regex(
+        results,
+        "docs/workbook_import_map.md",
+        import_map,
+        "import map documents validation lists",
+        r"`Validation Lists`.*dropdown values",
+        "Document the dropdown-source sheet in the import map.",
+    )
+    check_required_regex(
+        results,
+        "docs/workbook_import_map.md",
+        import_map,
+        "import map documents visible control bindings",
+        r"`PM_Filter_Dropdowns`.*\$K\$3.*`Burndown_Cut_Target`.*\$K\$6",
+        "Document worksheet-visible control name bindings.",
     )
     check_required_regex(
         results,
@@ -840,16 +922,27 @@ def audit_addin_contract(results: list[Result]) -> None:
     taskpane_checks = [
         ("loads Office.js", r"Office\.onReady"),
         ("uses Excel.run", r"Excel\.run"),
-        ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review"),
+        ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review.*Validation Lists"),
+        ("defines validation lists", r"validationLists\s*=\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo"),
+        ("defines visible controls", r"visibleControlNames.*PM_Filter_Dropdowns.*K3.*Burndown_Cut_Target.*K6"),
         ("loads workbook controls", r"../modules/controls\.formula\.txt"),
         ("loads formula modules", r"../modules/kind\.formula\.txt.*../modules/analysis\.formula\.txt"),
         ("installs workbook names", r"context\.workbook\.names\.add"),
+        ("binds visible control names", r"bindVisibleControlNames\(context\).*Governed formula visible control"),
         ("installs qualified module names", r"name:\s*`\$\{moduleFile\.prefix\}\.\$\{item\.name\}`"),
         ("handles unqualified alias collisions", r"unqualifiedAliases"),
         ("validates required names", r"requiredNames"),
         ("validates workbook control names", r"PM_Filter_Dropdowns.*Future_Filter_Mode.*HideClosed_Status.*Burndown_Cut_Target"),
         ("validates implemented analysis screens", r"Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN"),
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
+        ("formats starter workbook", r"formatPlanningTable.*formatCapSetup.*formatPlanningReview"),
+        ("applies dropdown validation", r"applyListValidation.*dataValidation\.rule"),
+        ("applies non-negative validation", r"applyNonNegativeValidation.*greaterThanOrEqualTo"),
+        ("validates starter header order", r"assertHeaderOrder\(planningHeaders\.values\[0\], expectedPlanningHeaders"),
+        ("validates visible controls", r"assertVisibleControls\(reviewControls\.values, reviewMonths\.values\)"),
+        ("validates bound control names", r"assertControlNamesBound\(controlNameItems\)"),
+        ("validates cap setup rows", r"assertCapRowsAreValid\(capRows\.values\)"),
+        ("renders validation summary", r"renderValidationSummary.*Sheets present.*Workbook names installed.*Dropdown lists ready"),
         ("strips module comments", r"stripBlockComments"),
     ]
     for check, pattern in taskpane_checks:
@@ -877,6 +970,46 @@ def audit_addin_contract(results: list[Result]) -> None:
         "add-in docs state installer boundary",
         r"installer and validator.*does not replace the formula modules",
         "Document that JavaScript is not the calculation engine.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document validation lists",
+        r"Creates the `Validation Lists` sheet",
+        "Document that the add-in creates dropdown source lists.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document visible controls",
+        r"`Planning Review` controls in `K3:K6`.*`M2:N2`",
+        "Document the visible starter workbook controls.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document control rebinding",
+        r"PM_Filter_Dropdowns -> 'Planning Review'!\$K\$3.*Burndown_Cut_Target -> 'Planning Review'!\$K\$6",
+        "Document that unqualified controls point to visible cells.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs preserve output ranges",
+        r"leaves `A4` open.*leaves `O4:R200` open",
+        "Document preserved spill and note ranges.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document validation summary",
+        r"Validation summary:.*Sheets present.*Workbook names installed.*Dropdown lists ready",
+        "Document the operator-facing validation summary.",
     )
     check_required_regex(
         results,

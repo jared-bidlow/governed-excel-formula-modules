@@ -11,9 +11,10 @@ Create these worksheets:
 | `Planning Table` | Source rows for jobs, forecasts, actuals, budget, status, and grouping. |
 | `Cap Setup` | Business-unit cap limits used by `kind.CapByBU` and `kind.PortfolioCap`. |
 | `Planning Review` | Output/control sheet for report formulas and the as-of month cell. |
+| `Validation Lists` | Dropdown source values used by the starter add-in. |
 | `Decision Staging` | Optional sheet for staged writeback examples. |
 
-On `Planning Review`, put an as-of month abbreviation such as `Mar` in cell `M2`.
+On `Planning Review`, put an as-of month abbreviation such as `Mar` in cell `M2`. Formulas in `defer` use `N2` as their as-of month.
 
 ## Paste The Starter Table
 
@@ -89,6 +90,34 @@ After those spill successfully, the other implemented planning screens are:
 =Analysis.WORKING_BUDGET_SCREEN()
 =Analysis.BURNDOWN_SCREEN()
 ```
+
+## Starter Layout And Controls
+
+The Office.js starter can create the workbook layout for you. It writes the starter data, creates the `Validation Lists` sheet, formats the source sheets, and adds a visible control panel on `Planning Review`.
+
+The public control cells are:
+
+| Cell | Control | Default | Used by |
+|---|---|---|---|
+| `K3` | Group selector | `BU` | Main report grouping through `PM_Filter_Dropdowns`. |
+| `K4` | Future filter | `All` | Main report, scorecard, and burndown future-scope filters. |
+| `K5` | Closed rows | `SHOW` | Main report, scorecard, and burndown closed-row filters. |
+| `K6` | Burndown cut target | `0` | Burndown candidate labeling. |
+| `M2` | Report as-of month | `Mar` | Main report and `Analysis` screens. |
+| `N2` | Defer as-of month | `Mar` | `defer` module examples. |
+
+After formula installation, the unqualified workbook names point to the visible controls:
+
+```text
+PM_Filter_Dropdowns -> 'Planning Review'!$K$3
+Future_Filter_Mode -> 'Planning Review'!$K$4
+HideClosed_Status -> 'Planning Review'!$K$5
+Burndown_Cut_Target -> 'Planning Review'!$K$6
+```
+
+The module-qualified `Controls.*` names remain defaults and documentation fallbacks.
+
+Keep `Planning Review!A4` clear for the main report spill. Keep `Planning Review!O4:R200` clear for the note-context example formulas.
 
 ## Add-In Option
 

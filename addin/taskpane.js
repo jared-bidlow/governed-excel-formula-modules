@@ -20,7 +20,30 @@
   ];
 
   const reviewSheet = "Planning Review";
-  const requiredSheets = ["Planning Table", "Cap Setup", reviewSheet];
+  const validationSheet = "Validation Lists";
+  const requiredSheets = ["Planning Table", "Cap Setup", reviewSheet, validationSheet];
+  const validationLists = {
+    months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    groupFields: ["BU", "Region", "Site", "PM", "Category", "Revised Group", "Status", "Type"],
+    futureFilters: ["All", "Exclude Future", "Keep F1 Only", "Keep F1+F2"],
+    closedRows: ["SHOW", "HIDE"],
+    statuses: ["Active", "Hold", "Closed", "In Service", "Skipping", "Canceled"],
+    yesNo: ["Y", "N"]
+  };
+  const validationListColumns = [
+    { key: "months", header: "Month" },
+    { key: "groupFields", header: "Group Field" },
+    { key: "futureFilters", header: "Future Filter" },
+    { key: "closedRows", header: "Closed Rows" },
+    { key: "statuses", header: "Status" },
+    { key: "yesNo", header: "Yes No" }
+  ];
+  const visibleControlNames = [
+    { name: "PM_Filter_Dropdowns", address: "K3", formula: "='Planning Review'!$K$3" },
+    { name: "Future_Filter_Mode", address: "K4", formula: "='Planning Review'!$K$4" },
+    { name: "HideClosed_Status", address: "K5", formula: "='Planning Review'!$K$5" },
+    { name: "Burndown_Cut_Target", address: "K6", formula: "='Planning Review'!$K$6" }
+  ];
   const requiredNames = [
     "PM_Filter_Dropdowns",
     "Future_Filter_Mode",
@@ -83,7 +106,7 @@
   }
 
   async function setupWorkbook() {
-    appendLog("Creating starter sheets...");
+    appendLog("Creating starter sheets, controls, and validation lists...");
     const tables = [];
     for (const table of starterTables) {
       tables.push({
@@ -94,19 +117,7 @@
     }
 
     await Excel.run(async (context) => {
-      const existingSheets = {};
-      for (const sheetName of requiredSheets) {
-        const sheet = context.workbook.worksheets.getItemOrNullObject(sheetName);
-        sheet.load("name");
-        existingSheets[sheetName] = sheet;
-      }
-      await context.sync();
-
-      for (const sheetName of requiredSheets) {
-        if (existingSheets[sheetName].isNullObject) {
-          context.workbook.worksheets.add(sheetName);
-        }
-      }
+      await ensureRequiredSheets(context);
       await context.sync();
 
       for (const table of tables) {
@@ -118,11 +129,14 @@
         range.format.autofitColumns();
       }
 
-      context.workbook.worksheets.getItem(reviewSheet).getRange("M2").values = [["Mar"]];
+      buildValidationLists(context.workbook.worksheets.getItem(validationSheet));
+      formatPlanningTable(context.workbook.worksheets.getItem("Planning Table"));
+      formatCapSetup(context.workbook.worksheets.getItem("Cap Setup"));
+      formatPlanningReview(context.workbook.worksheets.getItem(reviewSheet));
       await context.sync();
     });
 
-    appendLog("Starter sheets ready.");
+    appendLog("Starter sheets, visible controls, dropdowns, and formats ready.");
   }
 
   async function installModules() {
@@ -160,6 +174,7 @@
       for (const item of formulas) {
         await replaceName(context, item.name, item.formula, item.comment);
       }
+      await bindVisibleControlNames(context);
       await context.sync();
     });
 
@@ -168,7 +183,10 @@
 
   async function validateWorkbook() {
     appendLog("Validating workbook contract...");
-    await Excel.run(async (context) => {
+    const expectedPlanningHeaders = parseTsv(await fetchText("../samples/planning_table_starter.tsv"))[0];
+    const expectedCapHeaders = parseTsv(await fetchText("../samples/cap_setup_starter.tsv"))[0];
+
+    const summary = await Excel.run(async (context) => {
       const sheets = {};
       for (const sheetName of requiredSheets) {
         const sheet = context.workbook.worksheets.getItemOrNullObject(sheetName);
@@ -197,21 +215,258 @@
         }
       }
 
-      const headers = context.workbook.worksheets
-        .getItem("Planning Table")
-        .getRange("A2:BO2");
-      headers.load("values");
+      const controlNameItems = {};
+      for (const control of visibleControlNames) {
+        const item = context.workbook.names.getItemOrNullObject(control.name);
+        item.load("name, formula");
+        controlNameItems[control.name] = item;
+      }
+
+      const planning = context.workbook.worksheets.getItem("Planning Table");
+      const capSetup = context.workbook.worksheets.getItem("Cap Setup");
+      const review = context.workbook.worksheets.getItem(reviewSheet);
+
+      const planningHeaders = planning.getRange("A2:BO2");
+      const capHeaders = capSetup.getRange("A2:B2");
+      const capRows = capSetup.getRange("A3:B100");
+      const reviewControls = review.getRange("K3:K6");
+      const reviewMonths = review.getRange("M2:N2");
+
+      planningHeaders.load("values");
+      capHeaders.load("values");
+      capRows.load("values");
+      reviewControls.load("values");
+      reviewMonths.load("values");
       await context.sync();
 
-      const headerSet = new Set(headers.values[0].map((value) => String(value).trim()));
-      for (const header of ["BU", "Annual Projected", "Current Authorized Amount"]) {
-        if (!headerSet.has(header)) {
-          throw new Error(`Missing Planning Table header: ${header}`);
-        }
-      }
+      assertHeaderOrder(planningHeaders.values[0], expectedPlanningHeaders, "Planning Table");
+      assertHeaderOrder(capHeaders.values[0], expectedCapHeaders, "Cap Setup");
+      assertCapRowsAreValid(capRows.values);
+      assertVisibleControls(reviewControls.values, reviewMonths.values);
+      assertControlNamesBound(controlNameItems);
+
+      return {
+        sheetCount: requiredSheets.length,
+        workbookNameCount: requiredNames.length,
+        planningHeaderCount: expectedPlanningHeaders.length,
+        capRowCount: countConfiguredCapRows(capRows.values),
+        controlCount: visibleControlNames.length,
+        dropdownListCount: validationListColumns.length
+      };
     });
 
     appendLog("Workbook contract valid.");
+    appendLog(renderValidationSummary(summary));
+  }
+
+  async function ensureRequiredSheets(context) {
+    const existingSheets = {};
+    for (const sheetName of requiredSheets) {
+      const sheet = context.workbook.worksheets.getItemOrNullObject(sheetName);
+      sheet.load("name");
+      existingSheets[sheetName] = sheet;
+    }
+    await context.sync();
+
+    for (const sheetName of requiredSheets) {
+      if (existingSheets[sheetName].isNullObject) {
+        context.workbook.worksheets.add(sheetName);
+      }
+    }
+  }
+
+  async function bindVisibleControlNames(context) {
+    for (const control of visibleControlNames) {
+      await replaceName(
+        context,
+        control.name,
+        control.formula,
+        `Governed formula visible control: ${reviewSheet}!${control.address}`
+      );
+    }
+  }
+
+  function buildValidationLists(sheet) {
+    const rowCount = Math.max(...validationListColumns.map((column) => validationLists[column.key].length)) + 1;
+    const values = Array.from({ length: rowCount }, (_, rowIndex) =>
+      validationListColumns.map((column) => {
+        if (rowIndex === 0) {
+          return column.header;
+        }
+        return validationLists[column.key][rowIndex - 1] || "";
+      })
+    );
+
+    const listRange = sheet.getRange("A1").getResizedRange(rowCount - 1, validationListColumns.length - 1);
+    listRange.values = values;
+    listRange.format.font.name = "Segoe UI";
+    listRange.format.autofitColumns();
+    sheet.getRange("A1:F1").format.font.bold = true;
+    sheet.getRange("A1:F1").format.fill.color = "#D9EAF7";
+  }
+
+  function formatPlanningTable(sheet) {
+    sheet.freezePanes.freezeRows(2);
+    sheet.getRange("A2:BO2").format.font.bold = true;
+    sheet.getRange("A2:BO2").format.wrapText = true;
+    sheet.getRange("A2:BO2").format.fill.color = "#D9EAF7";
+    for (const address of ["F2", "G2", "P2", "Q2", "BE2"]) {
+      sheet.getRange(address).format.fill.color = "#FFF2CC";
+    }
+    applyNumberFormat(sheet.getRange("P3:BA234"), 232, 38, "$#,##0");
+    applyNumberFormat(sheet.getRange("BM3:BM234"), 232, 1, "0");
+    applyListValidation(sheet.getRange("F3:F234"), validationSource("E"));
+    applyListValidation(sheet.getRange("M3:M234"), validationSource("F"));
+    applyListValidation(sheet.getRange("O3:O234"), validationSource("F"));
+    applyListValidation(sheet.getRange("BE3:BE234"), validationSource("F"));
+    applyListValidation(sheet.getRange("BG3:BH234"), validationSource("F"));
+    applyListValidation(sheet.getRange("BO3:BO234"), validationSource("F"));
+    sheet.getRange("A:BO").format.autofitColumns();
+  }
+
+  function formatCapSetup(sheet) {
+    sheet.freezePanes.freezeRows(2);
+    sheet.getRange("A2:B2").format.font.bold = true;
+    sheet.getRange("A2:B2").format.fill.color = "#D9EAF7";
+    applyNumberFormat(sheet.getRange("B3:B100"), 98, 1, "$#,##0");
+    applyNonNegativeValidation(sheet.getRange("B3:B100"));
+    sheet.getRange("A:B").format.autofitColumns();
+  }
+
+  function formatPlanningReview(sheet) {
+    sheet.freezePanes.freezeRows(3);
+    sheet.getRange("A1").values = [["Planning Review"]];
+    sheet.getRange("A2").values = [["Main report spill starts at A4. Columns O:R are reserved for notes."]];
+    sheet.getRange("J2:K6").values = [
+      ["Control", "Value"],
+      ["Group", "BU"],
+      ["Future Filter", "All"],
+      ["Closed Rows", "SHOW"],
+      ["Burndown Cut Target", 0]
+    ];
+    sheet.getRange("M1:N2").values = [
+      ["Report As Of", "Defer As Of"],
+      ["Mar", "Mar"]
+    ];
+
+    sheet.getRange("A1").format.font.bold = true;
+    sheet.getRange("A1").format.font.size = 16;
+    sheet.getRange("J2:K2").format.font.bold = true;
+    sheet.getRange("M1:N1").format.font.bold = true;
+    sheet.getRange("J2:K6").format.fill.color = "#F3F6FA";
+    sheet.getRange("K3:K6").format.fill.color = "#FFF2CC";
+    sheet.getRange("M2:N2").format.fill.color = "#FFF2CC";
+    applyNumberFormat(sheet.getRange("K6"), 1, 1, "$#,##0");
+    applyListValidation(sheet.getRange("K3"), validationSource("B"));
+    applyListValidation(sheet.getRange("K4"), validationSource("C"));
+    applyListValidation(sheet.getRange("K5"), validationSource("D"));
+    applyListValidation(sheet.getRange("M2:N2"), validationSource("A"));
+    applyNonNegativeValidation(sheet.getRange("K6"));
+    sheet.getRange("A:N").format.autofitColumns();
+  }
+
+  function validationSource(columnLetter) {
+    const index = columnLetter.charCodeAt(0) - "A".charCodeAt(0);
+    const listKey = validationListColumns[index].key;
+    const endRow = validationLists[listKey].length + 1;
+    return `='${validationSheet}'!$${columnLetter}$2:$${columnLetter}$${endRow}`;
+  }
+
+  function applyListValidation(range, source) {
+    range.dataValidation.clear();
+    range.dataValidation.rule = {
+      list: {
+        inCellDropDown: true,
+        source
+      }
+    };
+  }
+
+  function applyNonNegativeValidation(range) {
+    range.dataValidation.clear();
+    range.dataValidation.rule = {
+      decimal: {
+        formula1: "0",
+        operator: Excel.DataValidationOperator.greaterThanOrEqualTo
+      }
+    };
+  }
+
+  function applyNumberFormat(range, rowCount, columnCount, format) {
+    range.numberFormat = Array.from({ length: rowCount }, () => Array(columnCount).fill(format));
+  }
+
+  function assertHeaderOrder(actualHeaders, expectedHeaders, label) {
+    const actual = actualHeaders.map((value) => String(value).trim());
+    if (actual.length !== expectedHeaders.length) {
+      throw new Error(`${label} header count is ${actual.length}; expected ${expectedHeaders.length}.`);
+    }
+    expectedHeaders.forEach((expected, index) => {
+      if (actual[index] !== expected) {
+        throw new Error(`${label} header ${index + 1} should be ${expected}; found ${actual[index] || "(blank)"}.`);
+      }
+    });
+  }
+
+  function assertCapRowsAreValid(rows) {
+    rows.forEach((row, index) => {
+      const bu = String(row[0] || "").trim();
+      const cap = row[1];
+      if (bu && !(Number(cap) >= 0)) {
+        throw new Error(`Cap Setup row ${index + 3} has BU but Cap is not a non-negative number.`);
+      }
+    });
+  }
+
+  function countConfiguredCapRows(rows) {
+    return rows.filter((row) => String(row[0] || "").trim()).length;
+  }
+
+  function assertVisibleControls(controlValues, monthValues) {
+    assertAllowed("PM_Filter_Dropdowns", controlValues[0][0], validationLists.groupFields);
+    assertAllowed("Future_Filter_Mode", controlValues[1][0], validationLists.futureFilters);
+    assertAllowed("HideClosed_Status", controlValues[2][0], validationLists.closedRows);
+    if (!(Number(controlValues[3][0]) >= 0)) {
+      throw new Error("Burndown_Cut_Target control must be a non-negative number.");
+    }
+    assertAllowed("Planning Review!M2", monthValues[0][0], validationLists.months);
+    assertAllowed("Planning Review!N2", monthValues[0][1], validationLists.months);
+  }
+
+  function assertAllowed(label, value, allowedValues) {
+    const normalized = String(value || "").trim().toLowerCase();
+    const allowed = new Set(allowedValues.map((item) => item.toLowerCase()));
+    if (!allowed.has(normalized)) {
+      throw new Error(`${label} value ${value || "(blank)"} is not allowed.`);
+    }
+  }
+
+  function assertControlNamesBound(controlNameItems) {
+    for (const control of visibleControlNames) {
+      const item = controlNameItems[control.name];
+      if (item.isNullObject) {
+        throw new Error(`Missing workbook name: ${control.name}`);
+      }
+      if (normalizeFormula(item.formula) !== normalizeFormula(control.formula)) {
+        throw new Error(`${control.name} should point to ${control.formula}; found ${item.formula}.`);
+      }
+    }
+  }
+
+  function normalizeFormula(formula) {
+    return String(formula || "").replace(/\s/g, "").toUpperCase();
+  }
+
+  function renderValidationSummary(summary) {
+    return [
+      "Validation summary:",
+      `- Sheets present: ${summary.sheetCount}/${requiredSheets.length}`,
+      `- Workbook names installed: ${summary.workbookNameCount}/${requiredNames.length}`,
+      `- Planning Table headers: ${summary.planningHeaderCount}`,
+      `- Cap Setup rows with BU: ${summary.capRowCount}`,
+      `- Visible controls bound: ${summary.controlCount}/${visibleControlNames.length}`,
+      `- Dropdown lists ready: ${summary.dropdownListCount}`
+    ].join("\n");
   }
 
   async function replaceName(context, name, formula, comment) {

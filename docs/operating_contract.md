@@ -65,8 +65,11 @@ The formula modules assume generic workbook inputs, not private workbook state:
 - `Planning Table` contains job rows and the finance block.
 - `Cap Setup` contains the `BU` and `Cap` columns used by `kind.CapByBU(...)`.
 - `Planning Review` contains meeting controls and report spill areas.
+- `Validation Lists` contains dropdown source values for the public starter workbook.
 
 BU cap values should be changed in the workbook's `Cap Setup` sheet. They should not be edited inside `modules/kind.formula.txt`.
+
+The public starter keeps visible controls on `Planning Review` and binds the unqualified control names to those cells. Module-qualified `Controls.*` names remain safe defaults.
 
 ## Add-In Packaging Contract
 
