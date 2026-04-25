@@ -10,6 +10,7 @@ The add-in is an installer and validator. It does not replace the formula module
 - Pastes the public starter TSV data into `Planning Table!A2` and `Cap Setup!A2`.
 - Reads `modules/*.formula.txt` from the hosted repo root.
 - Installs workbook defined names through the Excel JavaScript API.
+- Installs default workbook-control names such as `PM_Filter_Dropdowns`, `Future_Filter_Mode`, `HideClosed_Status`, and `Burndown_Cut_Target`.
 - Adds module-qualified names such as `kind.CapByBU` and `Analysis.REFORECAST_QUEUE`.
 - Adds unqualified compatibility aliases for the first occurrence of each formula name.
 - Validates required sheets, names, starter headers, and compatibility helpers such as `TRIMRANGE_KEEPBLANKS` and `RBYROW`.

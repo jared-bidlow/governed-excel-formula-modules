@@ -1,5 +1,24 @@
 # Change Log
 
+## 2026-04-25 - Add workbook-control defaults
+
+Semantic change:
+
+- Added a tracked `Controls` formula module for default workbook-control names that public blank workbooks otherwise reported as `#NAME?`.
+- The Office.js installer now creates defaults for `PM_Filter_Dropdowns`, `Future_Filter_Mode`, `HideClosed_Status`, and `Burndown_Cut_Target`.
+
+Minimal diff summary:
+
+- Added `modules/controls.formula.txt`.
+- Updated the add-in installer, import map, add-in docs, changelog, and audit coverage.
+
+Visible impact:
+
+- Workbook behavior: report filters now resolve to safe defaults in a clean workbook.
+- Main report totals: no intended change when defaults match the previous workbook controls.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Bound local add-in server stalls
 
 Semantic change:

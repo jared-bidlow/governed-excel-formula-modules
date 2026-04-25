@@ -107,6 +107,12 @@ FORBIDDEN_EXTENSIONS = {
 }
 
 REQUIRED_FORMULAS = {
+    "modules/controls.formula.txt": [
+        "PM_Filter_Dropdowns",
+        "Future_Filter_Mode",
+        "HideClosed_Status",
+        "Burndown_Cut_Target",
+    ],
     "modules/get.formula.txt": [
         "TRIMRANGE_KEEPBLANKS",
         "GetFinanceBlock",
@@ -768,11 +774,13 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("loads Office.js", r"Office\.onReady"),
         ("uses Excel.run", r"Excel\.run"),
         ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review"),
+        ("loads workbook controls", r"../modules/controls\.formula\.txt"),
         ("loads formula modules", r"../modules/kind\.formula\.txt.*../modules/analysis\.formula\.txt"),
         ("installs workbook names", r"context\.workbook\.names\.add"),
         ("installs qualified module names", r"name:\s*`\$\{moduleFile\.prefix\}\.\$\{item\.name\}`"),
         ("handles unqualified alias collisions", r"unqualifiedAliases"),
         ("validates required names", r"requiredNames"),
+        ("validates workbook control names", r"PM_Filter_Dropdowns.*Future_Filter_Mode.*HideClosed_Status.*Burndown_Cut_Target"),
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
         ("strips module comments", r"stripBlockComments"),
     ]

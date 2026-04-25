@@ -2,6 +2,7 @@
   "use strict";
 
   const moduleFiles = [
+    { prefix: "Controls", path: "../modules/controls.formula.txt" },
     { prefix: "get", path: "../modules/get.formula.txt" },
     { prefix: "kind", path: "../modules/kind.formula.txt" },
     { prefix: "CapitalPlanning", path: "../modules/capital_planning_report.formula.txt" },
@@ -21,6 +22,11 @@
   const reviewSheet = "Planning Review";
   const requiredSheets = ["Planning Table", "Cap Setup", reviewSheet];
   const requiredNames = [
+    "PM_Filter_Dropdowns",
+    "Future_Filter_Mode",
+    "HideClosed_Status",
+    "Burndown_Cut_Target",
+    "Controls.PM_Filter_Dropdowns",
     "TRIMRANGE_KEEPBLANKS",
     "RBYROW",
     "get.TRIMRANGE_KEEPBLANKS",

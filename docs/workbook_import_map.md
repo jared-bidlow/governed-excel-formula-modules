@@ -10,6 +10,7 @@ For a blank-workbook trial, use `docs/starter_workbook.md`, paste `samples/plann
 
 | Workbook name | Repo source | Manual update note |
 |---|---|---|
+| `Controls` | `modules/controls.formula.txt` | Import first in a blank workbook so report filters have default workbook names. |
 | `get` | `modules/get.formula.txt` | Import when workbook extraction helpers change. |
 | `kind` | `modules/kind.formula.txt` | Import before report or analysis formulas when helper logic changes. |
 | `CapitalPlanning` | `modules/capital_planning_report.formula.txt` | Import after `kind` so helper references resolve. |
@@ -24,6 +25,8 @@ For a blank-workbook trial, use `docs/starter_workbook.md`, paste `samples/plann
 | `Planning Review` | Holds meeting controls such as the as-of month and output spill areas. |
 
 `kind.CapByBU(...)` reads `Cap Setup`, not hardcoded module constants. The BU value in `Planning Table[BU]` can include a description after a colon; only the code before the colon is used for cap lookup.
+
+The `Controls` module defines default workbook-control names used by the public report screens: `PM_Filter_Dropdowns`, `Future_Filter_Mode`, `HideClosed_Status`, and `Burndown_Cut_Target`. Replace those names with worksheet-linked controls later if you want interactive dropdown cells.
 
 The `get` and `kind` modules also include small compatibility helpers that older workbook copies may have held as workbook-local names, including `TRIMRANGE_KEEPBLANKS` and `RBYROW`. Importing the modules, or using the Office.js installer, should create those names in a blank workbook.
 
