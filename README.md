@@ -12,6 +12,12 @@ It keeps workbook formulas in plain-text modules, pairs them with scenario docum
 - Static checks for formula balance, named-formula size, public-safety strings, and important planning-screen contracts.
 - Operator-facing docs that explain how a workbook user should import, review, and validate formula modules.
 
+## For Technical Reviewers
+
+Start with `docs/technical_review_guide.md` if you are reviewing this repo as evidence of systems work.
+
+That guide explains how the pieces fit together: source-controlled formula modules, workbook contracts, static audits, starter data, Office.js installation tooling, and the public/private boundary. It is written for someone who wants to understand the engineering pattern without needing a private workbook or production data.
+
 ## Layout
 
 ```text
@@ -35,6 +41,7 @@ governed-excel-formula-modules/
 |   +-- public_release_checklist.md
 |   +-- scenario_matrix.md
 |   +-- starter_workbook.md
+|   +-- technical_review_guide.md
 |   +-- office_addin.md
 |   +-- workbook_import_map.md
 |   \-- change_log.md

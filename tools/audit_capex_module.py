@@ -348,6 +348,7 @@ def audit_docs(results: list[Result]) -> None:
     changelog = read_text(ROOT / "docs" / "change_log.md")
     release = read_text(ROOT / "docs" / "public_release_checklist.md")
     starter = read_text(ROOT / "docs" / "starter_workbook.md")
+    review = read_text(ROOT / "docs" / "technical_review_guide.md")
     push_helper = read_text(ROOT / "tools" / "push_public.ps1")
     addin_smoke = read_text(ROOT / "tools" / "start_addin_smoke_test.ps1")
     addin_server = read_text(ROOT / "tools" / "start_addin_dev_server.ps1")
@@ -447,9 +448,41 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "README.md",
         readme,
+        "README points technical reviewers to guide",
+        r"docs/technical_review_guide\.md",
+        "Surface the technical-review path from the README.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
         "README explains cap setup",
         r"Cap Setup.*samples/cap_setup_starter\.tsv.*kind\.CapByBU",
         "Tell public users how to set BU caps without editing formula modules.",
+    )
+    check_required_regex(
+        results,
+        "docs/technical_review_guide.md",
+        review,
+        "technical review guide states systems pattern",
+        r"treats workbook logic as governed source code",
+        "Keep the reviewer guide focused on the governed-workbook systems pattern.",
+    )
+    check_required_regex(
+        results,
+        "docs/technical_review_guide.md",
+        review,
+        "technical review guide lists review path",
+        r"Read `README\.md`.*Inspect `tools/audit_capex_module\.py`",
+        "Give reviewers a concrete file-by-file path through the repo.",
+    )
+    check_required_regex(
+        results,
+        "docs/technical_review_guide.md",
+        review,
+        "technical review guide states public boundary",
+        r"This repo intentionally does not include:.*workbook binaries.*production data",
+        "Keep the public/private boundary visible in the reviewer guide.",
     )
     check_required_regex(
         results,
@@ -490,6 +523,14 @@ def audit_docs(results: list[Result]) -> None:
         "scenario matrix covers public safety",
         r"Public Safety",
         "Include public safety scenarios.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records technical review guide",
+        r"Technical review guide added",
+        "Record the reviewer-facing documentation layer.",
     )
     check_required_regex(
         results,

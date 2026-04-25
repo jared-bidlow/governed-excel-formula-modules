@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-04-25 - Technical review guide added
+
+Semantic change:
+
+- Added a public technical-review guide so the repository communicates the governed-workbook systems pattern clearly to reviewers.
+- Surfaced the guide from the README without changing formula modules or workbook behavior.
+- Extended audit coverage so the review guide remains present and tied to the public/private boundary.
+
+Minimal diff summary:
+
+- Added `docs/technical_review_guide.md`.
+- Updated README reviewer guidance and repository layout.
+- Updated `tools/audit_capex_module.py` documentation checks.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Fix Office manifest validation
 
 Semantic change:
