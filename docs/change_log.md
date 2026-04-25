@@ -1,5 +1,25 @@
 # Change Log
 
+## 2026-04-25 - Excel runtime rationale documented
+
+Semantic change:
+
+- Added public-facing rationale for using Excel as the runtime while keeping workbook logic governed through text modules, Git, docs, and audit.
+- Clarified that Excel is appropriate for planning review surfaces, not for transactional application requirements.
+
+Minimal diff summary:
+
+- Added `Why Excel` to the README.
+- Added `Runtime Position` to the operating contract.
+- Added audit coverage for the public rationale.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Search helper label cleanup
 
 Semantic change:

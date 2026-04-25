@@ -319,11 +319,35 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "README.md",
+        readme,
+        "README defends Excel runtime",
+        r"Excel is the right runtime for this pattern",
+        "Explain why Excel is the runtime for the public template.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
+        "README states application boundary",
+        r"multi-user transactions, permissions, APIs, durable storage",
+        "Keep the public Excel rationale honest about application boundaries.",
+    )
+    check_required_regex(
+        results,
         "docs/operating_contract.md",
         operating,
         "operating contract states source-code pattern",
         r"formula modules are edited in plain text",
         "Document the formula-module source-control contract.",
+    )
+    check_required_regex(
+        results,
+        "docs/operating_contract.md",
+        operating,
+        "operating contract states runtime position",
+        r"Excel is the runtime because this pattern is meant for planning teams",
+        "Document why Excel is the public template runtime.",
     )
     check_required_regex(
         results,

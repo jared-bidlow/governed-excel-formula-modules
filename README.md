@@ -50,6 +50,20 @@ python tools/lint_formulas.py modules/*.formula.txt
 
 The audit is intentionally text-only. It does not open Excel, edit workbook binaries, or require workbook data.
 
+## Why Excel
+
+Excel is the right runtime for this pattern when the real work is planning, review, and decision support by people who already live in workbooks.
+
+The goal is not to pretend that a workbook is a database or a web application. The goal is to make workbook logic governable:
+
+- planners can inspect formulas, source rows, pivots, and exceptions without leaving Excel,
+- dynamic arrays can produce live review screens without a separate service layer,
+- `LET` and `LAMBDA` allow complex logic to be named, split, and reused,
+- Git can track formula modules as source code while excluding workbook binaries,
+- text audit can enforce size limits, public-safety rules, and key formula contracts.
+
+A different stack is better when the primary need is multi-user transactions, permissions, APIs, durable storage, or application workflows. This repo is for the space where Excel is already the operating surface, and the missing discipline is source control, reviewability, and repeatable validation.
+
 ## Current Readiness
 
 This repo works as a public source-code template:

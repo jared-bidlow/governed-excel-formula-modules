@@ -12,6 +12,20 @@ The repo demonstrates a governed workbook pattern:
 - planning screens are documented with scenarios,
 - workbook-side changes are captured as text before they are applied in Excel.
 
+## Runtime Position
+
+Excel is the runtime because this pattern is meant for planning teams whose review, notes, and decisions already happen in workbooks.
+
+The source-control boundary is what makes that defensible:
+
+- plain-text formula modules can be reviewed and linted,
+- workbook binaries and real data stay out of Git,
+- complex workbook logic is split into named formulas instead of hidden cell sprawl,
+- scenario docs describe expected planning behavior,
+- audit tooling catches public-safety issues and contract drift before release.
+
+This is not a claim that every planning process should stay in Excel. If the core requirement is multi-user writeback, permissions, APIs, or durable transactional storage, a database-backed application is the better system boundary.
+
 ## Scope
 
 In scope:
