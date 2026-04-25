@@ -1,0 +1,1935 @@
+PM_SPEND_REPORT = LAMBDA([groupBy],
+    LET(
+        FinanceBlock, get.GetFinanceBlock(),
+        BudgetRows, get.GetBudgetDetailRows(),
+        Hdr, TAKE(BudgetRows, 1),
+        IdxPM, XMATCH("PM", Hdr, 0),
+        IdxDesc, XMATCH("Project Description", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxAuth, XMATCH("Current Authorized Amount", Hdr, 0),
+        IdxCanceled, IFERROR(XMATCH("Canceled", Hdr, 0), 0),
+        GroupChoiceRaw, IF(ISOMITTED(groupBy), "Category", TRIM(groupBy & "")),
+        IdxGroupBase, IFERROR(
+            XMATCH(GroupChoiceRaw, Hdr, 0),
+            XMATCH("Category", Hdr, 0)
+        ),
+        IdxGroup, IF(IdxGroupBase = IdxPM, XMATCH("Category", Hdr, 0), IdxGroupBase),
+        GroupLabel, INDEX(Hdr, 1, IdxGroup),
+        Projections, get.GetProjections(FinanceBlock),
+        Actuals12, get.GetActuals12(FinanceBlock),
+        AsOfMonth, kind.MonthNum('Planning Review'!$M$2),
+        YtdActuals, IFERROR(kind.GetYTDActuals(Actuals12, AsOfMonth), 0),
+        ProjectedHRs, VSTACK("2026 Projected", Projections),
+        StatusHRs, CHOOSECOLS(BudgetRows, IdxStatus),
+        AuthHRs, CHOOSECOLS(BudgetRows, IdxAuth),
+        ActHRs, VSTACK("YTD Actuals", YtdActuals),
+        CanceledHRs, IF(
+            IdxCanceled > 0,
+            CHOOSECOLS(BudgetRows, IdxCanceled),
+            VSTACK("Canceled", 0 * Projections)
+        ),
+        UniverseMask, DROP(
+            kind.CapConsumeMask(
+                BudgetRows,
+                StatusHRs,
+                AuthHRs,
+                ProjectedHRs,
+                ActHRs,
+                CanceledHRs
+            ),
+            1
+        ),
+        GroupRaw, DROP(CHOOSECOLS(BudgetRows, IdxGroup), 1),
+        PMRaw, DROP(CHOOSECOLS(BudgetRows, IdxPM), 1),
+        DescRaw, DROP(CHOOSECOLS(BudgetRows, IdxDesc), 1),
+        StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
+        GroupVals, IF(
+            TRIM(GroupRaw & "") = "",
+            "(Unassigned " & GroupLabel & ")",
+            GroupRaw
+        ),
+        PMVals, IF(TRIM(PMRaw & "") = "", "(Unassigned PM)", PMRaw),
+        JobVals, IF(
+            TRIM(DescRaw & "") = "",
+            "(No Project Description)",
+            DescRaw
+        ),
+        Remaining, Projections - YtdActuals,
+        SpentPct, IF(
+            Projections = 0,
+            IF(YtdActuals <> 0, 1, 0),
+            YtdActuals / Projections
+        ),
+        PotSkipSignal, IF(
+            (Projections > 0) * (YtdActuals = 0),
+            "Pot Skip",
+            ""
+        ),
+        PotSkipAmt, IF(PotSkipSignal = "Pot Skip", Projections, 0),
+        GroupTotalsRaw, GROUPBY(
+            GroupVals,
+            HSTACK(Projections, YtdActuals, Remaining, PotSkipAmt),
+            HSTACK(SUM, SUM, SUM, SUM),
+            0,
+            0,
+            1,
+            UniverseMask
+        ),
+        GroupProj, CHOOSECOLS(GroupTotalsRaw, 2),
+        GroupSpend, CHOOSECOLS(GroupTotalsRaw, 3),
+        GroupPct, IF(
+            GroupProj = 0,
+            IF(GroupSpend <> 0, 1, 0),
+            GroupSpend / GroupProj
+        ),
+        SummaryRaw, GROUPBY(
+            HSTACK(GroupVals, PMVals),
+            HSTACK(Projections, YtdActuals, Remaining, PotSkipAmt),
+            HSTACK(SUM, SUM, SUM, SUM),
+            0,
+            0,
+            {1, 2},
+            UniverseMask
+        ),
+        SummaryProj, CHOOSECOLS(SummaryRaw, 3),
+        SummarySpend, CHOOSECOLS(SummaryRaw, 4),
+        SummaryPct, IF(
+            SummaryProj = 0,
+            IF(SummarySpend <> 0, 1, 0),
+            SummarySpend / SummaryProj
+        ),
+        DetailRaw, FILTER(
+            HSTACK(
+                GroupVals,
+                PMVals,
+                JobVals,
+                Projections,
+                YtdActuals,
+                Remaining,
+                SpentPct,
+                StatusRaw,
+                PotSkipSignal,
+                PotSkipAmt
+            ),
+            UniverseMask
+        ),
+        DetailRows, SORTBY(
+            DetailRaw,
+            CHOOSECOLS(DetailRaw, 1),
+            1,
+            CHOOSECOLS(DetailRaw, 2),
+            1,
+            CHOOSECOLS(DetailRaw, 3),
+            1
+        ),
+        HeaderRow, HSTACK(
+            GroupLabel,
+            "PM",
+            "Project Description",
+            "2026 Projected",
+            "YTD Spend",
+            "Remaining",
+            "% Spent",
+            "Status",
+            "Actuals Signal",
+            "Pot Skip Projected"
+        ),
+        GroupTotalRows, HSTACK(
+            CHOOSECOLS(GroupTotalsRaw, 1),
+            MAKEARRAY(ROWS(GroupTotalsRaw), 1, LAMBDA(rw, c, "(Group Total)")),
+            MAKEARRAY(ROWS(GroupTotalsRaw), 1, LAMBDA(rw, c, "")),
+            CHOOSECOLS(GroupTotalsRaw, 2, 3, 4),
+            GroupPct,
+            MAKEARRAY(ROWS(GroupTotalsRaw), 2, LAMBDA(rw, c, "")),
+            CHOOSECOLS(GroupTotalsRaw, 5)
+        ),
+        SummaryRows, HSTACK(
+            CHOOSECOLS(SummaryRaw, 1, 2),
+            MAKEARRAY(ROWS(SummaryRaw), 1, LAMBDA(rw, c, "(PM Total)")),
+            CHOOSECOLS(SummaryRaw, 3, 4, 5),
+            SummaryPct,
+            MAKEARRAY(ROWS(SummaryRaw), 2, LAMBDA(rw, c, "")),
+            CHOOSECOLS(SummaryRaw, 6)
+        ),
+        TitlePad, MAKEARRAY(1, COLUMNS(HeaderRow) - 1, LAMBDA(rw, c, "")),
+        BlankRow, MAKEARRAY(1, COLUMNS(HeaderRow), LAMBDA(rw, c, "")),
+        IFERROR(
+            VSTACK(
+                HSTACK("Group Totals by " & GroupLabel, TitlePad),
+                HeaderRow,
+                GroupTotalRows,
+                BlankRow,
+                HSTACK("PM Summary by " & GroupLabel, TitlePad),
+                HeaderRow,
+                SummaryRows,
+                BlankRow,
+                HSTACK("Jobs by " & GroupLabel, TitlePad),
+                HeaderRow,
+                DetailRows
+            ),
+            "No cap-consuming rows found for PM spend reporting"
+        )
+    )
+);
+
+WORKING_BUDGET_SCREEN = LAMBDA(
+    LET(
+        FinanceBlock, get.GetFinanceBlock(),
+        BudgetRows, get.GetBudgetDetailRows(),
+        Hdr, TAKE(BudgetRows, 1),
+        IdxRegion, XMATCH("Region", Hdr, 0),
+        IdxSite, XMATCH("Site", Hdr, 0),
+        IdxPM, XMATCH("PM", Hdr, 0),
+        IdxCat, XMATCH("Category", Hdr, 0),
+        IdxDesc, XMATCH("Project Description", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxAuth, XMATCH("Current Authorized Amount", Hdr, 0),
+        IdxCanceled, IFERROR(XMATCH("Canceled", Hdr, 0), 0),
+        Projections, get.GetProjections(FinanceBlock),
+        Actuals12, get.GetActuals12(FinanceBlock),
+        AsOfMonth, kind.MonthNum('Planning Review'!$M$2),
+        YtdActuals, IFERROR(kind.GetYTDActuals(Actuals12, AsOfMonth), 0),
+        ProjectedHRs, VSTACK("2026 Projected", Projections),
+        StatusHRs, CHOOSECOLS(BudgetRows, IdxStatus),
+        AuthHRs, CHOOSECOLS(BudgetRows, IdxAuth),
+        ActHRs, VSTACK("YTD Actuals", YtdActuals),
+        CanceledHRs, IF(
+            IdxCanceled > 0,
+            CHOOSECOLS(BudgetRows, IdxCanceled),
+            VSTACK("Canceled", 0 * Projections)
+        ),
+        UniverseMask, DROP(
+            kind.CapConsumeMask(
+                BudgetRows,
+                StatusHRs,
+                AuthHRs,
+                ProjectedHRs,
+                ActHRs,
+                CanceledHRs
+            ),
+            1
+        ),
+        RegionRaw, DROP(CHOOSECOLS(BudgetRows, IdxRegion), 1),
+        SiteRaw, DROP(CHOOSECOLS(BudgetRows, IdxSite), 1),
+        PMRaw, DROP(CHOOSECOLS(BudgetRows, IdxPM), 1),
+        CatRaw, DROP(CHOOSECOLS(BudgetRows, IdxCat), 1),
+        DescRaw, DROP(CHOOSECOLS(BudgetRows, IdxDesc), 1),
+        StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
+        AuthRaw, DROP(CHOOSECOLS(BudgetRows, IdxAuth), 1),
+        RegionVals, IF(TRIM(RegionRaw & "") = "", "(Unassigned Region)", RegionRaw),
+        SiteVals, IF(TRIM(SiteRaw & "") = "", "(Unassigned Site)", SiteRaw),
+        PMVals, IF(TRIM(PMRaw & "") = "", "(Unassigned PM)", PMRaw),
+        CatVals, IF(TRIM(CatRaw & "") = "", "(Unassigned Category)", CatRaw),
+        JobVals, IF(TRIM(DescRaw & "") = "", "(No Project Description)", DescRaw),
+        Remaining, Projections - YtdActuals,
+        SpentPct, IF(
+            Projections = 0,
+            IF(YtdActuals <> 0, 1, 0),
+            YtdActuals / Projections
+        ),
+        PotSkipFlag, (Projections > 0) * (YtdActuals = 0),
+        AuthHoldFlag, (AuthRaw > 0) * (Projections = 0) * (YtdActuals = 0),
+        ZeroProjActualFlag, (Projections = 0) * (YtdActuals > 0),
+        OverProjFlag, (Projections > 0) * (YtdActuals > Projections),
+        ActiveSpendFlag, (Projections > 0) * (YtdActuals > 0) * (YtdActuals <= Projections),
+        PotSkipAmt, IF(PotSkipFlag, Projections, 0),
+        ActualsSignal, IF(
+            PotSkipFlag,
+            "Pot Skip",
+            IF(
+                ZeroProjActualFlag,
+                "Unplanned Actuals",
+                IF(
+                    OverProjFlag,
+                    "Over Projected",
+                    IF(
+                        ActiveSpendFlag,
+                        "Active Spend",
+                        IF(AuthHoldFlag, "Authorized No Spend", "Monitor")
+                    )
+                )
+            )
+        ),
+        PlanningHint, IF(
+            PotSkipFlag,
+            "Pot Skip Review",
+            IF(
+                AuthHoldFlag,
+                "Authorized Hold Review",
+                IF(
+                    ZeroProjActualFlag,
+                    "Unplanned Spend Review",
+                    IF(
+                        OverProjFlag,
+                        "Reforecast / Over Projected",
+                        IF(ActiveSpendFlag, "Carry Forecast Review", "Monitor")
+                    )
+                )
+            )
+        ),
+        CandidateMask, UniverseMask * (
+            (PotSkipFlag + AuthHoldFlag + ZeroProjActualFlag + OverProjFlag + ActiveSpendFlag) > 0
+        ),
+        HintTotalsRaw, GROUPBY(
+            PlanningHint,
+            HSTACK(Projections, YtdActuals, Remaining, PotSkipAmt),
+            HSTACK(SUM, SUM, SUM, SUM),
+            0,
+            0,
+            1,
+            CandidateMask
+        ),
+        HintProj, CHOOSECOLS(HintTotalsRaw, 2),
+        HintSpend, CHOOSECOLS(HintTotalsRaw, 3),
+        HintPct, IF(
+            HintProj = 0,
+            IF(HintSpend <> 0, 1, 0),
+            HintSpend / HintProj
+        ),
+        HintHeader, HSTACK(
+            "Planning Hint",
+            "2026 Projected",
+            "YTD Spend",
+            "Remaining",
+            "% Spent",
+            "Pot Skip Projected"
+        ),
+        HintRows, HSTACK(
+            CHOOSECOLS(HintTotalsRaw, 1, 2, 3, 4),
+            HintPct,
+            CHOOSECOLS(HintTotalsRaw, 5)
+        ),
+        DetailHeader, HSTACK(
+            "Region",
+            "Site",
+            "PM",
+            "Category",
+            "Project Description",
+            "Status",
+            "2026 Projected",
+            "YTD Spend",
+            "Remaining",
+            "Current Authorized",
+            "% Spent",
+            "Actuals Signal",
+            "Pot Skip Projected",
+            "Planning Hint"
+        ),
+        DetailRaw, FILTER(
+            HSTACK(
+                RegionVals,
+                SiteVals,
+                PMVals,
+                CatVals,
+                JobVals,
+                StatusRaw,
+                Projections,
+                YtdActuals,
+                Remaining,
+                AuthRaw,
+                SpentPct,
+                ActualsSignal,
+                PotSkipAmt,
+                PlanningHint
+            ),
+            CandidateMask
+        ),
+        DetailRows, SORTBY(
+            DetailRaw,
+            CHOOSECOLS(DetailRaw, 14),
+            1,
+            CHOOSECOLS(DetailRaw, 1),
+            1,
+            CHOOSECOLS(DetailRaw, 2),
+            1,
+            CHOOSECOLS(DetailRaw, 5),
+            1
+        ),
+        HintPad, MAKEARRAY(1, COLUMNS(HintHeader) - 1, LAMBDA(rw, c, "")),
+        DetailPad, MAKEARRAY(1, COLUMNS(DetailHeader) - 1, LAMBDA(rw, c, "")),
+        BlankHintRow, MAKEARRAY(1, COLUMNS(HintHeader), LAMBDA(rw, c, "")),
+        IFERROR(
+            VSTACK(
+                HSTACK("Working Budget Totals by Planning Hint", HintPad),
+                HintHeader,
+                HintRows,
+                BlankHintRow,
+                HSTACK("Working Budget Detail", DetailPad),
+                DetailHeader,
+                DetailRows
+            ),
+            "No working-budget candidates found in the active accounting universe"
+        )
+    )
+);
+
+REFORECAST_QUEUE_AXIS = LAMBDA([groupBy],
+    LET(
+        FinanceBlock, get.GetFinanceBlock(),
+        BudgetRows, get.GetBudgetDetailRows(),
+        Hdr, TAKE(BudgetRows, 1),
+        IdxBU, XMATCH("BU", Hdr, 0),
+        GroupChoiceRaw, IF(ISOMITTED(groupBy), "BU", TRIM(groupBy & "")),
+        IdxGroup, IFERROR(XMATCH(GroupChoiceRaw, Hdr, 0), IdxBU),
+        GroupLabel, INDEX(Hdr, 1, IdxGroup),
+        IdxRegion, XMATCH("Region", Hdr, 0),
+        IdxSite, XMATCH("Site", Hdr, 0),
+        IdxPM, XMATCH("PM", Hdr, 0),
+        IdxDesc, XMATCH("Project Description", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxAuth, XMATCH("Current Authorized Amount", Hdr, 0),
+        IdxStart, IFERROR(
+            XMATCH("Earliest Start (Internal)", Hdr, 0),
+            XMATCH("Earliest Start(Internal)", Hdr, 0)
+        ),
+        IdxCanceled, IFERROR(XMATCH("Canceled", Hdr, 0), 0),
+        Projections, get.GetProjections(FinanceBlock),
+        Actuals12, get.GetActuals12(FinanceBlock),
+        Budget12, get.GetBudget12(FinanceBlock),
+        AsOfMonth, kind.MonthNum('Planning Review'!$M$2),
+        YtdActuals, IFERROR(kind.GetYTDActuals(Actuals12, AsOfMonth), 0),
+        ProjectedHRs, VSTACK("2026 Projected", Projections),
+        StatusHRs, CHOOSECOLS(BudgetRows, IdxStatus),
+        AuthHRs, CHOOSECOLS(BudgetRows, IdxAuth),
+        ActHRs, VSTACK("YTD Actuals", YtdActuals),
+        CanceledHRs, IF(
+            IdxCanceled > 0,
+            CHOOSECOLS(BudgetRows, IdxCanceled),
+            VSTACK("Canceled", 0 * Projections)
+        ),
+        UniverseMask, DROP(
+            kind.CapConsumeMask(
+                BudgetRows,
+                StatusHRs,
+                AuthHRs,
+                ProjectedHRs,
+                ActHRs,
+                CanceledHRs
+            ),
+            1
+        ),
+        BURaw, DROP(CHOOSECOLS(BudgetRows, IdxBU), 1),
+        GroupRaw, DROP(CHOOSECOLS(BudgetRows, IdxGroup), 1),
+        RegionRaw, DROP(CHOOSECOLS(BudgetRows, IdxRegion), 1),
+        SiteRaw, DROP(CHOOSECOLS(BudgetRows, IdxSite), 1),
+        PMRaw, DROP(CHOOSECOLS(BudgetRows, IdxPM), 1),
+        DescRaw, DROP(CHOOSECOLS(BudgetRows, IdxDesc), 1),
+        StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
+        AuthRaw, DROP(CHOOSECOLS(BudgetRows, IdxAuth), 1),
+        StartRaw, DROP(CHOOSECOLS(BudgetRows, IdxStart), 1),
+        AuthVal, IFERROR(0 + AuthRaw, 0),
+        BUCode, TEXTBEFORE(BURaw, ":", , , 1),
+        GroupVals, IF(TRIM(GroupRaw & "") = "", "(Unassigned " & GroupLabel & ")", GroupRaw),
+        RegionVals, IF(TRIM(RegionRaw & "") = "", "(Unassigned Region)", RegionRaw),
+        SiteVals, IF(TRIM(SiteRaw & "") = "", "(Unassigned Site)", SiteRaw),
+        PMVals, IF(TRIM(PMRaw & "") = "", "(Unassigned PM)", PMRaw),
+        JobVals, IF(TRIM(DescRaw & "") = "", "(No Project Description)", DescRaw),
+        Remaining, Projections - YtdActuals,
+        StartMonthVec, kind.GetStartMonthVec(StartRaw),
+        CapVec, IFERROR(kind.CapByBU(BUCode), 0),
+        SignalPack, kind.SpendSignalPack(
+            Projections,
+            YtdActuals,
+            Actuals12,
+            Budget12,
+            StartMonthVec,
+            AsOfMonth,
+            CapVec
+        ),
+        EarlySpendFlagVec, CHOOSECOLS(SignalPack, 2),
+        DriftVec, CHOOSECOLS(SignalPack, 3),
+        ClosePack, kind.CloseMetricPack(Projections, YtdActuals, StatusRaw),
+        AdjustedProjected, CHOOSECOLS(ClosePack, 1),
+        Closed, CHOOSECOLS(ClosePack, 2),
+        LineRemainingPct, IFERROR((Projections - YtdActuals) / Projections, ""),
+        Zeros, 0 * Projections,
+        ReportFlagEvidence, kind.FlagsOut(
+            Projections,
+            YtdActuals,
+            AdjustedProjected,
+            LineRemainingPct,
+            Closed,
+            EarlySpendFlagVec,
+            Zeros,
+            Zeros,
+            Zeros,
+            Zeros,
+            Zeros,
+            Zeros,
+            DriftVec
+        ),
+        AddForecastFlag, (Projections = 0) * (YtdActuals > 0),
+        RaiseForecastFlag, (Projections > 0) *
+            ISNUMBER(SEARCH("Over Projected", ReportFlagEvidence)),
+        CutHoldFlag, (Projections > 0) * (YtdActuals = 0),
+        ReleaseHoldFlag, (AuthVal > 0) * (Projections = 0) * (YtdActuals = 0),
+        CandidateMask, UniverseMask * (
+            (RaiseForecastFlag + AddForecastFlag + CutHoldFlag + ReleaseHoldFlag) > 0
+        ),
+        Priority, IF(
+            RaiseForecastFlag,
+            1,
+            IF(AddForecastFlag, 2, IF(CutHoldFlag, 3, IF(ReleaseHoldFlag, 4, 99)))
+        ),
+        Action, IF(
+            RaiseForecastFlag,
+            "Raise Forecast",
+            IF(
+                AddForecastFlag,
+                "Add Forecast",
+                IF(
+                    CutHoldFlag,
+                    "Cut / Hold Review",
+                    IF(ReleaseHoldFlag, "Release / Hold Auth", "")
+                )
+            )
+        ),
+        PlanningEvidence, IF(
+            RaiseForecastFlag,
+            "Report flag contains Over Projected after tolerance",
+            IF(
+                AddForecastFlag,
+                "Actual spend exists with no 2026 projection",
+                IF(
+                    CutHoldFlag,
+                    "Projected work has no spend through the as-of month",
+                    IF(
+                        ReleaseHoldFlag,
+                        "Authorization exists with no forecast or actual spend",
+                        ""
+                    )
+                )
+            )
+        ),
+        SuggestedDelta, IF(
+            RaiseForecastFlag,
+            YtdActuals - Projections,
+            IF(AddForecastFlag, YtdActuals, IF(CutHoldFlag, -Projections, 0))
+        ),
+        DecisionDollars, IF(
+            RaiseForecastFlag,
+            SuggestedDelta,
+            IF(AddForecastFlag, YtdActuals, IF(CutHoldFlag, Projections, AuthVal))
+        ),
+        Reason, IF(
+            RaiseForecastFlag,
+            "YTD spend is above current 2026 projected",
+            IF(
+                AddForecastFlag,
+                "Actual spend exists with no 2026 projection",
+                IF(
+                    CutHoldFlag,
+                    "Projected work has no spend through the as-of month",
+                    IF(
+                        ReleaseHoldFlag,
+                        "Authorized amount has no forecast or actual spend",
+                        ""
+                    )
+                )
+            )
+        ),
+        Header, HSTACK(
+            "Priority",
+            "Action",
+            GroupLabel,
+            "Region",
+            "Site",
+            "PM",
+            "Project Description",
+            "Status",
+            "2026 Projected",
+            "YTD Spend",
+            "Remaining",
+            "Current Authorized",
+            "Report Flag Evidence",
+            "Planning Evidence",
+            "Suggested Delta",
+            "Decision Dollars",
+            "Reason"
+        ),
+        RowsRaw, FILTER(
+            HSTACK(
+                Priority,
+                Action,
+                GroupVals,
+                RegionVals,
+                SiteVals,
+                PMVals,
+                JobVals,
+                StatusRaw,
+                Projections,
+                YtdActuals,
+                Remaining,
+                AuthVal,
+                ReportFlagEvidence,
+                PlanningEvidence,
+                SuggestedDelta,
+                DecisionDollars,
+                Reason
+            ),
+            CandidateMask
+        ),
+        RowsSorted, SORTBY(
+            RowsRaw,
+            CHOOSECOLS(RowsRaw, 1),
+            1,
+            CHOOSECOLS(RowsRaw, 16),
+            -1,
+            CHOOSECOLS(RowsRaw, 3),
+            1,
+            CHOOSECOLS(RowsRaw, 7),
+            1
+        ),
+        VSTACK(Header, RowsSorted)
+    )
+);
+
+REFORECAST_QUEUE = LAMBDA([groupBy],
+    LET(
+        GroupChoiceRaw, IF(ISOMITTED(groupBy), "BU", TRIM(groupBy & "")),
+        Axis, REFORECAST_QUEUE_AXIS(GroupChoiceRaw),
+        Header, TAKE(Axis, 1),
+        Rows, DROP(Axis, 1),
+        GroupLabel, INDEX(Header, 1, 3),
+        ScreenCols, COLUMNS(Header),
+        PadTo, LAMBDA(arr,
+            IF(
+                COLUMNS(arr) < ScreenCols,
+                HSTACK(
+                    arr,
+                    MAKEARRAY(ROWS(arr), ScreenCols - COLUMNS(arr), LAMBDA(rw, c, ""))
+                ),
+                arr
+            )
+        ),
+        GroupVals, CHOOSECOLS(Rows, 3),
+        JobKey, CHOOSECOLS(Rows, 5) & " | " & CHOOSECOLS(Rows, 6) & " | " & CHOOSECOLS(Rows, 7),
+        ActionSortLabel, CHOOSECOLS(Rows, 1) & " " & CHOOSECOLS(Rows, 2),
+        DecisionDollars, CHOOSECOLS(Rows, 16),
+        ActionTotalsRaw, GROUPBY(
+            CHOOSECOLS(Rows, 2),
+            DecisionDollars,
+            SUM,
+            0,
+            0,
+            1
+        ),
+        ActionTotals, SORTBY(ActionTotalsRaw, CHOOSECOLS(ActionTotalsRaw, 2), -1),
+        GrandTotalRow, HSTACK("Grand Total", SUM(DecisionDollars)),
+        GroupJobActionPivot, PIVOTBY(
+            HSTACK(
+                VSTACK(GroupLabel, GroupVals),
+                VSTACK("Job", JobKey)
+            ),
+            VSTACK("Action", ActionSortLabel),
+            VSTACK("Decision Dollars", DecisionDollars),
+            SUM,
+            3,
+            2,
+            {1, 2},
+            1,
+            1
+        ),
+        TitlePad, MAKEARRAY(1, ScreenCols - 1, LAMBDA(rw, c, "")),
+        BlankRow, MAKEARRAY(1, ScreenCols, LAMBDA(rw, c, "")),
+        IFERROR(
+            VSTACK(
+                HSTACK("Reforecast Queue Totals", TitlePad),
+                PadTo(HSTACK("Action", "Decision Dollars")),
+                PadTo(GrandTotalRow),
+                PadTo(ActionTotals),
+                BlankRow,
+                HSTACK("Reforecast Queue by " & GroupLabel & ", Job, and Action", TitlePad),
+                PadTo(GroupJobActionPivot),
+                BlankRow,
+                HSTACK("Reforecast Queue Detail", TitlePad),
+                Header,
+                Rows
+            ),
+            "No reforecast queue candidates found in the active accounting universe"
+        )
+    )
+);
+
+BU_CAP_SCORECARD_AXIS = LAMBDA(
+    LET(
+        FinanceBlock, get.GetFinanceBlock(),
+        BudgetRows, get.GetBudgetDetailRows(),
+        Hdr, TAKE(BudgetRows, 1),
+        IdxBU, XMATCH("BU", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxAuth, XMATCH("Current Authorized Amount", Hdr, 0),
+        IdxCarryover, XMATCH("Carry-over", Hdr, 0),
+        IdxRevisedGroup, XMATCH("Revised Group", Hdr, 0),
+        IdxFutureTierOverride, XMATCH("Future Tier Override", Hdr, 0),
+        IdxCanceled, IFERROR(XMATCH("Canceled", Hdr, 0), 0),
+        Projections, get.GetProjections(FinanceBlock),
+        Actuals12, get.GetActuals12(FinanceBlock),
+        Budget12, get.GetBudget12(FinanceBlock),
+        AsOfMonth, kind.MonthNum('Planning Review'!$M$2),
+        YtdActuals, IFERROR(kind.GetYTDActuals(Actuals12, AsOfMonth), 0),
+        YtdBudget, BYROW(TAKE(Budget12, , AsOfMonth), LAMBDA(r, SUM(N(r)))),
+        ProjectedHRs, VSTACK("2026 Projected", Projections),
+        StatusHRs, CHOOSECOLS(BudgetRows, IdxStatus),
+        AuthHRs, CHOOSECOLS(BudgetRows, IdxAuth),
+        ActHRs, VSTACK("YTD Actuals", YtdActuals),
+        CanceledHRs, IF(
+            IdxCanceled > 0,
+            CHOOSECOLS(BudgetRows, IdxCanceled),
+            VSTACK("Canceled", 0 * Projections)
+        ),
+        UniverseMask, DROP(
+            kind.CapConsumeMask(
+                BudgetRows,
+                StatusHRs,
+                AuthHRs,
+                ProjectedHRs,
+                ActHRs,
+                CanceledHRs
+            ),
+            1
+        ),
+        StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
+        CarryoverRaw, DROP(CHOOSECOLS(BudgetRows, IdxCarryover), 1),
+        RevisedGroupRaw, DROP(CHOOSECOLS(BudgetRows, IdxRevisedGroup), 1),
+        FutureTierOverrideRaw, DROP(CHOOSECOLS(BudgetRows, IdxFutureTierOverride), 1),
+        BURaw, DROP(CHOOSECOLS(BudgetRows, IdxBU), 1),
+        BUVals, IF(TRIM(BURaw & "") = "", "(Unassigned BU)", BURaw),
+        CapVec, IFERROR(kind.CapByBU(BUVals), 0),
+        FutureFilterMode, IFERROR(TRIM(Future_Filter_Mode), "All"),
+        HideClosedMode, IFERROR(UPPER(TRIM(HideClosed_Status)), "SHOW"),
+        FutureTierAutoVec, kind.FutureTierAuto(
+            RevisedGroupRaw,
+            Projections,
+            YtdActuals,
+            CarryoverRaw,
+            250000
+        ),
+        FutureTierFinalRaw, kind.FutureTierFinal(
+            FutureTierAutoVec,
+            FutureTierOverrideRaw
+        ),
+        FutureIncludeMaskRaw, kind.FutureIncludeMask(
+            RevisedGroupRaw,
+            FutureTierFinalRaw,
+            FutureFilterMode
+        ),
+        ClosedIncludeMaskRaw, kind.HideClosedMask(StatusRaw, HideClosedMode),
+        InScopeMask, --UniverseMask * --FutureIncludeMaskRaw * --ClosedIncludeMaskRaw,
+        HiddenFutureMask, --UniverseMask * (1 - --FutureIncludeMaskRaw),
+        HiddenClosedMask, --UniverseMask * --FutureIncludeMaskRaw * (1 - --ClosedIncludeMaskRaw),
+        HiddenBurnAmt, IF(
+            kind.HiddenMaskLogic(StatusRaw, Projections, YtdActuals),
+            IF(
+                Projections = 0,
+                YtdActuals,
+                IF(YtdActuals > Projections, YtdActuals - Projections, 0)
+            ),
+            0
+        ),
+        RemainingToBurn, Projections - YtdActuals,
+        Jobs, 1 + 0 * Projections,
+        SummaryRaw, GROUPBY(
+            BUVals,
+            HSTACK(
+                CapVec,
+                HiddenBurnAmt,
+                Projections * InScopeMask,
+                YtdBudget * InScopeMask,
+                YtdActuals * InScopeMask,
+                RemainingToBurn * InScopeMask,
+                Jobs * InScopeMask,
+                Projections * HiddenFutureMask,
+                Projections * HiddenClosedMask
+            ),
+            HSTACK(MAX, SUM, SUM, SUM, SUM, SUM, SUM, SUM, SUM),
+            0,
+            0,
+            1,
+            UniverseMask
+        ),
+        BUName, CHOOSECOLS(SummaryRaw, 1),
+        Cap, CHOOSECOLS(SummaryRaw, 2),
+        HiddenBurn, CHOOSECOLS(SummaryRaw, 3),
+        EffectiveCap, Cap - HiddenBurn,
+        Projected, CHOOSECOLS(SummaryRaw, 4),
+        BudgetYtd, CHOOSECOLS(SummaryRaw, 5),
+        BurnedYtd, CHOOSECOLS(SummaryRaw, 6),
+        RemainingBurn, CHOOSECOLS(SummaryRaw, 7),
+        JobCount, CHOOSECOLS(SummaryRaw, 8),
+        HiddenFuture, CHOOSECOLS(SummaryRaw, 9),
+        HiddenClosed, CHOOSECOLS(SummaryRaw, 10),
+        FilteredProjected, HiddenFuture + HiddenClosed,
+        PlanCapRemaining, EffectiveCap - Projected,
+        PctPlanCap, IF(
+            EffectiveCap = 0,
+            IF(Projected <> 0, 1, 0),
+            Projected / EffectiveCap
+        ),
+        SpendVsBudget, BurnedYtd - BudgetYtd,
+        PctYtdBudget, IF(
+            BudgetYtd = 0,
+            IF(BurnedYtd <> 0, 1, 0),
+            BurnedYtd / BudgetYtd
+        ),
+        PctBurned, IF(
+            Projected = 0,
+            IF(BurnedYtd <> 0, 1, 0),
+            BurnedYtd / Projected
+        ),
+        Header, HSTACK(
+            "BU",
+            "As Of Month",
+            "Future Filter",
+            "Closed Rows",
+            "BU Cap",
+            "Hidden Burn",
+            "Effective Cap",
+            "In-Scope Projected",
+            "Filtered Out Projected",
+            "Hidden by Future",
+            "Hidden by Closed",
+            "Plan Cap Remaining",
+            "% Plan of Cap",
+            "YTD Budget",
+            "YTD Spend",
+            "Spend vs YTD Budget",
+            "% YTD Budget Spent",
+            "Remaining to Burn",
+            "% Burned",
+            "Jobs in Scope"
+        ),
+        Rows, HSTACK(
+            BUName,
+            TEXT(DATE(2000, AsOfMonth, 1), "mmm"),
+            FutureFilterMode,
+            HideClosedMode,
+            Cap,
+            HiddenBurn,
+            EffectiveCap,
+            Projected,
+            FilteredProjected,
+            HiddenFuture,
+            HiddenClosed,
+            PlanCapRemaining,
+            PctPlanCap,
+            BudgetYtd,
+            BurnedYtd,
+            SpendVsBudget,
+            PctYtdBudget,
+            RemainingBurn,
+            PctBurned,
+            JobCount
+        ),
+        VSTACK(Header, Rows)
+    )
+);
+
+BU_CAP_SCORECARD = LAMBDA(
+    IFERROR(
+        LET(
+            Axis, BU_CAP_SCORECARD_AXIS(),
+            AxisRows, DROP(Axis, 1),
+            Header, HSTACK(TAKE(Axis, 1), "Cap Posture", "Spend Posture"),
+            Cap, CHOOSECOLS(AxisRows, 5),
+            HiddenBurn, CHOOSECOLS(AxisRows, 6),
+            EffectiveCap, CHOOSECOLS(AxisRows, 7),
+            Projected, CHOOSECOLS(AxisRows, 8),
+            FilteredProjected, CHOOSECOLS(AxisRows, 9),
+            HiddenFuture, CHOOSECOLS(AxisRows, 10),
+            HiddenClosed, CHOOSECOLS(AxisRows, 11),
+            PlanCapRemaining, CHOOSECOLS(AxisRows, 12),
+            PctPlanCap, CHOOSECOLS(AxisRows, 13),
+            BudgetYtd, CHOOSECOLS(AxisRows, 14),
+            BurnedYtd, CHOOSECOLS(AxisRows, 15),
+            SpendVsBudget, CHOOSECOLS(AxisRows, 16),
+            PctYtdBudget, CHOOSECOLS(AxisRows, 17),
+            RemainingBurn, CHOOSECOLS(AxisRows, 18),
+            PctBurned, CHOOSECOLS(AxisRows, 19),
+            JobCount, CHOOSECOLS(AxisRows, 20),
+            CapPosture, IF(
+                PlanCapRemaining < 0,
+                "Over Cap Plan",
+                IF(PctPlanCap >= 0.95, "Near Cap Plan", "Within Cap Plan")
+            ),
+            SpendPosture, IF(
+                (BudgetYtd = 0) * (BurnedYtd > 0),
+                "Unplanned Spend",
+                IF(
+                    SpendVsBudget > 0,
+                    "Ahead of YTD Budget",
+                    IF(
+                        (BurnedYtd = 0) * (Projected > 0),
+                        "No YTD Burn",
+                        "At/Under YTD Budget"
+                    )
+                )
+            ),
+            RowsRaw, HSTACK(AxisRows, CapPosture, SpendPosture),
+            RowsOut, SORTBY(RowsRaw, PlanCapRemaining, 1),
+            TotalCap, SUM(Cap),
+            TotalHidden, SUM(HiddenBurn),
+            TotalEffectiveCap, TotalCap - TotalHidden,
+            TotalProjected, SUM(Projected),
+            TotalFilteredProjected, SUM(FilteredProjected),
+            TotalHiddenFuture, SUM(HiddenFuture),
+            TotalHiddenClosed, SUM(HiddenClosed),
+            TotalPlanCapRemaining, TotalEffectiveCap - TotalProjected,
+            TotalBudgetYtd, SUM(BudgetYtd),
+            TotalBurnedYtd, SUM(BurnedYtd),
+            TotalSpendVsBudget, TotalBurnedYtd - TotalBudgetYtd,
+            TotalRemainingBurn, SUM(RemainingBurn),
+            TotalJobs, SUM(JobCount),
+            TotalPctPlanCap, IF(
+                TotalEffectiveCap = 0,
+                IF(TotalProjected <> 0, 1, 0),
+                TotalProjected / TotalEffectiveCap
+            ),
+            TotalPctYtdBudget, IF(
+                TotalBudgetYtd = 0,
+                IF(TotalBurnedYtd <> 0, 1, 0),
+                TotalBurnedYtd / TotalBudgetYtd
+            ),
+            TotalPctBurned, IF(
+                TotalProjected = 0,
+                IF(TotalBurnedYtd <> 0, 1, 0),
+                TotalBurnedYtd / TotalProjected
+            ),
+            TotalCapPosture, IF(
+                TotalPlanCapRemaining < 0,
+                "Over Cap Plan",
+                IF(TotalPctPlanCap >= 0.95, "Near Cap Plan", "Within Cap Plan")
+            ),
+            TotalSpendPosture, IF(
+                (TotalBudgetYtd = 0) * (TotalBurnedYtd > 0),
+                "Unplanned Spend",
+                IF(
+                    TotalSpendVsBudget > 0,
+                    "Ahead of YTD Budget",
+                    IF(
+                        (TotalBurnedYtd = 0) * (TotalProjected > 0),
+                        "No YTD Burn",
+                        "At/Under YTD Budget"
+                    )
+                )
+            ),
+            TotalRow, HSTACK(
+                "Grand Total",
+                INDEX(AxisRows, 1, 2),
+                INDEX(AxisRows, 1, 3),
+                INDEX(AxisRows, 1, 4),
+                TotalCap,
+                TotalHidden,
+                TotalEffectiveCap,
+                TotalProjected,
+                TotalFilteredProjected,
+                TotalHiddenFuture,
+                TotalHiddenClosed,
+                TotalPlanCapRemaining,
+                TotalPctPlanCap,
+                TotalBudgetYtd,
+                TotalBurnedYtd,
+                TotalSpendVsBudget,
+                TotalPctYtdBudget,
+                TotalRemainingBurn,
+                TotalPctBurned,
+                TotalJobs,
+                TotalCapPosture,
+                TotalSpendPosture
+            ),
+            VSTACK(Header, RowsOut, TotalRow)
+        ),
+        "No cap-consuming rows found for BU cap scorecard"
+    )
+);
+
+BURNDOWN_AXIS = LAMBDA([groupBy],
+    LET(
+        GroupChoice, IF(ISOMITTED(groupBy), "BU", groupBy),
+        FinanceBlock, get.GetFinanceBlock(),
+        BudgetRows, get.GetBudgetDetailRows(),
+        Hdr, TAKE(BudgetRows, 1),
+        IdxPM, XMATCH("PM", Hdr, 0),
+        IdxDesc, XMATCH("Project Description", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxAuth, XMATCH("Current Authorized Amount", Hdr, 0),
+        IdxCarryover, XMATCH("Carry-over", Hdr, 0),
+        IdxRevisedGroup, XMATCH("Revised Group", Hdr, 0),
+        IdxFutureTierOverride, XMATCH("Future Tier Override", Hdr, 0),
+        IdxCanceled, IFERROR(XMATCH("Canceled", Hdr, 0), 0),
+        GroupChoiceRaw, TRIM(GroupChoice & ""),
+        IdxGroup, IFERROR(XMATCH(GroupChoiceRaw, Hdr, 0), XMATCH("BU", Hdr, 0)),
+        GroupLabel, INDEX(Hdr, 1, IdxGroup),
+        Projections, get.GetProjections(FinanceBlock),
+        Actuals12, get.GetActuals12(FinanceBlock),
+        AsOfMonth, kind.MonthNum('Planning Review'!$M$2),
+        YtdActuals, IFERROR(kind.GetYTDActuals(Actuals12, AsOfMonth), 0),
+        ProjectedHRs, VSTACK("2026 Projected", Projections),
+        StatusHRs, CHOOSECOLS(BudgetRows, IdxStatus),
+        AuthHRs, CHOOSECOLS(BudgetRows, IdxAuth),
+        ActHRs, VSTACK("YTD Actuals", YtdActuals),
+        CanceledHRs, IF(
+            IdxCanceled > 0,
+            CHOOSECOLS(BudgetRows, IdxCanceled),
+            VSTACK("Canceled", 0 * Projections)
+        ),
+        BaseUniverseMask, DROP(
+            kind.CapConsumeMask(
+                BudgetRows,
+                StatusHRs,
+                AuthHRs,
+                ProjectedHRs,
+                ActHRs,
+                CanceledHRs
+            ),
+            1
+        ),
+        GroupRaw, DROP(CHOOSECOLS(BudgetRows, IdxGroup), 1),
+        PMRaw, DROP(CHOOSECOLS(BudgetRows, IdxPM), 1),
+        DescRaw, DROP(CHOOSECOLS(BudgetRows, IdxDesc), 1),
+        StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
+        CarryoverRaw, DROP(CHOOSECOLS(BudgetRows, IdxCarryover), 1),
+        RevisedGroupRaw, DROP(CHOOSECOLS(BudgetRows, IdxRevisedGroup), 1),
+        FutureTierOverrideRaw, DROP(CHOOSECOLS(BudgetRows, IdxFutureTierOverride), 1),
+        GroupVals, IF(
+            TRIM(GroupRaw & "") = "",
+            "(Unassigned " & GroupLabel & ")",
+            GroupRaw
+        ),
+        PMVals, IF(TRIM(PMRaw & "") = "", "(Unassigned PM)", PMRaw),
+        JobVals, IF(TRIM(DescRaw & "") = "", "(No Project Description)", DescRaw),
+        StatusVals, IF(TRIM(StatusRaw & "") = "", "(No Status)", StatusRaw),
+        FutureFilterMode, IFERROR(TRIM(Future_Filter_Mode), "All"),
+        HideClosedMode, IFERROR(UPPER(TRIM(HideClosed_Status)), "SHOW"),
+        FutureLikelyMinProj, 250000,
+        FutureTierAutoVec, kind.FutureTierAuto(
+            RevisedGroupRaw,
+            Projections,
+            YtdActuals,
+            CarryoverRaw,
+            FutureLikelyMinProj
+        ),
+        FutureTierFinalRaw, kind.FutureTierFinal(
+            FutureTierAutoVec,
+            FutureTierOverrideRaw
+        ),
+        FutureTierVals, IF(
+            TRIM(FutureTierFinalRaw & "") = "",
+            "(Current)",
+            FutureTierFinalRaw
+        ),
+        FutureIncludeMaskRaw, kind.FutureIncludeMask(
+            RevisedGroupRaw,
+            FutureTierFinalRaw,
+            FutureFilterMode
+        ),
+        ClosedIncludeMaskRaw, kind.HideClosedMask(StatusRaw, HideClosedMode),
+        MeetingMask, --BaseUniverseMask * --FutureIncludeMaskRaw * --ClosedIncludeMaskRaw,
+        ScopeState, IF(
+            --FutureIncludeMaskRaw = 0,
+            "Hidden by Future",
+            IF(--ClosedIncludeMaskRaw = 0, "Hidden by Closed", "In Scope")
+        ),
+        Remaining, Projections - YtdActuals,
+        Jobs, 1 + 0 * Projections,
+        MonthHdr, TEXT(DATE(2000, SEQUENCE(, 12), 1), "mmm"),
+        AxisHdr, HSTACK(
+            GroupLabel,
+            "PM",
+            "Project Description",
+            "2026 Projected",
+            "Burned YTD",
+            "Remaining to Burn",
+            "Status",
+            "Future Tier",
+            "ScopeState",
+            "In Scope",
+            "Jobs",
+            MonthHdr
+        ),
+        AxisRowsRaw, HSTACK(
+            GroupVals,
+            PMVals,
+            JobVals,
+            Projections,
+            YtdActuals,
+            Remaining,
+            StatusVals,
+            FutureTierVals,
+            ScopeState,
+            MeetingMask,
+            Jobs,
+            Actuals12
+        ),
+        AxisRows, IF(
+            SUM(BaseUniverseMask) = 0,
+            DROP(AxisHdr, 1),
+            FILTER(AxisRowsRaw, BaseUniverseMask)
+        ),
+        VSTACK(AxisHdr, AxisRows)
+    )
+);
+
+BURNDOWN_BASE = LAMBDA([groupBy],
+    LET(
+        GroupChoice, IF(ISOMITTED(groupBy), "BU", groupBy),
+        Axis, BURNDOWN_AXIS(GroupChoice),
+        AxisHdr, TAKE(Axis, 1),
+        AxisRows, DROP(Axis, 1),
+        KeyHdr, INDEX(AxisHdr, 1, 1),
+        KeyVals, CHOOSECOLS(AxisRows, 1),
+        Proj, CHOOSECOLS(AxisRows, 4),
+        Burn, CHOOSECOLS(AxisRows, 5),
+        Rem, CHOOSECOLS(AxisRows, 6),
+        ScopeState, CHOOSECOLS(AxisRows, 9),
+        InScope, CHOOSECOLS(AxisRows, 10),
+        Jobs, CHOOSECOLS(AxisRows, 11),
+        HdrOut, HSTACK(
+            KeyHdr,
+            "2026 Projected",
+            "Burned YTD",
+            "Remaining to Burn",
+            "% Burned",
+            "Avg Burn / Job",
+            "Remaining Share %",
+            "Hidden Dollars %",
+            "Jobs in Scope"
+        ),
+        TotalsRaw, GROUPBY(
+            KeyVals,
+            HSTACK(Proj, Burn, Rem, Jobs),
+            HSTACK(SUM, SUM, SUM, SUM),
+            0,
+            0,
+            1,
+            InScope
+        ),
+        TotProj, CHOOSECOLS(TotalsRaw, 2),
+        TotBurn, CHOOSECOLS(TotalsRaw, 3),
+        TotPct, IF(
+            TotProj = 0,
+            IF(TotBurn <> 0, 1, 0),
+            TotBurn / TotProj
+        ),
+        TotalRemainingAll, SUM(Rem * InScope),
+        AllProjRaw, GROUPBY(
+            KeyVals,
+            Proj,
+            SUM,
+            0,
+            0,
+            1
+        ),
+        HiddenProjRaw, GROUPBY(
+            KeyVals,
+            Proj * --(ScopeState <> "In Scope"),
+            SUM,
+            0,
+            0,
+            1
+        ),
+        AllProjByKey, XLOOKUP(
+            CHOOSECOLS(TotalsRaw, 1),
+            CHOOSECOLS(AllProjRaw, 1),
+            CHOOSECOLS(AllProjRaw, 2),
+            0
+        ),
+        HiddenProjByKey, XLOOKUP(
+            CHOOSECOLS(TotalsRaw, 1),
+            CHOOSECOLS(HiddenProjRaw, 1),
+            CHOOSECOLS(HiddenProjRaw, 2),
+            0
+        ),
+        AvgBurnPerJob, IF(
+            CHOOSECOLS(TotalsRaw, 5) = 0,
+            IF(TotBurn <> 0, TotBurn, 0),
+            TotBurn / CHOOSECOLS(TotalsRaw, 5)
+        ),
+        RemSharePct, IF(
+            TotalRemainingAll = 0,
+            IF(CHOOSECOLS(TotalsRaw, 4) <> 0, 1, 0),
+            CHOOSECOLS(TotalsRaw, 4) / TotalRemainingAll
+        ),
+        HiddenPct, IF(
+            AllProjByKey = 0,
+            IF(HiddenProjByKey <> 0, 1, 0),
+            HiddenProjByKey / AllProjByKey
+        ),
+        RowsRaw, HSTACK(
+            CHOOSECOLS(TotalsRaw, 1, 2, 3, 4),
+            TotPct,
+            AvgBurnPerJob,
+            RemSharePct,
+            HiddenPct,
+            CHOOSECOLS(TotalsRaw, 5)
+        ),
+        RowsOut, SORTBY(
+            RowsRaw,
+            CHOOSECOLS(RowsRaw, 4),
+            -1
+        ),
+        IF(
+            SUM(InScope) = 0,
+            HdrOut,
+            VSTACK(HdrOut, RowsOut)
+        )
+    )
+);
+
+BURNDOWN_WS_HORIZON = LAMBDA([groupBy],
+    LET(
+        GroupChoice, IF(ISOMITTED(groupBy), "BU", groupBy),
+        Axis, BURNDOWN_AXIS(GroupChoice),
+        Base, BURNDOWN_BASE(GroupChoice),
+        AxisHdr, TAKE(Axis, 1),
+        AxisRows, DROP(Axis, 1),
+        KeyHdr, INDEX(AxisHdr, 1, 1),
+        KeyVals, CHOOSECOLS(AxisRows, 1),
+        BucketVals, CHOOSECOLS(AxisRows, 8),
+        Proj, CHOOSECOLS(AxisRows, 4),
+        Burn, CHOOSECOLS(AxisRows, 5),
+        Rem, CHOOSECOLS(AxisRows, 6),
+        ScopeState, CHOOSECOLS(AxisRows, 9),
+        InScope, CHOOSECOLS(AxisRows, 10),
+        Jobs, CHOOSECOLS(AxisRows, 11),
+        BaseRows, DROP(Base, 1),
+        BaseKeys, CHOOSECOLS(BaseRows, 1),
+        BaseRem, CHOOSECOLS(BaseRows, 4),
+        Num0, LAMBDA(arr, IFERROR(0 + arr, 0)),
+        SafePct, LAMBDA(num, den,
+            LET(
+                NumVal, Num0(num),
+                DenVal, Num0(den),
+                IF(
+                    DenVal = 0,
+                    IF(NumVal <> 0, 1, 0),
+                    NumVal / DenVal
+                )
+            )
+        ),
+        PivotRaw, PIVOTBY(
+            VSTACK(KeyHdr, KeyVals),
+            VSTACK("Future Tier", BucketVals),
+            HSTACK(
+                VSTACK("Projected", Proj * InScope),
+                VSTACK("Remaining", Rem * InScope),
+                VSTACK("Burned YTD", Burn * InScope),
+                VSTACK("Jobs", Jobs * InScope),
+                VSTACK("Hidden Dollars", Proj * --(ScopeState <> "In Scope")),
+                VSTACK("Remaining Share", Rem * InScope),
+                VSTACK("Hidden Dollars Share", Proj * --(ScopeState <> "In Scope"))
+            ),
+            HSTACK(SUM, SUM, SUM, SUM, SUM, PERCENTOF, PERCENTOF),
+            3,
+            0,
+            1,
+            0,
+            1,
+            VSTACK(1, 1 + 0 * Jobs),
+            1
+        ),
+        BucketHdrs, DROP(CHOOSEROWS(PivotRaw, 2), , 1),
+        FnHdrs, DROP(CHOOSEROWS(PivotRaw, 3), , 1),
+        ValHdrs, DROP(CHOOSEROWS(PivotRaw, 4), , 1),
+        PivotRows, DROP(PivotRaw, 4),
+        PivotKeys, CHOOSECOLS(PivotRows, 1),
+        PivotVals, DROP(PivotRows, , 1),
+        MetricIdx, LAMBDA(fn, val,
+            FILTER(SEQUENCE(, COLUMNS(PivotVals)), (FnHdrs = fn) * (ValHdrs = val))
+        ),
+        MetricVals, LAMBDA(fn, val,
+            Num0(XLOOKUP(BaseKeys, PivotKeys, CHOOSECOLS(PivotVals, MetricIdx(fn, val)), 0))
+        ),
+        MetricHdr, LAMBDA(fn, val, label,
+            MAP(CHOOSECOLS(BucketHdrs, MetricIdx(fn, val)), LAMBDA(x, x & " | " & label))
+        ),
+        ProjVals, MetricVals("SUM", "Projected"),
+        RemVals, MetricVals("SUM", "Remaining"),
+        BurnVals, MetricVals("SUM", "Burned YTD"),
+        JobVals, MetricVals("SUM", "Jobs"),
+        HiddenVals, MetricVals("SUM", "Hidden Dollars"),
+        RemShareVals, MetricVals("PERCENTOF", "Remaining Share"),
+        HiddenPctVals, MetricVals("PERCENTOF", "Hidden Dollars Share"),
+        TotalProjBuckets, BYCOL(ProjVals, LAMBDA(col, SUM(col))),
+        TotalRemBuckets, BYCOL(RemVals, LAMBDA(col, SUM(col))),
+        TotalBurnBuckets, BYCOL(BurnVals, LAMBDA(col, SUM(col))),
+        TotalJobBuckets, BYCOL(JobVals, LAMBDA(col, SUM(col))),
+        TotalHiddenBuckets, BYCOL(HiddenVals, LAMBDA(col, SUM(col))),
+        AvgHdr, MetricHdr("SUM", "Burned YTD", "Avg Burn / Job"),
+        RemShareHdr, MetricHdr("PERCENTOF", "Remaining Share", "Remaining Share %"),
+        HiddenHdr, MetricHdr("PERCENTOF", "Hidden Dollars Share", "Hidden Dollars %"),
+        HdrOut, HSTACK(
+            KeyHdr,
+            MetricHdr("SUM", "Projected", "Projected"),
+            MetricHdr("SUM", "Remaining", "Remaining"),
+            AvgHdr,
+            RemShareHdr,
+            HiddenHdr
+        ),
+        RowsOut, HSTACK(
+            BaseKeys,
+            ProjVals,
+            RemVals,
+            SafePct(BurnVals, JobVals),
+            RemShareVals,
+            HiddenPctVals
+        ),
+        TotalRow, HSTACK(
+            "Grand Total",
+            TotalProjBuckets,
+            TotalRemBuckets,
+            SafePct(TotalBurnBuckets, TotalJobBuckets),
+            SafePct(TotalRemBuckets, SUM(BaseRem)),
+            SafePct(TotalHiddenBuckets, SUM(TotalHiddenBuckets))
+        ),
+        IF(
+            SUM(InScope) = 0,
+            HdrOut,
+            VSTACK(HdrOut, RowsOut, TotalRow)
+        )
+    )
+);
+
+BURNDOWN_WS_STATUS = LAMBDA([groupBy],
+    LET(
+        GroupChoice, IF(ISOMITTED(groupBy), "BU", groupBy),
+        Axis, BURNDOWN_AXIS(GroupChoice),
+        Base, BURNDOWN_BASE(GroupChoice),
+        AxisHdr, TAKE(Axis, 1),
+        AxisRows, DROP(Axis, 1),
+        KeyHdr, INDEX(AxisHdr, 1, 1),
+        KeyVals, CHOOSECOLS(AxisRows, 1),
+        BucketVals, CHOOSECOLS(AxisRows, 7),
+        Proj, CHOOSECOLS(AxisRows, 4),
+        Burn, CHOOSECOLS(AxisRows, 5),
+        Rem, CHOOSECOLS(AxisRows, 6),
+        ScopeState, CHOOSECOLS(AxisRows, 9),
+        InScope, CHOOSECOLS(AxisRows, 10),
+        Jobs, CHOOSECOLS(AxisRows, 11),
+        BaseRows, DROP(Base, 1),
+        BaseKeys, CHOOSECOLS(BaseRows, 1),
+        BaseRem, CHOOSECOLS(BaseRows, 4),
+        Num0, LAMBDA(arr, IFERROR(0 + arr, 0)),
+        SafePct, LAMBDA(num, den,
+            LET(
+                NumVal, Num0(num),
+                DenVal, Num0(den),
+                IF(
+                    DenVal = 0,
+                    IF(NumVal <> 0, 1, 0),
+                    NumVal / DenVal
+                )
+            )
+        ),
+        PivotRaw, PIVOTBY(
+            VSTACK(KeyHdr, KeyVals),
+            VSTACK("Status", BucketVals),
+            HSTACK(
+                VSTACK("Projected", Proj * InScope),
+                VSTACK("Burned YTD", Burn * InScope),
+                VSTACK("Remaining", Rem * InScope),
+                VSTACK("Jobs", Jobs * InScope),
+                VSTACK("Hidden Dollars", Proj * --(ScopeState <> "In Scope")),
+                VSTACK("Remaining Share", Rem * InScope),
+                VSTACK("Hidden Dollars Share", Proj * --(ScopeState <> "In Scope"))
+            ),
+            HSTACK(SUM, SUM, SUM, SUM, SUM, PERCENTOF, PERCENTOF),
+            3,
+            0,
+            1,
+            0,
+            1,
+            VSTACK(1, 1 + 0 * Jobs),
+            1
+        ),
+        BucketHdrs, DROP(CHOOSEROWS(PivotRaw, 2), , 1),
+        FnHdrs, DROP(CHOOSEROWS(PivotRaw, 3), , 1),
+        ValHdrs, DROP(CHOOSEROWS(PivotRaw, 4), , 1),
+        PivotRows, DROP(PivotRaw, 4),
+        PivotKeys, CHOOSECOLS(PivotRows, 1),
+        PivotVals, DROP(PivotRows, , 1),
+        MetricIdx, LAMBDA(fn, val,
+            FILTER(SEQUENCE(, COLUMNS(PivotVals)), (FnHdrs = fn) * (ValHdrs = val))
+        ),
+        MetricVals, LAMBDA(fn, val,
+            Num0(XLOOKUP(BaseKeys, PivotKeys, CHOOSECOLS(PivotVals, MetricIdx(fn, val)), 0))
+        ),
+        MetricHdr, LAMBDA(fn, val, label,
+            MAP(CHOOSECOLS(BucketHdrs, MetricIdx(fn, val)), LAMBDA(x, x & " | " & label))
+        ),
+        ProjVals, MetricVals("SUM", "Projected"),
+        BurnVals, MetricVals("SUM", "Burned YTD"),
+        RemVals, MetricVals("SUM", "Remaining"),
+        JobVals, MetricVals("SUM", "Jobs"),
+        HiddenVals, MetricVals("SUM", "Hidden Dollars"),
+        RemShareVals, MetricVals("PERCENTOF", "Remaining Share"),
+        HiddenPctVals, MetricVals("PERCENTOF", "Hidden Dollars Share"),
+        TotalProjBuckets, BYCOL(ProjVals, LAMBDA(col, SUM(col))),
+        TotalBurnBuckets, BYCOL(BurnVals, LAMBDA(col, SUM(col))),
+        TotalRemBuckets, BYCOL(RemVals, LAMBDA(col, SUM(col))),
+        TotalJobBuckets, BYCOL(JobVals, LAMBDA(col, SUM(col))),
+        TotalHiddenBuckets, BYCOL(HiddenVals, LAMBDA(col, SUM(col))),
+        AvgHdr, MetricHdr("SUM", "Burned YTD", "Avg Burn / Job"),
+        RemShareHdr, MetricHdr("PERCENTOF", "Remaining Share", "Remaining Share %"),
+        HiddenHdr, MetricHdr("PERCENTOF", "Hidden Dollars Share", "Hidden Dollars %"),
+        HdrOut, HSTACK(
+            KeyHdr,
+            MetricHdr("SUM", "Burned YTD", "Burned YTD"),
+            MetricHdr("SUM", "Remaining", "Remaining"),
+            AvgHdr,
+            RemShareHdr,
+            HiddenHdr
+        ),
+        RowsOut, HSTACK(
+            BaseKeys,
+            BurnVals,
+            RemVals,
+            SafePct(BurnVals, JobVals),
+            RemShareVals,
+            HiddenPctVals
+        ),
+        TotalRow, HSTACK(
+            "Grand Total",
+            TotalBurnBuckets,
+            TotalRemBuckets,
+            SafePct(TotalBurnBuckets, TotalJobBuckets),
+            SafePct(TotalRemBuckets, SUM(BaseRem)),
+            SafePct(TotalHiddenBuckets, SUM(TotalHiddenBuckets))
+        ),
+        IF(
+            SUM(InScope) = 0,
+            HdrOut,
+            VSTACK(HdrOut, RowsOut, TotalRow)
+        )
+    )
+);
+
+BURNDOWN_WS_SIGNAL = LAMBDA([groupBy],
+    LET(
+        GroupChoice, IF(ISOMITTED(groupBy), "BU", groupBy),
+        Axis, BURNDOWN_AXIS(GroupChoice),
+        Base, BURNDOWN_BASE(GroupChoice),
+        AxisHdr, TAKE(Axis, 1),
+        AxisRows, DROP(Axis, 1),
+        KeyHdr, INDEX(AxisHdr, 1, 1),
+        KeyVals, CHOOSECOLS(AxisRows, 1),
+        ScopeStateRaw, CHOOSECOLS(AxisRows, 9),
+        BucketVals, IF(
+            ScopeStateRaw = "In Scope",
+            "1 In Scope",
+            IF(
+                ScopeStateRaw = "Hidden by Future",
+                "2 Hidden by Future",
+                "3 Hidden by Closed"
+            )
+        ),
+        Rem, CHOOSECOLS(AxisRows, 6),
+        Burn, CHOOSECOLS(AxisRows, 5),
+        Proj, CHOOSECOLS(AxisRows, 4),
+        Jobs, CHOOSECOLS(AxisRows, 11),
+        KeepMask, 1 + 0 * Jobs,
+        BaseRows, DROP(Base, 1),
+        BaseKeys, CHOOSECOLS(BaseRows, 1),
+        Num0, LAMBDA(arr, IFERROR(0 + arr, 0)),
+        SafePct, LAMBDA(num, den,
+            LET(
+                NumVal, Num0(num),
+                DenVal, Num0(den),
+                IF(
+                    DenVal = 0,
+                    IF(NumVal <> 0, 1, 0),
+                    NumVal / DenVal
+                )
+            )
+        ),
+        AllTotalsRaw, GROUPBY(
+            KeyVals,
+            HSTACK(Proj, Rem),
+            HSTACK(SUM, SUM),
+            0,
+            0,
+            1
+        ),
+        BaseRemAll, XLOOKUP(
+            BaseKeys,
+            CHOOSECOLS(AllTotalsRaw, 1),
+            CHOOSECOLS(AllTotalsRaw, 3),
+            0
+        ),
+        PivotRaw, PIVOTBY(
+            VSTACK(KeyHdr, KeyVals),
+            VSTACK("ScopeState", BucketVals),
+            HSTACK(
+                VSTACK("Projected", Proj),
+                VSTACK("Remaining", Rem),
+                VSTACK("Jobs", Jobs),
+                VSTACK("Burned YTD", Burn),
+                VSTACK("Hidden Dollars", Proj * --(ScopeStateRaw <> "In Scope")),
+                VSTACK("Remaining Share", Rem),
+                VSTACK("Hidden Dollars Share", Proj * --(ScopeStateRaw <> "In Scope"))
+            ),
+            HSTACK(SUM, SUM, SUM, SUM, SUM, PERCENTOF, PERCENTOF),
+            3,
+            0,
+            1,
+            0,
+            1,
+            VSTACK(1, KeepMask),
+            1
+        ),
+        BucketHdrs, DROP(CHOOSEROWS(PivotRaw, 2), , 1),
+        FnHdrs, DROP(CHOOSEROWS(PivotRaw, 3), , 1),
+        ValHdrs, DROP(CHOOSEROWS(PivotRaw, 4), , 1),
+        PivotRows, DROP(PivotRaw, 4),
+        PivotKeys, CHOOSECOLS(PivotRows, 1),
+        PivotVals, DROP(PivotRows, , 1),
+        CleanBucket, LAMBDA(x, IFERROR(TEXTAFTER(x, " "), x)),
+        MetricIdx, LAMBDA(fn, val,
+            FILTER(SEQUENCE(, COLUMNS(PivotVals)), (FnHdrs = fn) * (ValHdrs = val))
+        ),
+        MetricVals, LAMBDA(fn, val,
+            Num0(XLOOKUP(BaseKeys, PivotKeys, CHOOSECOLS(PivotVals, MetricIdx(fn, val)), 0))
+        ),
+        MetricHdr, LAMBDA(fn, val, label,
+            MAP(CHOOSECOLS(BucketHdrs, MetricIdx(fn, val)), LAMBDA(x, CleanBucket(x) & " | " & label))
+        ),
+        ProjVals, MetricVals("SUM", "Projected"),
+        RemVals, MetricVals("SUM", "Remaining"),
+        JobVals, MetricVals("SUM", "Jobs"),
+        BurnVals, MetricVals("SUM", "Burned YTD"),
+        HiddenVals, MetricVals("SUM", "Hidden Dollars"),
+        RemShareVals, MetricVals("PERCENTOF", "Remaining Share"),
+        HiddenPctVals, MetricVals("PERCENTOF", "Hidden Dollars Share"),
+        TotalProjBuckets, BYCOL(ProjVals, LAMBDA(col, SUM(col))),
+        TotalRemBuckets, BYCOL(RemVals, LAMBDA(col, SUM(col))),
+        TotalJobBuckets, BYCOL(JobVals, LAMBDA(col, SUM(col))),
+        TotalBurnBuckets, BYCOL(BurnVals, LAMBDA(col, SUM(col))),
+        TotalHiddenBuckets, BYCOL(HiddenVals, LAMBDA(col, SUM(col))),
+        AvgHdr, MetricHdr("SUM", "Burned YTD", "Avg Burn / Job"),
+        RemShareHdr, MetricHdr("PERCENTOF", "Remaining Share", "Remaining Share %"),
+        HiddenHdr, MetricHdr("PERCENTOF", "Hidden Dollars Share", "Hidden Dollars %"),
+        HdrOut, HSTACK(
+            KeyHdr,
+            MetricHdr("SUM", "Remaining", "Remaining"),
+            MetricHdr("SUM", "Jobs", "Jobs"),
+            AvgHdr,
+            RemShareHdr,
+            HiddenHdr
+        ),
+        RowsOut, HSTACK(
+            BaseKeys,
+            RemVals,
+            JobVals,
+            SafePct(BurnVals, JobVals),
+            RemShareVals,
+            HiddenPctVals
+        ),
+        TotalRow, HSTACK(
+            "Grand Total",
+            TotalRemBuckets,
+            TotalJobBuckets,
+            SafePct(TotalBurnBuckets, TotalJobBuckets),
+            SafePct(TotalRemBuckets, SUM(BaseRemAll)),
+            SafePct(TotalHiddenBuckets, SUM(TotalHiddenBuckets))
+        ),
+        IF(
+            ROWS(BaseKeys) = 0,
+            HdrOut,
+            VSTACK(HdrOut, RowsOut, TotalRow)
+        )
+    )
+);
+
+BURNDOWN_DIRECTOR_SUMMARY_FROM_AXIS = LAMBDA(Axis,
+    LET(
+        AxisRows, DROP(Axis, 1),
+        KeyVals, CHOOSECOLS(AxisRows, 1),
+        Proj, CHOOSECOLS(AxisRows, 4),
+        Burn, CHOOSECOLS(AxisRows, 5),
+        Rem, CHOOSECOLS(AxisRows, 6),
+        FutureTier, CHOOSECOLS(AxisRows, 8),
+        ScopeState, CHOOSECOLS(AxisRows, 9),
+        InScope, CHOOSECOLS(AxisRows, 10),
+        Jobs, CHOOSECOLS(AxisRows, 11),
+        Num0, LAMBDA(arr, IFERROR(0 + arr, 0)),
+        SafePct, LAMBDA(num, den,
+            LET(
+                NumVal, Num0(num),
+                DenVal, Num0(den),
+                IF(
+                    DenVal = 0,
+                    IF(NumVal <> 0, 1, 0),
+                    NumVal / DenVal
+                )
+            )
+        ),
+        TierBucket, MAP(
+            FutureTier,
+            LAMBDA(t,
+                LET(
+                    Raw, IFERROR(TRIM(t & ""), ""),
+                    IF(
+                        ((Raw = "") + (Raw = "(Current)")) > 0,
+                        "Current",
+                        IF(
+                            LEFT(Raw, 2) = "F1",
+                            "F1 Committed",
+                            IF(LEFT(Raw, 2) = "F2", "F2 Future", "F3/Other Future")
+                        )
+                    )
+                )
+            )
+        ),
+        HdrOut, HSTACK(
+            "Group",
+            "2026 Projected",
+            "Burned YTD",
+            "Remaining to Burn",
+            "% Burned",
+            "Avg Burn / Job",
+            "Remaining Share %",
+            "Jobs in Scope",
+            "Current Remaining",
+            "F1 Committed Remaining",
+            "F2 Future Remaining",
+            "F3/Other Future Remaining",
+            "Hidden by Future $",
+            "Hidden by Closed $",
+            "Hidden Dollars %"
+        ),
+        SummaryRaw, GROUPBY(
+            KeyVals,
+            HSTACK(
+                Proj * InScope,
+                Burn * InScope,
+                Rem * InScope,
+                Jobs * InScope,
+                Rem * InScope * --(TierBucket = "Current"),
+                Rem * InScope * --(TierBucket = "F1 Committed"),
+                Rem * InScope * --(TierBucket = "F2 Future"),
+                Rem * InScope * --(TierBucket = "F3/Other Future"),
+                Proj * --(ScopeState = "Hidden by Future"),
+                Proj * --(ScopeState = "Hidden by Closed"),
+                Proj
+            ),
+            HSTACK(SUM, SUM, SUM, SUM, SUM, SUM, SUM, SUM, SUM, SUM, SUM),
+            0,
+            0,
+            1
+        ),
+        GroupKeys, CHOOSECOLS(SummaryRaw, 1),
+        GroupProj, Num0(CHOOSECOLS(SummaryRaw, 2)),
+        GroupBurn, Num0(CHOOSECOLS(SummaryRaw, 3)),
+        GroupRem, Num0(CHOOSECOLS(SummaryRaw, 4)),
+        GroupJobs, Num0(CHOOSECOLS(SummaryRaw, 5)),
+        GroupCurrentRem, Num0(CHOOSECOLS(SummaryRaw, 6)),
+        GroupF1Rem, Num0(CHOOSECOLS(SummaryRaw, 7)),
+        GroupF2Rem, Num0(CHOOSECOLS(SummaryRaw, 8)),
+        GroupF3Rem, Num0(CHOOSECOLS(SummaryRaw, 9)),
+        GroupHiddenFuture, Num0(CHOOSECOLS(SummaryRaw, 10)),
+        GroupHiddenClosed, Num0(CHOOSECOLS(SummaryRaw, 11)),
+        GroupAllProj, Num0(CHOOSECOLS(SummaryRaw, 12)),
+        GroupHiddenProjected, GroupHiddenFuture + GroupHiddenClosed,
+        TotalRemainingAll, SUM(GroupRem),
+        RowsRaw, HSTACK(
+            GroupKeys,
+            GroupProj,
+            GroupBurn,
+            GroupRem,
+            SafePct(GroupBurn, GroupProj),
+            SafePct(GroupBurn, GroupJobs),
+            SafePct(GroupRem, TotalRemainingAll),
+            GroupJobs,
+            GroupCurrentRem,
+            GroupF1Rem,
+            GroupF2Rem,
+            GroupF3Rem,
+            GroupHiddenFuture,
+            GroupHiddenClosed,
+            SafePct(GroupHiddenProjected, GroupAllProj)
+        ),
+        RowsOut, SORTBY(
+            RowsRaw,
+            CHOOSECOLS(RowsRaw, 4),
+            -1
+        ),
+        TotalProjected, SUM(Proj * InScope),
+        TotalBurned, SUM(Burn * InScope),
+        TotalRemaining, TotalProjected - TotalBurned,
+        JobsInScope, SUM(Jobs * InScope),
+        TotalHiddenFuture, SUM(Proj * --(ScopeState = "Hidden by Future")),
+        TotalHiddenClosed, SUM(Proj * --(ScopeState = "Hidden by Closed")),
+        TotalHiddenProjected, TotalHiddenFuture + TotalHiddenClosed,
+        TotalProjectedAll, SUM(Proj),
+        TotalRow, HSTACK(
+            "Grand Total",
+            TotalProjected,
+            TotalBurned,
+            TotalRemaining,
+            SafePct(TotalBurned, TotalProjected),
+            SafePct(TotalBurned, JobsInScope),
+            IF(TotalRemaining = 0, 0, 1),
+            JobsInScope,
+            SUM(Rem * InScope * --(TierBucket = "Current")),
+            SUM(Rem * InScope * --(TierBucket = "F1 Committed")),
+            SUM(Rem * InScope * --(TierBucket = "F2 Future")),
+            SUM(Rem * InScope * --(TierBucket = "F3/Other Future")),
+            TotalHiddenFuture,
+            TotalHiddenClosed,
+            SafePct(TotalHiddenProjected, TotalProjectedAll)
+        ),
+        IF(
+            SUM(InScope) = 0,
+            HdrOut,
+            VSTACK(HdrOut, RowsOut, TotalRow)
+        )
+    )
+);
+
+BURNDOWN_DIRECTOR_SUMMARY = LAMBDA([groupBy],
+    LET(
+        GroupChoice, IF(ISOMITTED(groupBy), "BU", groupBy),
+        Axis, BURNDOWN_AXIS(GroupChoice),
+        BURNDOWN_DIRECTOR_SUMMARY_FROM_AXIS(Axis)
+    )
+);
+
+BURNDOWN_SCREEN_TOP_FROM_AXIS = LAMBDA(Axis,
+    LET(
+        AxisHdr, TAKE(Axis, 1),
+        AxisRows, DROP(Axis, 1),
+        GroupLabel, INDEX(AxisHdr, 1, 1),
+        Proj, CHOOSECOLS(AxisRows, 4),
+        Burn, CHOOSECOLS(AxisRows, 5),
+        ScopeState, CHOOSECOLS(AxisRows, 9),
+        InScope, CHOOSECOLS(AxisRows, 10),
+        Jobs, CHOOSECOLS(AxisRows, 11),
+        Actuals12, CHOOSECOLS(AxisRows, SEQUENCE(, 12, 12)),
+        AsOfMonth, kind.MonthNum('Planning Review'!$M$2),
+        CutTarget, MAX(0, IFERROR(0 + Burndown_Cut_Target, 0)),
+        FutureFilterDisplay, IFERROR(TRIM(Future_Filter_Mode), "All"),
+        HideClosedDisplay, IFERROR(UPPER(TRIM(HideClosed_Status)), "SHOW"),
+        JobsInScope, SUM(Jobs * InScope),
+        TotalProjected, SUM(Proj * InScope),
+        TotalBurned, SUM(Burn * InScope),
+        TotalRemaining, TotalProjected - TotalBurned,
+        TotalHiddenFuture, SUM(Proj * --(ScopeState = "Hidden by Future")),
+        TotalHiddenClosed, SUM(Proj * --(ScopeState = "Hidden by Closed")),
+        TotalHiddenProjected, TotalHiddenFuture + TotalHiddenClosed,
+        TotalProjectedAll, SUM(Proj),
+        TotalPctBurned, IF(
+            TotalProjected = 0,
+            IF(TotalBurned <> 0, 1, 0),
+            TotalBurned / TotalProjected
+        ),
+        AvgBurnPerJob, IF(
+            JobsInScope = 0,
+            IF(TotalBurned <> 0, TotalBurned, 0),
+            TotalBurned / JobsInScope
+        ),
+        HiddenPct, IF(
+            TotalProjectedAll = 0,
+            IF(TotalHiddenProjected <> 0, 1, 0),
+            TotalHiddenProjected / TotalProjectedAll
+        ),
+        MonthActiveMask, --(SEQUENCE(, 12) <= AsOfMonth),
+        MonthlyBurnRaw, BYCOL(Actuals12, LAMBDA(col, SUM(col * InScope))),
+        MonthlyBurn, MonthlyBurnRaw * MonthActiveMask,
+        CumulativeBurn, SCAN(0, MonthlyBurn, LAMBDA(acc, val, acc + val)),
+        RemainingBurndown, IF(MonthActiveMask, TotalProjected - CumulativeBurn, ""),
+        CumulativePctBurned, IF(
+            MonthActiveMask,
+            IF(
+                TotalProjected = 0,
+                IF(CumulativeBurn <> 0, 1, 0),
+                CumulativeBurn / TotalProjected
+            ),
+            ""
+        ),
+        ScreenCols, 15,
+        PadRows, LAMBDA(
+            Arr,
+            IF(
+                COLUMNS(Arr) < ScreenCols,
+                HSTACK(
+                    Arr,
+                    MAKEARRAY(ROWS(Arr), ScreenCols - COLUMNS(Arr), LAMBDA(rw, c, ""))
+                ),
+                Arr
+            )
+        ),
+        TitlePad, MAKEARRAY(1, ScreenCols - 1, LAMBDA(rw, c, "")),
+        BlankRow, MAKEARRAY(1, ScreenCols, LAMBDA(rw, c, "")),
+        ControlHeader, HSTACK(
+            "Group",
+            "As Of Month",
+            "Future Filter",
+            "Closed Rows",
+            "Cut Target",
+            "Jobs in Scope",
+            "Hidden Dollars",
+            "Hidden Dollars %"
+        ),
+        ControlValues, HSTACK(
+            GroupLabel,
+            TEXT(DATE(2000, AsOfMonth, 1), "mmm"),
+            FutureFilterDisplay,
+            HideClosedDisplay,
+            CutTarget,
+            JobsInScope,
+            TotalHiddenProjected,
+            HiddenPct
+        ),
+        KpiHeader, HSTACK(
+            "In Scope Projected",
+            "Burned YTD",
+            "Remaining to Burn",
+            "% Burned",
+            "Avg Burn / Job",
+            "Hidden by Future",
+            "Hidden by Closed",
+            "Hidden Dollars %",
+            "Jobs in Scope"
+        ),
+        KpiValues, HSTACK(
+            TotalProjected,
+            TotalBurned,
+            TotalRemaining,
+            TotalPctBurned,
+            AvgBurnPerJob,
+            TotalHiddenFuture,
+            TotalHiddenClosed,
+            HiddenPct,
+            JobsInScope
+        ),
+        MonthHeader, HSTACK("Metric", TEXT(DATE(2000, SEQUENCE(, 12), 1), "mmm")),
+        MonthRows, VSTACK(
+            HSTACK("Monthly Actual Burn", MonthlyBurn),
+            HSTACK("Cumulative Burn", CumulativeBurn),
+            HSTACK("Remaining Burndown", RemainingBurndown),
+            HSTACK("Cumulative % Burned", CumulativePctBurned)
+        ),
+        VSTACK(
+            HSTACK("Burndown Controls In Effect", TitlePad),
+            PadRows(ControlHeader),
+            PadRows(ControlValues),
+            BlankRow,
+            HSTACK("Meeting Burndown", TitlePad),
+            PadRows(KpiHeader),
+            PadRows(KpiValues),
+            BlankRow,
+            HSTACK("Monthly Burndown", TitlePad),
+            PadRows(MonthHeader),
+            PadRows(MonthRows),
+            BlankRow
+        )
+    )
+);
+
+BURNDOWN_SCREEN_DETAIL_FROM_AXIS = LAMBDA(Axis,
+    LET(
+        AxisHdr, TAKE(Axis, 1),
+        AxisRows, DROP(Axis, 1),
+        GroupLabel, INDEX(AxisHdr, 1, 1),
+        InScope, CHOOSECOLS(AxisRows, 10),
+        CutTarget, MAX(0, IFERROR(0 + Burndown_Cut_Target, 0)),
+        ScreenCols, 15,
+        PadRows, LAMBDA(
+            Arr,
+            IF(
+                COLUMNS(Arr) < ScreenCols,
+                HSTACK(
+                    Arr,
+                    MAKEARRAY(ROWS(Arr), ScreenCols - COLUMNS(Arr), LAMBDA(rw, c, ""))
+                ),
+                Arr
+            )
+        ),
+        TitlePad, MAKEARRAY(1, ScreenCols - 1, LAMBDA(rw, c, "")),
+        DetailRaw, FILTER(
+            CHOOSECOLS(AxisRows, 1, 2, 3, 4, 5, 6, 7, 8),
+            InScope
+        ),
+        DetailSorted, SORTBY(
+            DetailRaw,
+            CHOOSECOLS(DetailRaw, 6),
+            -1,
+            CHOOSECOLS(DetailRaw, 1),
+            1,
+            CHOOSECOLS(DetailRaw, 2),
+            1,
+            CHOOSECOLS(DetailRaw, 3),
+            1
+        ),
+        DetProj, CHOOSECOLS(DetailSorted, 4),
+        DetBurn, CHOOSECOLS(DetailSorted, 5),
+        DetRem, CHOOSECOLS(DetailSorted, 6),
+        BurnPct, IF(
+            DetProj = 0,
+            IF(DetBurn <> 0, 1, 0),
+            DetBurn / DetProj
+        ),
+        CumRem, SCAN(0, DetRem, LAMBDA(acc, val, acc + val)),
+        CutMask, (CutTarget > 0) * (CumRem <= CutTarget),
+        CutDisp, IF(CutTarget <= 0, "", IF(CutMask, TRUE, "")),
+        DetailAnn, HSTACK(
+            DetailSorted,
+            BurnPct,
+            CumRem,
+            CutDisp
+        ),
+        DetailLimit, MAX(25, SUM(--CutMask)),
+        DetailRows, IF(
+            ROWS(DetailAnn) > DetailLimit,
+            TAKE(DetailAnn, DetailLimit),
+            DetailAnn
+        ),
+        DetailHeader, HSTACK(
+            GroupLabel,
+            "PM",
+            "Project Description",
+            "2026 Projected",
+            "Burned YTD",
+            "Remaining to Burn",
+            "Status",
+            "Future Tier",
+            "Burn %",
+            "Cumulative Remaining",
+            "Cut Candidate"
+        ),
+        VSTACK(
+            HSTACK("Largest Remaining Burn", TitlePad),
+            PadRows(DetailHeader),
+            PadRows(DetailRows)
+        )
+    )
+);
+
+BURNDOWN_SCREEN = LAMBDA([groupBy],
+    LET(
+        GroupChoice, IF(ISOMITTED(groupBy), "BU", groupBy),
+        Axis, BURNDOWN_AXIS(GroupChoice),
+        AxisRows, DROP(Axis, 1),
+        InScope, CHOOSECOLS(AxisRows, 10),
+        Jobs, CHOOSECOLS(AxisRows, 11),
+        JobsInScope, SUM(Jobs * InScope),
+        IF(
+            JobsInScope = 0,
+            "No cap-consuming rows found for meeting burndown",
+            LET(
+                GroupBlock, BURNDOWN_DIRECTOR_SUMMARY_FROM_AXIS(Axis),
+                GroupLabel, INDEX(TAKE(Axis, 1), 1, 1),
+                ScreenCols, COLUMNS(GroupBlock),
+                TitlePad, MAKEARRAY(1, ScreenCols - 1, LAMBDA(rw, c, "")),
+                BlankRow, MAKEARRAY(1, ScreenCols, LAMBDA(rw, c, "")),
+                VSTACK(
+                    BURNDOWN_SCREEN_TOP_FROM_AXIS(Axis),
+                    HSTACK("Burndown by " & GroupLabel, TitlePad),
+                    GroupBlock,
+                    BlankRow,
+                    BURNDOWN_SCREEN_DETAIL_FROM_AXIS(Axis)
+                )
+            )
+        )
+    )
+);

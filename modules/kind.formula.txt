@@ -1,0 +1,548 @@
+MonthList = {
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+};
+
+GroupChoices = {"Revised Group", "Site", "Region", "PM", "BU", "Category"};
+
+Carryover_Keys = {
+    "Not carry-over",
+    "CO – Not worked(design/hold)",
+    "CO – Worked(2025 start)",
+    "Standard Work(No Cuts)"
+};
+
+Carryover_Ranks = {1, 2, 4, 5};
+
+CarryoverRank = LAMBDA(c, XLOOKUP(TRIM(c), Carryover_Keys, Carryover_Ranks, 1, 0));
+
+CapByBU_Keys = {"20401", "15000"};
+
+CapByBU_Vals = {15300000, 4300000};
+
+CapExCap = 15300000;
+
+CapTotal = SUM(CapByBU_Vals);
+
+CapByBU = LAMBDA(bu,
+    LET(
+        buKey, TEXTBEFORE(bu & "", ":", , , 1),
+        XLOOKUP(TRIM(buKey), CapByBU_Keys, CapByBU_Vals, NA(), 0)
+    )
+);
+
+MonthNum = LAMBDA(mon, IFERROR(XMATCH(TRIM(mon), MonthList, 0), 1));
+
+GetFinanceBlock = LAMBDA(
+    LET(
+        fb_raw, TRIMRANGE_KEEPBLANKS('Planning Table'!$P$3:$BA$234),
+        IF('Planning Table'!$F$3 = "Grand Total", DROP(fb_raw, 1), fb_raw)
+    )
+);
+
+GetBudgetRaw = LAMBDA(TRIMRANGE('Planning Table'!$A$2:$BX$234, 2, 2));
+
+GetBudgetActiveRows = LAMBDA(
+    LET(
+        budget_raw, GetBudgetRaw(),
+        FILTER(budget_raw, CHOOSECOLS(budget_raw, 6) <> "Grand Total")
+    )
+);
+
+RowAlignFlag = LAMBDA(financeBlock, budget_active_rows,
+    IF(
+        ROWS(financeBlock) <> ROWS(DROP(budget_active_rows, 1)),
+        "⚠ Row mismatch FinanceBlock vs budget_active_rows",
+        ""
+    )
+);
+
+GetStartMonthVec = LAMBDA(EarliestStartVals,
+    IFERROR(
+        MONTH(EarliestStartVals),
+        IFERROR(XMATCH(LEFT(TRIM(EarliestStartVals), 3), MonthList, 0), 1)
+    )
+);
+
+GetYTDActuals = LAMBDA(Actuals12, asOfMonth,
+    LET(
+        m, MAX(1, MIN(12, asOfMonth)),
+        BYROW(TAKE(Actuals12, , m), LAMBDA(r, SUM(N(r))))
+    )
+);
+
+AccountingUniverseMask = LAMBDA(Status_raw, Projected, YTDActuals, CompositeCat_raw,
+    LET(
+        IsTotal, --(IFERROR(TEXTAFTER(CompositeCat_raw, " ", -1), "") = "Total"),
+        Deadweight, --((Status_raw = "Closed") * (Projected = 0) * (YTDActuals = 0)),
+        --((1 - Deadweight) * (1 - IsTotal))
+    )
+);
+
+CapConsumeMask = LAMBDA(BudgetRowsHR, StatusHRs, AuthHRs, ProjectedHRs, ActHRs, CanceledHRs,
+    LET(
+        Hdr, TAKE(BudgetRowsHR, 1),
+        IdxCompcat, XMATCH("Composite Cat", Hdr, 0),
+        IdxDesc, XMATCH("Project Description", Hdr, 0),
+        IdxCat, XMATCH("Category", Hdr, 0),
+        IdxSource, XMATCH("Source ID", Hdr, 0),
+        IdxJob, XMATCH("Job ID", Hdr, 0),
+        CompcatCol, DROP(CHOOSECOLS(BudgetRowsHR, IdxCompcat), 1),
+        DescCol, DROP(CHOOSECOLS(BudgetRowsHR, IdxDesc), 1),
+        CatCol, DROP(CHOOSECOLS(BudgetRowsHR, IdxCat), 1),
+        SourceCol, DROP(CHOOSECOLS(BudgetRowsHR, IdxSource), 1),
+        JobCol, DROP(CHOOSECOLS(BudgetRowsHR, IdxJob), 1),
+        StatusCol, DROP(StatusHRs, 1),
+        AuthCol, DROP(AuthHRs, 1),
+        ProjCol, DROP(ProjectedHRs, 1),
+        ActCol, DROP(ActHRs, 1),
+        CanceledCol, DROP(CanceledHRs, 1),
+        TinyActualThreshold, 50,
+        IsRollup, ((CompcatCol = "Grand Total") + (RIGHT(CompcatCol, 5) = "Total")) >
+            0,
+        HasDetailIdentity, (
+            (DescCol <> "") + (CatCol <> "") + (SourceCol <> "") + (JobCol <> "")
+        ) > 0,
+        HasPlan, N(ProjCol) <> 0,
+        HasAuth, N(AuthCol) <> 0,
+        HasActuals, N(ActCol) <> 0,
+        CanceledTxt, LOWER(TRIM(CanceledCol & "")),
+        IsCanceled, (
+            (N(CanceledCol) = 1) + (CanceledTxt = "true") + (CanceledTxt = "yes") +
+                (CanceledTxt = "y") + (CanceledTxt = "x") +
+                (CanceledTxt = "canceled") + (CanceledTxt = "cancelled")
+        ) > 0,
+        HasCapSignal, ((HasPlan) + (HasAuth) + (HasActuals)) > 0,
+        DeadweightInService, (StatusCol = "In Service") * NOT(HasCapSignal),
+        CanceledNoActuals, IsCanceled * NOT(HasActuals),
+        NuisanceResidual, (
+            (
+                (StatusCol = "In Service") + (StatusCol = "Closed") +
+                    (StatusCol = "Skipping")
+            ) > 0
+        ) * NOT(HasPlan) * NOT(HasAuth) * (ABS(N(ActCol)) <= TinyActualThreshold),
+        VSTACK(
+            "AccountingUniverse",
+            HasDetailIdentity * NOT(IsRollup) * HasCapSignal *
+                NOT(DeadweightInService) * NOT(CanceledNoActuals) *
+                NOT(NuisanceResidual)
+        )
+    )
+);
+
+HiddenMaskLogic = LAMBDA(Status_raw, Projections, YTDActuals,
+    --(
+        (
+            (Status_raw = "In Service") *
+                ((Projections = 0) + (YTDActuals > Projections))
+        ) > 0
+    )
+);
+
+AnchorProj12 = LAMBDA(Projections, Projections12, StartMonthVec, asOfMonth,
+    LET(
+        p12_all, Projections12,
+        ann_all, Projections,
+        DROP(
+            REDUCE(
+                0,
+                SEQUENCE(ROWS(p12_all)),
+                LAMBDA(acc, i,
+                    VSTACK(
+                        acc,
+                        LET(
+                            ann, N(INDEX(ann_all, i)),
+                            p12_s, N(INDEX(p12_all, i, 0)),
+                            sumFilled, SUM(p12_s),
+                            rem, MAX(0, ann - sumFilled),
+                            startM, INDEX(StartMonthVec, i),
+                            anchor, MAX(asOfMonth, startM),
+                            isBlank, --(p12_s = 0),
+                            idx, SEQUENCE(1, 12),
+                            w, IF(idx < anchor, 0, 13 - idx) * isBlank,
+                            wSum, SUM(w),
+                            p12_s + IF(wSum = 0, 0, rem * w / wSum)
+                        )
+                    )
+                )
+            ),
+            1
+        )
+    )
+);
+
+CalcSortKey = LAMBDA(Projections, YTDActuals, financeBlock,
+    LET(
+        Remaining, Projections - YTDActuals,
+        RemainingCapped, IF(Remaining < 0, 0, Remaining),
+        MaxRem, MAX(RemainingCapped),
+        Scale, 10 ^ (1 + INT(LOG10(MaxRem + 1))),
+        AuthRank, IF(N(CHOOSECOLS(financeBlock, 2)) > 0, 2, 0),
+        SpentPct, IFERROR(YTDActuals / Projections, 0),
+        SpendRank, IFS(SpentPct >= 0.25, 3, SpentPct >= 0.1, 2, TRUE, 1),
+        WithinBandScore, AuthRank * 10 + SpendRank,
+        RemainingForSort, IF(Projections = 0, MaxRem + 1, RemainingCapped),
+        WithinBandScore * Scale - RemainingForSort
+    )
+);
+
+SpendSignalPack = LAMBDA(
+    Projections,
+    YTDActuals,
+    Actuals12,
+    Budget12,
+    StartMonthVec,
+    asOfMonth,
+    capVec,
+    LET(
+        kMA, 2,
+        startMA, MAX(1, asOfMonth - kMA + 1),
+        actSlice, TAKE(DROP(Actuals12, , startMA - 1), , asOfMonth - startMA + 1),
+        budSlice, TAKE(DROP(Budget12, , startMA - 1), , asOfMonth - startMA + 1),
+        actMA, BYROW(actSlice, LAMBDA(r, AVERAGE(r))),
+        budMA, BYROW(budSlice, LAMBDA(r, AVERAGE(r))),
+        ratio, IF(budMA <= 0, 0, actMA / budMA),
+        urgencyMA, IF(
+            Projections = 0,
+            IF(YTDActuals > 0, 1, 0),
+            IF(ratio > 1, 1, ratio)
+        ),
+        capImpact, IF(
+            capVec = 0,
+            0,
+            IF(Projections >= YTDActuals, Projections, YTDActuals) / capVec
+        ),
+        CPSvec, 100 * (0.7 * capImpact + 0.3 * urgencyMA),
+        EarlySpendFlagVec, (asOfMonth < StartMonthVec) * (YTDActuals > 0),
+        m, SEQUENCE(, 12),
+        exec_mask, --(m >= StartMonthVec),
+        month_mask, --(m <= asOfMonth),
+        plan_cum, RBYROW(Budget12, LAMBDA(r, SCAN(0, r, LAMBDA(a, x, a + x)))),
+        act_cum, RBYROW(Actuals12, LAMBDA(r, SCAN(0, r, LAMBDA(a, x, a + x)))),
+        DriftVec, BYROW(
+            (act_cum - plan_cum) * --(m <= asOfMonth),
+            LAMBDA(r, MAX(0, MAX(r)))
+        ),
+        stack, HSTACK(CPSvec, EarlySpendFlagVec, DriftVec),
+        stack
+    )
+);
+
+VisibleGroupRows = LAMBDA(GroupRows,
+    LET(
+        GroupTopRow, CHOOSEROWS(GroupRows, 1),
+        GroupHdr, CHOOSEROWS(GroupRows, 2),
+        GroupBodyRows, DROP(DROP(GroupRows, 2), -1),
+        DropIdx, HSTACK(
+            XMATCH("EarlySpend", GroupHdr),
+            XMATCH("Status", GroupHdr),
+            XMATCH("YTD Actuals", GroupHdr),
+            XMATCH("Drift", GroupHdr)
+        ),
+        KeepIdx, FILTER(
+            SEQUENCE(, COLUMNS(GroupHdr)),
+            ISNA(MATCH(SEQUENCE(, COLUMNS(GroupHdr)), DropIdx, 0))
+        ),
+        VSTACK(
+            CHOOSECOLS(GroupTopRow, KeepIdx),
+            CHOOSECOLS(GroupHdr, KeepIdx),
+            CHOOSECOLS(GroupBodyRows, KeepIdx),
+            CHOOSECOLS(TAKE(GroupRows, -1), KeepIdx)
+        )
+    )
+);
+
+GroupMetricPack = LAMBDA(GroupRows,
+    LET(
+        GroupHdr, CHOOSEROWS(GroupRows, 2),
+        GroupBodyRows, DROP(DROP(GroupRows, 2), -1),
+        IdxDesc, XMATCH("Project Description", GroupHdr),
+        IdxProj, XMATCH("2026 Projected", GroupHdr),
+        IdxAct, XMATCH("YTD Actuals", GroupHdr),
+        IdxStatus, XMATCH("Status", GroupHdr),
+        IdxEarly, XMATCH("EarlySpend", GroupHdr),
+        IdxDrift, XMATCH("Drift", GroupHdr),
+        IdxCat, XMATCH("Category", GroupHdr),
+        Desc, CHOOSECOLS(GroupBodyRows, IdxDesc),
+        ProjAuth, CHOOSECOLS(GroupBodyRows, IdxProj),
+        ActYtd, CHOOSECOLS(GroupBodyRows, IdxAct),
+        StatusGrp, CHOOSECOLS(GroupBodyRows, IdxStatus),
+        EarlyFlagRaw, IFERROR(CHOOSECOLS(GroupBodyRows, IdxEarly), 0 * ProjAuth),
+        DriftGrp, CHOOSECOLS(GroupBodyRows, IdxDrift),
+        GrpValue, CHOOSECOLS(GroupBodyRows, 1),
+        CatGrp, CHOOSECOLS(GroupBodyRows, IdxCat),
+        HSTACK(
+            Desc,
+            ProjAuth,
+            ActYtd,
+            StatusGrp,
+            EarlyFlagRaw,
+            DriftGrp,
+            GrpValue,
+            CatGrp
+        )
+    )
+);
+
+CloseMetricPack = LAMBDA(ProjAuth, ActYtd, StatusGrp,
+    LET(
+        AdjustedProjected, IF(
+            ActYtd > ProjAuth,
+            CEILING(ActYtd, IF(ActYtd < 10000, 100, IF(ActYtd < 250000, 500, 1000))),
+            ProjAuth
+        ),
+        Closed, --(
+            (
+                (ActYtd > 0) * (ProjAuth > 0) *
+                    (ABS(ActYtd - ProjAuth) <= 0.01 * ProjAuth) +
+                    (StatusGrp = "In Service") + (StatusGrp = "Closed")
+            ) > 0
+        ),
+        HSTACK(AdjustedProjected, Closed)
+    )
+);
+
+SubtotalMetricPack = LAMBDA(CatGrp, Desc, ProjAuth, ActYtd,
+    LET(
+        IsSubtotal, (CatGrp = "") * (Desc = ""),
+        SubtotalAuthAmt, IF(IsSubtotal, ProjAuth, 0),
+        CumSubtotalAuth, SCAN(0, SubtotalAuthAmt, LAMBDA(acc, x, acc + IFERROR(x, 0))),
+        GrandTotal, SUM(SubtotalAuthAmt),
+        GrandTotalVec, 0 * ProjAuth + GrandTotal,
+        SubtotalActAmt, IF(IsSubtotal, ActYtd, 0),
+        CumSubtotalActuals, SCAN(
+            0,
+            SubtotalActAmt,
+            LAMBDA(acc, x, acc + IFERROR(x, 0))
+        ),
+        LineRem, IFERROR(ProjAuth - ActYtd, ""),
+        LineRemPct, IFERROR((ProjAuth - ActYtd) / ProjAuth, ""),
+        PctCum, IF(
+            IsSubtotal,
+            IFERROR(CumSubtotalAuth / GrandTotal, 0),
+            IFERROR(ActYtd / ProjAuth, "")
+        ),
+        HSTACK(
+            IsSubtotal,
+            CumSubtotalAuth,
+            GrandTotalVec,
+            CumSubtotalActuals,
+            LineRem,
+            LineRemPct,
+            PctCum
+        )
+    )
+);
+
+HiddenBurnByBU = LAMBDA(BUCode, StatusRaw, Projections, YTDActuals, HiddenBurnAmtVec,
+    LET(
+        HiddenMask, HiddenMaskLogic(StatusRaw, Projections, YTDActuals),
+        GROUPBY(BUCode, HiddenBurnAmtVec, SUM, 0, 0, 1, HiddenMask)
+    )
+);
+
+FlagsWithShadow = LAMBDA(FlagsOut, ShadowDisp, IsSubtotal,
+    IF(
+        IsSubtotal,
+        BYROW(HSTACK(FlagsOut, ShadowDisp), LAMBDA(r, TEXTJOIN(" | ", TRUE, r))),
+        FlagsOut
+    )
+);
+
+TotalMetricPack = LAMBDA(GrandTotal, PflCapBinding, YTDActuals,
+    LET(
+        ActTotal, SUM(YTDActuals),
+        CapRemActuals, PflCapBinding - ActTotal,
+        HSTACK(
+            GrandTotal,
+            1,
+            IF(
+                GrandTotal > PflCapBinding,
+                "Info CapEx of " & TEXT(PflCapBinding, "#,##0.0,,") & "M",
+                TEXT(PflCapBinding, "#,##0.000,,")
+            ),
+            TEXT(CapRemActuals, "#,##0.0,,") & "M",
+            IFERROR(GrandTotal / PflCapBinding, 0),
+            IFERROR(GrandTotal / PflCapBinding, 0)
+        )
+    )
+);
+
+DropHelperCols = LAMBDA(Stack,
+    LET(
+        stackhdr, CHOOSEROWS(Stack, 2),
+        idxfinalearly, IFERROR(XMATCH("EarlySpend", stackhdr, 0), 0),
+        idxfinalrank, IFERROR(XMATCH("Rank", stackhdr, 0), 0),
+        idxfinalsort, IFERROR(XMATCH("Sortkey", stackhdr, 0), 0),
+        allcols, SEQUENCE(, COLUMNS(Stack)),
+        helperids, VSTACK(idxfinalrank, idxfinalsort, idxfinalearly),
+        finaldropcols, FILTER(helperids, helperids > 0, 0),
+        finalkeepcols, FILTER(allcols, ISNA(MATCH(allcols, finaldropcols, 0))),
+        DROP(IFNA(CHOOSECOLS(Stack, finalkeepcols), ""), 1)
+    )
+);
+
+FlagsOut = LAMBDA(
+    auth,
+    a,
+    AdjustedProjected,
+    line_remaining_pct,
+    closed,
+    early_flag_raw,
+    isSubtotal,
+    cap_remaining_ctx,
+    isGroupBU,
+    capRow,
+    HiddenBurnBU,
+    run,
+    DriftVec,
+    LET(
+        baseMag, IF(auth > 0, auth, AdjustedProjected),
+        mag, 2.2 ^ INT(LOG(baseMag + 1, 2.2)),
+        tol, 0.025 * mag,
+        earlyAuthorized, (auth > 0) * (a > 0) * (a <= tol) * (1 - closed),
+        preAuthBilling, (auth = 0) * (a > 0) * (a <= tol) * (1 - closed),
+        mobilized, (auth = 0) * (a > tol) * (a <= MAX(4 * tol, 1000)) * (1 - closed),
+        installed, (auth = 0) * (a > MAX(4 * tol, 1000)) * (1 - closed),
+        overProj, (auth > 0) * ((a - auth) > tol) * (1 - closed),
+        retAdj, (auth > 0) * ((a - auth) > tol) * (AdjustedProjected > auth) *
+            (1 - closed),
+        nearProj, (a > 0) * (ABS(auth - a) <= tol) * (1 - closed),
+        drift_ratio, DriftVec / MAX(baseMag, 1000),
+        driftWatch, (DriftVec > MAX(1000, 0.03 * auth)) * (1 - closed),
+        driftRisk, (auth > 0) * (DriftVec > 0.3 * auth) * (a > 0) * (1 - closed),
+        driftCritical, (DriftVec > MAX(75000, 0.1 * auth)) * (1 - closed),
+        baseTxt, BYROW(
+            HSTACK(
+                IF(preAuthBilling, "⚠ Early Billing", ""),
+                IF(earlyAuthorized, "🟢 Early Authorized", ""),
+                IF(mobilized, "🟠 Mobilized", ""),
+                IF(installed, "🚨 Installed (Unauthorized)", ""),
+                IF(retAdj, "↥ Retention Adj.", ""),
+                IF(overProj, "⚠ Over Projected", ""),
+                IF(nearProj, "⚑ Near Projected", ""),
+                IF(driftCritical, "🚨 Drift Critical", ""),
+                IF((1 - driftCritical) * driftRisk, "⚠ Drift Risk", ""),
+                IF(
+                    (1 - driftRisk) * (1 - driftCritical) * driftWatch,
+                    "🟡 Drift Watch",
+                    ""
+                )
+            ),
+            LAMBDA(r, TEXTJOIN(" | ", TRUE, r))
+        ),
+        earlyTxt, IF(early_flag_raw, "⚠ Early spend(active)", ""),
+        detailTxt, BYROW(
+            HSTACK(IF(closed, "✔ Closed", ""), IF(closed, "", earlyTxt), baseTxt),
+            LAMBDA(r, TEXTJOIN(" | ", TRUE, r))
+        ),
+        subTxt, IF(cap_remaining_ctx < 0, "⚠ Over CapEx", ""),
+        IF(isSubtotal, subTxt, detailTxt)
+    )
+);
+
+ReportExtraHeaders = LAMBDA(
+    HSTACK(
+        "YTD Actuals (Dtl)" & CHAR(10) & "Run Projected Total(Sub)",
+        "% Spent (Dtl)" & CHAR(10) & "Cumulative Share of Plan(Sub)",
+        "Flags (Dtl)" & CHAR(10) & "Cap/Rollup Flags + Shadow Price(Sub)",
+        "Remaining $ (Dtl)" & CHAR(10) & "Cap Remaining $(Sub)",
+        "% Remaining (Dtl)" & CHAR(10) & "Line % of Cap(Sub)",
+        "% of Cap (Dtl)" & CHAR(10) & "Cumulative % of Cap(Sub)"
+    )
+);
+
+FutureTierAuto = LAMBDA(
+    RevisedGroupVec,
+    ProjectedVec,
+    YtdActualsVec,
+    CarryoverVec,
+    LikelyMinProj,
+    LET(
+        Rev, IFERROR(LOWER(TRIM(RevisedGroupVec)), ""),
+        Proj, IFERROR(N(ProjectedVec), 0),
+        Act, IFERROR(N(YtdActualsVec), 0),
+        Carry, IFERROR(LOWER(TRIM(CarryoverVec)), ""),
+        IsFutureFamily, Rev = "future",
+        HasActuals, Act > 0,
+        CarryFlag, (
+            (Carry = "co – worked(2025 start)") +
+                (Carry = "co – not worked(design/hold)") + (Carry = "roll-over") +
+                (Carry = "rollover") + (Carry = "yes")
+        ) > 0,
+        BigJob, Proj >= LikelyMinProj,
+        IF(
+            IsFutureFamily,
+            IF(
+                HasActuals,
+                "F1 — Future Committed",
+                IF((BigJob + CarryFlag) > 0, "F2 — Future", "F3 — Future Speculative")
+            ),
+            ""
+        )
+    )
+);
+
+FutureTierFinal = LAMBDA(FutureTierAutoVec, FutureTierOverrideVec,
+    LET(
+        Ovr, TRIM(FutureTierOverrideVec),
+        Auto, FutureTierAutoVec,
+        IF(Ovr <> "", Ovr, Auto)
+    )
+);
+
+FutureIncludeMask = LAMBDA(RevisedGroupVec, FutureTierFinalVec, FilterMode,
+    LET(
+        Rev, IFERROR(LOWER(TRIM(RevisedGroupVec)), ""),
+        Tier, IFERROR(TRIM(FutureTierFinalVec), ""),
+        Mode, IFERROR(LOWER(TRIM(FilterMode)), "all"),
+        Ones, 1 + 0 * SEQUENCE(ROWS(Rev)),
+        IsFutureFamily, ((Rev = "future") + (Tier <> "")) > 0,
+        IF(
+            Mode = "exclude future",
+            --NOT(IsFutureFamily),
+            IF(
+                Mode = "keep f1 only",
+                --(((NOT(IsFutureFamily)) + (Tier = "F1 — Future Committed")) > 0),
+                IF(
+                    Mode = "keep f1+f2",
+                    --(
+                        (
+                            (NOT(IsFutureFamily)) + (Tier = "F1 — Future Committed") +
+                                (Tier = "F2 — Future")
+                        ) > 0
+                    ),
+                    Ones
+                )
+            )
+        )
+    )
+);
+
+HideClosedMask = LAMBDA(StatusVec, HideClosedSetting,
+    LET(
+        St, IFERROR(LOWER(TRIM(StatusVec)), ""),
+        RawSetting, UPPER(TRIM(HideClosedSetting & "")),
+        HideFlag, IF(
+            RawSetting = "HIDE",
+            1,
+            IF(
+                RawSetting = "SHOW",
+                0,
+                IFERROR(--HideClosedSetting, 0)
+            )
+        ),
+        Ones, 1 + 0 * SEQUENCE(ROWS(St)),
+        IF(HideFlag, --(St <> "closed"), Ones)
+    )
+);

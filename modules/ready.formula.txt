@@ -1,0 +1,182 @@
+Eligible = 'Planning Table'!$BE$5:$BE$200;
+
+Maturity = 'Planning Table'!$BD$5:$BD$200;
+
+Stage = 'Planning Table'!$BC$5:$BC$200;
+
+JobFlag = 'Planning Table'!$O$5:$O$200;
+
+cReadyExec = "Ready for Execution";
+
+lstExecStages = Lists!$S$2:$S$5;
+
+NormText = LAMBDA(x, UPPER(TRIM(x & "")));
+
+ReadyExecKey = NormText(cReadyExec);
+
+ExecStageKeys = MAP(lstExecStages, LAMBDA(v, NormText(v)));
+
+IsExecStage = LAMBDA(x, ISNUMBER(XMATCH(NormText(x), ExecStageKeys, 0, -1)));
+
+TruthyFlag = LAMBDA(x,
+    LET(
+        txt, LOWER(TRIM(x & "")),
+        ((N(x) = 1) + (txt = "true") + (txt = "yes") + (txt = "y") + (txt = "x")) >
+            0
+    )
+);
+
+CanceledFlag = LAMBDA(x,
+    LET(
+        txt, LOWER(TRIM(x & "")),
+        (TruthyFlag(x) + (txt = "canceled") + (txt = "cancelled")) > 0
+    )
+);
+
+IsBaseReadyRow = LAMBDA(eligible, maturity, stage,
+    LET(
+        eligibleFlag, --eligible,
+        readyExecFlag, --(NormText(maturity) = ReadyExecKey),
+        execStageFlag, --IsExecStage(stage),
+        --((eligibleFlag * readyExecFlag * execStageFlag) > 0)
+    )
+);
+
+InternalReady3 = LAMBDA(eligible, maturity, stage, jobFlag,
+    LET(
+        eligibleFlag, --eligible,
+        readyExecFlag, --(NormText(maturity) = ReadyExecKey),
+        execStageFlag, --IsExecStage(stage),
+        jobYesFlag, --(NormText(jobFlag) = "Y"),
+        strictReady, --((eligibleFlag * readyExecFlag * execStageFlag * jobYesFlag) > 0),
+        anyProgress, --(
+            (
+                (NormText(maturity) <> "") + (NormText(stage) <> "") +
+                    (NormText(jobFlag) <> "")
+            ) > 0
+        ),
+        IF(
+            eligibleFlag = 0,
+            0,
+            IF(strictReady, 2, IF(anyProgress, 1, 0))
+        )
+    )
+);
+
+InternalJobs_Export = LAMBDA(
+    LET(
+        Hdr, get.GetBudgetHeaders(),
+        Body, get.GetBudgetBody(),
+        BlankCol, EXPAND("", ROWS(Body), 1, ""),
+        HeaderPos, LAMBDA(hedr, IFERROR(XMATCH(hedr, Hdr, 0), 0)),
+        ColOrBlank, LAMBDA(hedr,
+            LET(
+                idx, HeaderPos(hedr),
+                IF(idx > 0, CHOOSECOLS(Body, idx), BlankCol)
+            )
+        ),
+        IdxInternalEligible, HeaderPos("Internal Eligible"),
+        IdxEligible, HeaderPos("Eligible"),
+        ProjectDescription, ColOrBlank("Project Description"),
+        BU, ColOrBlank("BU"),
+        Region, ColOrBlank("Region"),
+        Site, ColOrBlank("Site"),
+        CompositeCat, ColOrBlank("Composite Cat"),
+        Status, ColOrBlank("Status"),
+        PlanningNotes, ColOrBlank("Planning Notes"),
+        CarryOver, ColOrBlank("Carry-over"),
+        PM, ColOrBlank("PM"),
+        Type, ColOrBlank("Type"),
+        Category, ColOrBlank("Category"),
+        SourceID, ColOrBlank("Source ID"),
+        JobID, ColOrBlank("Job ID"),
+        Chargeable, ColOrBlank("Chargeable"),
+        Comments, ColOrBlank("Comments"),
+        StageCol, ColOrBlank("Stage"),
+        PlanningMaturity, ColOrBlank("Planning Maturity"),
+        InternalEligibleRaw, ColOrBlank("Internal Eligible"),
+        InternalReadyRaw, ColOrBlank("Internal Ready"),
+        EarliestStart, ColOrBlank("Earliest Start (Internal)"),
+        BlockedReason, ColOrBlank("Blocked Reason (Internal)"),
+        Timeline, ColOrBlank("Timeline"),
+        Person, ColOrBlank("Person"),
+        Hours, ColOrBlank("Hours"),
+        RevisedGroup, ColOrBlank("Revised Group"),
+        FutureTierOverride, ColOrBlank("Future Tier Override"),
+        CanceledRaw, ColOrBlank("Canceled"),
+        InternalEligibleOut, IF(
+            IdxInternalEligible > 0,
+            InternalEligibleRaw,
+            IF(IdxEligible > 0, ColOrBlank("Eligible"), BlankCol)
+        ),
+        IsRollup, ((CompositeCat = "Grand Total") + (RIGHT(CompositeCat, 5) = "Total")) >
+            0,
+        IsCanceled, CanceledFlag(CanceledRaw),
+        IsEligible, TruthyFlag(InternalEligibleOut),
+        HasProgress, (
+            (NormText(StageCol) <> "") + (NormText(PlanningMaturity) <> "") +
+                (NormText(InternalReadyRaw) <> "") + (NormText(EarliestStart) <> "") +
+                (NormText(BlockedReason) <> "") + (NormText(Timeline) <> "") +
+                (NormText(Person) <> "") + (NormText(Hours) <> "") +
+                (NormText(RevisedGroup) <> "") + (NormText(FutureTierOverride) <> "")
+        ) > 0,
+        InternalReadyComputed, InternalReady3(
+            IsEligible,
+            PlanningMaturity,
+            StageCol,
+            Chargeable
+        ),
+        InternalReadyFinal, IF(
+            NormText(InternalReadyRaw) <> "",
+            InternalReadyRaw,
+            InternalReadyComputed
+        ),
+        OutHdr, {
+            "Project Description", "BU", "Region", "Site", "Composite Cat", "Status",
+            "Planning Notes", "Carry-over", "PM", "Type", "Category", "Source ID",
+            "Job ID", "Chargeable", "Comments", "Stage", "Planning Maturity",
+            "Internal Eligible", "Internal Ready", "Internal Ready Final",
+            "Earliest Start (Internal)", "Blocked Reason (Internal)", "Timeline",
+            "Person", "Hours", "Revised Group", "Future Tier Override", "Canceled"
+        },
+        OutRows0, HSTACK(
+            ProjectDescription,
+            BU,
+            Region,
+            Site,
+            CompositeCat,
+            Status,
+            PlanningNotes,
+            CarryOver,
+            PM,
+            Type,
+            Category,
+            SourceID,
+            JobID,
+            Chargeable,
+            Comments,
+            StageCol,
+            PlanningMaturity,
+            InternalEligibleOut,
+            InternalReadyRaw,
+            InternalReadyFinal,
+            EarliestStart,
+            BlockedReason,
+            Timeline,
+            Person,
+            Hours,
+            RevisedGroup,
+            FutureTierOverride,
+            CanceledRaw
+        ),
+        KeepMask, NOT(IsRollup) * NOT(IsCanceled) * IsEligible * HasProgress,
+        HasRows, SUM(--KeepMask) > 0,
+        KeptRows, IF(HasRows, FILTER(OutRows0, KeepMask), ""),
+        SortedRows, IF(
+            HasRows,
+            SORTBY(KeptRows, FILTER(ProjectDescription, KeepMask), 1, FILTER(JobID, KeepMask), 1),
+            ""
+        ),
+        IF(HasRows, VSTACK(OutHdr, SortedRows), OutHdr)
+    )
+);

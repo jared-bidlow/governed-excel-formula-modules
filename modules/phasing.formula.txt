@@ -1,0 +1,63 @@
+PHASE_2026 = LAMBDA(total,
+    LET(
+        jan, ROUND(total, 0.04),
+        feb, ROUND(total, 0.05),
+        mar, ROUND(total, 0.06),
+        apr, ROUND(total, 0.12),
+        may, ROUND(total, 0.12),
+        jun, ROUND(total, 0.11),
+        jul, ROUND(total, 0.10),
+        aug, ROUND(total, 0.10),
+        sep, ROUND(total, 0.10),
+        oct, ROUND(total, 0.07),
+        nov, ROUND(total, 0.03),
+        dec, total - (jan + feb + mar + apr + may + jun + jul + aug + sep + oct + nov),
+        VSTACK(jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec)
+    )
+);
+
+PHASE_2026_SINGLE = LAMBDA(total, target,
+    LET(
+        t, LOWER(target),
+        pJan, 0.04,
+        pFeb, 0.05,
+        pMar, 0.06,
+        pApr, 0.12,
+        pMay, 0.12,
+        pJun, 0.11,
+        pJul, 0.10,
+        pAug, 0.10,
+        pSep, 0.10,
+        pOct, 0.07,
+        pNov, 0.03,
+        pDec, 0.10,
+        janAmt, ROUND(total * pJan, 0),
+        febAmt, ROUND(total * pFeb, 0),
+        marAmt, ROUND(total * pMar, 0),
+        aprAmt, ROUND(total * pApr, 0),
+        mayAmt, ROUND(total * pMay, 0),
+        junAmt, ROUND(total * pJun, 0),
+        julAmt, ROUND(total * pJul, 0),
+        augAmt, ROUND(total * pAug, 0),
+        sepAmt, ROUND(total * pSep, 0),
+        octAmt, ROUND(total * pOct, 0),
+        novAmt, ROUND(total * pNov, 0),
+        decAmt, total - (janAmt + febAmt + marAmt + aprAmt + mayAmt + junAmt + julAmt + augAmt + sepAmt + octAmt + novAmt),
+        SWITCH(
+            TRUE,
+            OR(t = "jan", t = "january"), janAmt,
+            OR(t = "feb", t = "february"), febAmt,
+            OR(t = "mar", t = "march"), marAmt,
+            OR(t = "apr", t = "april"), aprAmt,
+            t = "may", mayAmt,
+            OR(t = "jun", t = "june"), junAmt,
+            OR(t = "jul", t = "july"), julAmt,
+            OR(t = "aug", t = "august"), augAmt,
+            OR(t = "sep", t = "september"), sepAmt,
+            OR(t = "oct", t = "october"), octAmt,
+            OR(t = "nov", t = "november"), novAmt,
+            OR(t = "dec", t = "december"), decAmt,
+            NA()
+        )
+    )
+);

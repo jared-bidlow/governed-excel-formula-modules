@@ -1,0 +1,108 @@
+GetBudgetHeaders = LAMBDA('Planning Table'!$A$2:$BO$2);
+
+GetBudgetBodyRaw = LAMBDA(TRIMRANGE_KEEPBLANKS('Planning Table'!$A$3:$BO$234));
+
+GetHeaderPos = LAMBDA(hdr, XMATCH(hdr, GetBudgetHeaders(), 0));
+
+GetHeaderPosFromHdr = LAMBDA(Hdr, hedr, XMATCH(hedr, Hdr, 0));
+
+GetColByHeader = LAMBDA(data, hdr, CHOOSECOLS(data, GetHeaderPos(hdr)));
+
+GetBudgetBody = LAMBDA(
+    LET(
+        raw, GetBudgetBodyRaw(),
+        first_compcat, INDEX(TAKE(raw, 1), 1, GetHeaderPos("Composite Cat")),
+        IF(first_compcat = "Grand Total", DROP(raw, 1), raw)
+    )
+);
+
+GetAnnualProjectedPos = LAMBDA(
+    LET(Hdr, GetBudgetHeaders(), XMATCH(TRUE, (RIGHT(Hdr, 9) = "Projected"), 0))
+);
+
+GetAnnualProjectedPosFromHdr = LAMBDA(Hdr,
+    XMATCH(TRUE, (RIGHT(Hdr, 9) = "Projected"), 0)
+);
+
+GetAnnualProjectedHeader = LAMBDA(
+    INDEX(GetBudgetHeaders(), 1, GetAnnualProjectedPos())
+);
+
+GetAnnualProjectedHeaderFromHdr = LAMBDA(Hdr,
+    INDEX(Hdr, 1, GetAnnualProjectedPosFromHdr(Hdr))
+);
+
+GetIsRollupMask = LAMBDA(
+    LET(
+        body, GetBudgetBody(),
+        compcat_col, GetColByHeader(body, "Composite Cat"),
+        ((compcat_col = "Grand Total") + (RIGHT(compcat_col, 5) = "Total")) > 0
+    )
+);
+
+GetHasDetailIdentityMask = LAMBDA(
+    LET(
+        body, GetBudgetBody(),
+        desc_col, GetColByHeader(body, "Project Description"),
+        cat_col, GetColByHeader(body, "Category"),
+        source_col, GetColByHeader(body, "Source ID"),
+        job_col, GetColByHeader(body, "Job ID"),
+        ((desc_col <> "") + (cat_col <> "") + (source_col <> "") + (job_col <> "")) > 0
+    )
+);
+
+GetBudgetDetailMask = LAMBDA(GetHasDetailIdentityMask() * NOT(GetIsRollupMask()));
+
+GetBudgetDetailBody = LAMBDA(
+    LET(body, GetBudgetBody(), FILTER(body, GetBudgetDetailMask()))
+);
+
+GetBudgetDetailRows = LAMBDA(VSTACK(GetBudgetHeaders(), GetBudgetDetailBody()));
+
+GetFinanceStartPos = LAMBDA(GetAnnualProjectedPos());
+
+GetFinanceEndPos = LAMBDA(GetHeaderPos("December"));
+
+GetFinanceBlock = LAMBDA(
+    LET(
+        detail_body, GetBudgetDetailBody(),
+        s, GetFinanceStartPos(),
+        e, GetFinanceEndPos(),
+        TAKE(DROP(detail_body, , s - 1), , e - s + 1)
+    )
+);
+
+GetProjections = LAMBDA(FinanceBlock, N(CHOOSECOLS(FinanceBlock, 1)));
+
+GetCurrentAuthorized = LAMBDA(FinanceBlock, N(CHOOSECOLS(FinanceBlock, 2)));
+
+GetProj12Raw = LAMBDA(FinanceBlock, CHOOSECOLS(FinanceBlock, SEQUENCE(, 12, 3, 3)));
+GetFinalProj12 = LAMBDA(FinanceBlock,
+    N(CHOOSECOLS(FinanceBlock, SEQUENCE(, 12, 3, 3)))
+);
+
+GetActuals12 = LAMBDA(FinanceBlock, N(CHOOSECOLS(FinanceBlock, SEQUENCE(, 12, 4, 3))));
+
+GetBudget12 = LAMBDA(FinanceBlock, N(CHOOSECOLS(FinanceBlock, SEQUENCE(, 12, 5, 3))));
+
+GetBudgetActiveMask = LAMBDA(
+    LET(
+        body, GetBudgetBody(),
+        hdrs, GetBudgetHeaders(),
+        detail_mask, GetBudgetDetailMask(),
+        status_col, GetColByHeader(body, "Status"),
+        auth_col, GetColByHeader(body, "Current Authorized Amount"),
+        annual_proj_col, CHOOSECOLS(body, GetFinanceStartPos()),
+        actual_pos, FILTER(
+            SEQUENCE(, COLUMNS(hdrs)),
+            ISNUMBER(SEARCH("Actuals", hdrs))
+        ),
+        actuals_ytd, BYROW(CHOOSECOLS(body, actual_pos), LAMBDA(r, SUM(N(r)))),
+        has_plan, N(annual_proj_col) <> 0,
+        has_auth, N(auth_col) <> 0,
+        has_actuals, actuals_ytd <> 0,
+        has_cap_signal, ((has_plan) + (has_auth) + (has_actuals)) > 0,
+        deadweight_in_service, (status_col = "In Service") * NOT(has_cap_signal),
+        detail_mask * has_cap_signal * NOT(deadweight_in_service)
+    )
+);

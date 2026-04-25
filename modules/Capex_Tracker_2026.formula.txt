@@ -1,0 +1,307 @@
+BuildGroupedRows = LAMBDA(
+    BudgetRows,
+    GroupKeys,
+    RankVals,
+    SortKey,
+    CpsVec,
+    EarlySpendVec,
+    DriftVec,
+    YTDActuals,
+    AlphaMode,
+    ExtraMaskHRs,
+    LET(
+        /*Header map*/Hdr, TAKE(BudgetRows, 1),
+        IdxCat, XMATCH("Category", Hdr, 0),
+        IdxDesc, XMATCH("Project Description", Hdr, 0),
+        IdxProj, XMATCH("2026 Projected", Hdr, 0),
+        IdxChargeable, XMATCH("Chargeable", Hdr, 0),
+        IdxAuth, XMATCH("Current Authorized Amount", Hdr, 0),
+        IdxPm, XMATCH("PM", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxCanceled, IFERROR(XMATCH("Canceled", Hdr, 0), 0),
+        IdxCompcat, XMATCH("Composite Cat", Hdr, 0),
+        /*Header+row vectors used inside GROUPBY*/ProjectedHRs, CHOOSECOLS(
+            BudgetRows,
+            IdxProj
+        ),
+        StatusHRs, CHOOSECOLS(BudgetRows, IdxStatus),
+        ActHRs, VSTACK("YTD Actuals", YTDActuals),
+        AuthHRs, CHOOSECOLS(BudgetRows, IdxAuth),
+        CanceledHRs, IF(
+            IdxCanceled > 0,
+            CHOOSECOLS(BudgetRows, IdxCanceled),
+            VSTACK("Canceled", 0 * YTDActuals)
+        ),
+        RankHRs, VSTACK("Rank", RankVals),
+        SortKeyHRs, VSTACK("Sortkey", SortKey),
+        CpsHRs, VSTACK("CPS", CpsVec),
+        EarlySpendHRs, VSTACK("EarlySpend", EarlySpendVec),
+        DriftHRs, VSTACK("Drift", DriftVec),
+        /*Grouping fields*/GroupFields, IF(
+            AlphaMode,
+            HSTACK(
+                CHOOSECOLS(BudgetRows, GroupKeys),
+                CHOOSECOLS(BudgetRows, IdxCat, IdxDesc)
+            ),
+            HSTACK(
+                CHOOSECOLS(BudgetRows, GroupKeys),
+                HSTACK(RankHRs, SortKeyHRs),
+                CHOOSECOLS(BudgetRows, IdxCat, IdxDesc)
+            )
+        ),
+        /*Aggregated value block*/GroupValuePack, HSTACK(
+            CHOOSECOLS(BudgetRows, IdxProj, IdxProj, IdxChargeable, IdxPm),
+            CpsHRs,
+            EarlySpendHRs,
+            DriftHRs,
+            StatusHRs,
+            ActHRs
+        ),
+        /*Aggregation rules*/AggFns, HSTACK(
+            SUM,
+            PERCENTOF,
+            SINGLE,
+            SINGLE,
+            AVERAGE,
+            SINGLE,
+            SINGLE,
+            SINGLE,
+            SUM
+        ),
+        /*Sort behavior by grouping mode*/SortOrder, IF(
+            AlphaMode,
+            COLUMNS(GroupFields) + 4,
+            {1, -2, -3}
+        ),
+        /*Accounting universe mask*/UniverseMask, kind.CapConsumeMask(
+            BudgetRows,
+            StatusHRs,
+            AuthHRs,
+            ProjectedHRs,
+            ActHRs,
+            CanceledHRs
+        ),
+        /*Final universe mask=base universe x overlay filters*/FinalUniverseMask, --UniverseMask *
+            --ExtraMaskHRs,
+        /*Final grouped output*/GROUPBY(
+            GroupFields,
+            GroupValuePack,
+            AggFns,
+            3,
+            2,
+            SortOrder,
+            FinalUniverseMask
+        )
+    )
+);
+
+CAPEX_REPORT = LAMBDA(
+    LET(
+        /*Source blocks*/FinanceBlock, get.GetFinanceBlock(),
+        BudgetRows, get.GetBudgetDetailRows(),
+        Hdr, TAKE(BudgetRows, 1),
+        /*Header map*/IdxBU, XMATCH("BU", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxEarliestStart, IFERROR(
+            XMATCH("Earliest Start (Internal)", Hdr, 0),
+            XMATCH("Earliest Start(Internal)", Hdr, 0)
+        ),
+        IdxCarryover, XMATCH("Carry-over", Hdr, 0),
+        IdxRevisedGroup, XMATCH("Revised Group", Hdr, 0),
+        IdxFutureTierOverride, XMATCH("Future Tier Override", Hdr, 0),
+        /*Grouping controls*/GroupChoice, TRIM(PM_Filter_Dropdowns),
+        IdxGroup, IFERROR(
+            XMATCH(GroupChoice, Hdr, 0),
+            XMATCH("Revised Group", Hdr, 0)
+        ),
+        IsGroupBU, IdxGroup = IdxBU,
+        AlphaMode, OR(
+            GroupChoice = "PM",
+            GroupChoice = "BU",
+            GroupChoice = "Revised Group"
+        ),
+        FutureFilterMode, IFERROR(TRIM(Future_Filter_Mode), "All"),
+        HideClosedMode, IFERROR(UPPER(TRIM(HideClosed_Status)), "SHOW"),
+        FutureLikelyMinProj, 250000,
+        /*Raw row vectors*/EarliestStartRaw, DROP(
+            CHOOSECOLS(BudgetRows, IdxEarliestStart),
+            1
+        ),
+        CarryoverRaw, DROP(CHOOSECOLS(BudgetRows, IdxCarryover), 1),
+        RevisedGroupRaw, DROP(CHOOSECOLS(BudgetRows, IdxRevisedGroup), 1),
+        FutureTierOverrideRaw, DROP(CHOOSECOLS(BudgetRows, IdxFutureTierOverride), 1),
+        BURaw, DROP(CHOOSECOLS(BudgetRows, IdxBU), 1),
+        StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
+        BUCode, TEXTBEFORE(BURaw, ":", , , 1),
+        /*Portfolio and BU cap context*/PflCapBinding, kind.CapExCap,
+        CapByBUVec, kind.CapByBU(BUCode),
+        /*Time-series inputs*/Projections, get.GetProjections(FinanceBlock),
+        Actuals12, get.GetActuals12(FinanceBlock),
+        Budget12, get.GetBudget12(FinanceBlock),
+        AsOfMonth, kind.MonthNum('Planning Review'!$M$2),
+        YtdActuals, IFERROR(kind.GetYTDActuals(Actuals12, AsOfMonth), 0),
+        StartMonthVec, kind.GetStartMonthVec(EarliestStartRaw),
+        /*Future/closed overlay filters*/FutureTierAutoVec, kind.FutureTierAuto(
+            RevisedGroupRaw,
+            Projections,
+            YtdActuals,
+            CarryoverRaw,
+            FutureLikelyMinProj
+        ),
+        FutureTierFinalVec, kind.FutureTierFinal(
+            FutureTierAutoVec,
+            FutureTierOverrideRaw
+        ),
+        FutureIncludeMaskRaw, kind.FutureIncludeMask(
+            RevisedGroupRaw,
+            FutureTierFinalVec,
+            FutureFilterMode
+        ),
+        ClosedIncludeMaskRaw, kind.HideClosedMask(StatusRaw, HideClosedMode),
+        ExtraMaskRaw, --FutureIncludeMaskRaw * --ClosedIncludeMaskRaw,
+        ExtraMaskHRs, VSTACK(1, ExtraMaskRaw),
+        HiddenBurnAmtVec, IF(
+            kind.HiddenMaskLogic(StatusRaw, Projections, YtdActuals),
+            IF(
+                Projections = 0,
+                YtdActuals,
+                IF(YtdActuals > Projections, YtdActuals - Projections, 0)
+            ),
+            0
+        ),
+        /*Hidden burn by BU*/HiddenBurnRows, kind.HiddenBurnByBU(
+            BUCode,
+            StatusRaw,
+            Projections,
+            YtdActuals,
+            HiddenBurnAmtVec
+        ),
+        HiddenBUKey, TAKE(HiddenBurnRows, , 1),
+        HiddenBUVal, TAKE(HiddenBurnRows, , -1),
+        /*Row helper vectors*/SortKey, kind.CalcSortKey(
+            Projections,
+            YtdActuals,
+            FinanceBlock
+        ),
+        CarryoverRank, kind.CarryoverRank(CarryoverRaw),
+        SignalPack, kind.SpendSignalPack(
+            Projections,
+            YtdActuals,
+            Actuals12,
+            Budget12,
+            StartMonthVec,
+            AsOfMonth,
+            CapByBUVec
+        ),
+        CpsVec, CHOOSECOLS(SignalPack, 1),
+        EarlySpendVec, CHOOSECOLS(SignalPack, 2),
+        DriftVec, CHOOSECOLS(SignalPack, 3),
+        /*Build grouped report*/Grp, BuildGroupedRows(
+            BudgetRows,
+            IdxGroup,
+            CarryoverRank,
+            SortKey,
+            CpsVec,
+            EarlySpendVec,
+            DriftVec,
+            YtdActuals,
+            AlphaMode,
+            ExtraMaskHRs
+        ),
+        /*Grouped rows*/VisibleRows, kind.VisibleGroupRows(Grp),
+        MetricPack, kind.GroupMetricPack(Grp),
+        RptTopRow, CHOOSEROWS(VisibleRows, 1),
+        RptHdr, CHOOSEROWS(VisibleRows, 2),
+        RptRowsAll, DROP(VisibleRows, 2),
+        RptDetailRows, DROP(RptRowsAll, -1),
+        RptGrandTotalRow, TAKE(VisibleRows, -1),
+        /*Grouped row vectors*/Desc, CHOOSECOLS(MetricPack, 1),
+        ProjAuth, CHOOSECOLS(MetricPack, 2),
+        ActYtd, CHOOSECOLS(MetricPack, 3),
+        StatusGrp, CHOOSECOLS(MetricPack, 4),
+        EarlyFlagRaw, CHOOSECOLS(MetricPack, 5),
+        DriftGrp, CHOOSECOLS(MetricPack, 6),
+        GrpValue, CHOOSECOLS(MetricPack, 7),
+        CatGrp, CHOOSECOLS(MetricPack, 8),
+        GrpBuKey, TEXTBEFORE(GrpValue, ":", , , 1),
+        /*BU hidden burn and cap context*/HiddenBurnBu, IF(
+            IsGroupBU,
+            XLOOKUP(GrpBuKey, HiddenBUKey, HiddenBUVal, 0),
+            0
+        ),
+        GrpCap, IF(IsGroupBU, kind.CapByBU(GrpBuKey), PflCapBinding),
+        /*Project close/adjustment state*/ClosePack, kind.CloseMetricPack(
+            ProjAuth,
+            ActYtd,
+            StatusGrp
+        ),
+        AdjustedProjected, CHOOSECOLS(ClosePack, 1),
+        Closed, CHOOSECOLS(ClosePack, 2),
+        /*Subtotal identity*/SubtotalPack, kind.SubtotalMetricPack(
+            CatGrp,
+            Desc,
+            ProjAuth,
+            ActYtd
+        ),
+        IsSubtotal, CHOOSECOLS(SubtotalPack, 1),
+        CumSubtotalAuth, CHOOSECOLS(SubtotalPack, 2),
+        GrandTotal, INDEX(SubtotalPack, 1, 3),
+        /*Detail and subtotal metrics*/LineRem, CHOOSECOLS(SubtotalPack, 5),
+        LineRemPct, CHOOSECOLS(SubtotalPack, 6),
+        PctCum, CHOOSECOLS(SubtotalPack, 7),
+        PortfolioCapCtx, PflCapBinding,
+        CapCtx, IF(IsGroupBU, GrpCap - HiddenBurnBu, PortfolioCapCtx),
+        CapUsedPlan, IF(
+            IsSubtotal,
+            IF(IsGroupBU, ProjAuth, CumSubtotalAuth),
+            ProjAuth
+        ),
+        PlanCapRemCtx, IF(IsSubtotal, CapCtx - CapUsedPlan, ""),
+        CapRemDisp, IF(IsSubtotal, TEXT(PlanCapRemCtx, "#,##0.0,,") & "M", LineRem),
+        PctOfCapLine, IF(IsSubtotal, IFERROR(ProjAuth / CapCtx, 0), LineRemPct),
+        PctOfCapCum, IF(
+            IsSubtotal,
+            IFERROR(CapUsedPlan / CapCtx, 0),
+            IFERROR(ProjAuth / CapCtx, 0)
+        ),
+        RunDisp, IF(IsSubtotal, CapUsedPlan, ActYtd),
+        /*Flags and portfolio totals*/FlagsOut, kind.FlagsOut(
+            ProjAuth,
+            ActYtd,
+            AdjustedProjected,
+            LineRemPct,
+            Closed,
+            EarlyFlagRaw,
+            IsSubtotal,
+            PlanCapRemCtx,
+            IsGroupBU,
+            GrpCap,
+            HiddenBurnBu,
+            CumSubtotalAuth,
+            DriftGrp
+        ),
+        OverCapAmt, IF(IsSubtotal * (PlanCapRemCtx < 0), -PlanCapRemCtx, 0),
+        ShadowPct, IFERROR(OverCapAmt / CapCtx, 0),
+        ShadowDisp, IF(ShadowPct > 0, "Shadow Price " & TEXT(ShadowPct, "0.0%"), ""),
+        FlagDisp, kind.FlagsWithShadow(FlagsOut, ShadowDisp, IsSubtotal),
+        TotalPack, kind.TotalMetricPack(GrandTotal, PflCapBinding, YtdActuals),
+        TotalOut, HSTACK(RptGrandTotalRow, TotalPack),
+        /*Visible report stack*/HdrOut, HSTACK(RptHdr, kind.ReportExtraHeaders()),
+        Stack, VSTACK(
+            RptTopRow,
+            HdrOut,
+            HSTACK(
+                RptDetailRows,
+                RunDisp,
+                PctCum,
+                FlagDisp,
+                CapRemDisp,
+                PctOfCapLine,
+                PctOfCapCum
+            ),
+            TotalOut
+        ),
+        /*Final helper-column cleanup*/FinalRows, kind.DropHelperCols(Stack),
+        FinalRows
+    )
+);

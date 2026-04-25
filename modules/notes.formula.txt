@@ -1,0 +1,304 @@
+FromArrayv = LET(
+    rpt, 'Planning Review'!$A$4#,
+    hdr, TAKE(rpt, 1),
+    rows, DROP(rpt, 1),
+    n, ROWS(rows),
+    grpType, INDEX(hdr, 1, 1),
+    grpVals, CHOOSECOLS(rows, 1),
+    iCat, XMATCH("Category", hdr),
+    iDesc, XMATCH("Project Description", hdr),
+    iProj, XMATCH("2026 Projected", hdr),
+    iYTD, XMATCH("YTD Actuals*", hdr, 2),
+    baseHdrs, {
+        "GroupType",
+        "GroupValue",
+        "Category",
+        "ProjDesc",
+        "2026Proj",
+        "ActualsYTD"
+    },
+    baseData, HSTACK(
+        MAKEARRAY(n, 1, LAMBDA(r, c, grpType)),
+        grpVals,
+        CHOOSECOLS(rows, iCat),
+        CHOOSECOLS(rows, iDesc),
+        CHOOSECOLS(rows, iProj),
+        CHOOSECOLS(rows, iYTD)
+    ),
+    meetHdrs, 'Planning Review'!$o$4:$r$4,
+    meetData, 'Planning Review'!$o$5:$r$200,
+    isNew, LEFT(meetHdrs, 3) = "New",
+    newIdx, FILTER(SEQUENCE(, COLUMNS(meetHdrs)), isNew),
+    newHdrs, SUBSTITUTE(FILTER(meetHdrs, isNew), " ", ""),
+    newData, TAKE(
+        IF(CHOOSECOLS(meetData, newIdx) = "", "", CHOOSECOLS(meetData, newIdx)),
+        n
+    ),
+    keep, BYROW(newData, LAMBDA(r, SUM(--(IFERROR(TRIM(r), "") <> "")) > 0)),
+    stack, VSTACK(
+        HSTACK(baseHdrs, newHdrs),
+        FILTER(HSTACK(baseData, newData), keep, "")
+    ),
+    stack
+);
+
+variantProjDesc = 'Planning Review'!$D$5:$D$200;
+
+variantProjYTD = 'Planning Review'!$J$5:$J$200;
+
+MEETING_NOTE_DESC_ROW = IF(
+    @variantProjDesc = "",
+    "",
+    LAMBDA(MEETING_NOTE_DESC(@variantProjDesc, @variantProjYTD))
+);
+
+MEETING_NOTE_DESC = LAMBDA(ProjectDesc, YTD,
+    LET(
+        /*Pull once; no INDIRECT*/block, TRIMRANGE_KEEPBLANKS(
+            'Planning Table'!$A$2:$BM$126
+        ),
+        hdr, TAKE(block, 1),
+        data, DROP(block, 1),
+        /*Column indices(header-based)*/idxDesc, XMATCH(
+            "Project Description",
+            hdr,
+            0
+        ),
+        idxStatus, XMATCH("Status", hdr, 0),
+        idxStage, XMATCH("Stage", hdr, 0),
+        idxPM, XMATCH("PM", hdr, 0),
+        idxPlanningNotes, XMATCH("Planning Notes", hdr, 0),
+        idxTimeline, XMATCH("Timeline", hdr, 0),
+        idxProj, XMATCH("2026 Projected", hdr, 0),
+        /*Optional: Revised Group(won’t error if missing)*/idxRG, IFERROR(
+            XMATCH("Revised Group", hdr, 0),
+            0
+        ),
+        /*Match row safely: return a 1×N row*/row, IFERROR(
+            XLOOKUP(
+                TRIM(ProjectDesc),
+                TRIM(CHOOSECOLS(data, idxDesc)),
+                data,
+                "",
+                0
+            ),
+            ""
+        ),
+        IF(
+            TAKE(row, , 1) = "",
+            TEXTJOIN(
+                CHAR(10),
+                TRUE,
+                "INFO NEEDED | Not found in Planning Table |",
+                "Next: Confirm Project Description match(" & ProjectDesc & ")"
+            ),
+            LET(
+                Status, IFERROR(INDEX(row, 1, idxStatus), ""),
+                Stage, IFERROR(INDEX(row, 1, idxStage), ""),
+                PM, IFERROR(INDEX(row, 1, idxPM), ""),
+                PlanningNotes, IFERROR(INDEX(row, 1, idxPlanningNotes), ""),
+                Timeline, IFERROR(INDEX(row, 1, idxTimeline), ""),
+                Proj, N(IFERROR(INDEX(row, 1, idxProj), 0)),
+                RevisedGroup, IF(idxRG > 0, IFERROR(INDEX(row, 1, idxRG), ""), ""),
+                /*Build the first summary line*/SummaryLine, TEXTJOIN(
+                    " | ",
+                    TRUE,
+                    IF(RevisedGroup <> "", "RG: " & RevisedGroup, ""),
+                    Status,
+                    Stage,
+                    IF(
+                        Proj > 0,
+                        TEXT(YTD, "$#,##0") & "/" & TEXT(Proj, "$#,##0"),
+                        ""
+                    ),
+                    IF(Proj > 0, TEXT(YTD / Proj, "0%") & " spent", "")
+                ),
+                NextLine, "Next: " &
+                    TEXTJOIN(
+                        "; ",
+                        TRUE,
+                        IF(Timeline <> "", Timeline, ""),
+                        IF(PlanningNotes <> "", PlanningNotes, "")
+                    ) & "(" & PM & ")",
+                TEXTJOIN(CHAR(10), TRUE, SummaryLine, NextLine)
+            )
+        )
+    )
+);
+
+MEETING_NOTE_DESC_SPILL_ENGINE = LAMBDA(
+    descs,
+    ytds,
+    grpLabel,
+    grpVals,
+    budgetKey,
+    colStatus,
+    colStage,
+    colPM,
+    colPlanningNotes,
+    colTimeline,
+    colComments,
+    colProj,
+    LET(
+        d, IFERROR(TRIM(descs), ""),
+        y, IFERROR(ytds, 0),
+        g, IFERROR(TRIM(grpVals), ""),
+        pos, XMATCH(d, budgetKey, 0),
+        found, ISNUMBER(pos),
+        StatusArr, IFERROR(INDEX(colStatus, pos), ""),
+        StageArr, IFERROR(INDEX(colStage, pos), ""),
+        PMArr, IFERROR(INDEX(colPM, pos), ""),
+        PlanningNotesArr, IFERROR(INDEX(colPlanningNotes, pos), ""),
+        TimelineArr, IFERROR(INDEX(colTimeline, pos), ""),
+        CommentsArr, IFERROR(INDEX(colComments, pos), ""),
+        ProjArr, IFERROR(INDEX(colProj, pos), 0),
+        MAP(
+            d,
+            y,
+            g,
+            found,
+            StatusArr,
+            StageArr,
+            PMArr,
+            PlanningNotesArr,
+            TimelineArr,
+            CommentsArr,
+            ProjArr,
+            LAMBDA(dd, yy, gg, f, st, sg, pm, note, tl, cm, pr,
+                IF(
+                    dd = "",
+                    "",
+                    IF(
+                        NOT(f),
+                        TEXTJOIN(
+                            CHAR(10),
+                            TRUE,
+                            "INFO NEEDED | Not found in Planning Table |",
+                            "Previous: Confirm Project Description match(" & dd &
+                                ")"
+                        ),
+                        LET(
+                            projN, N(pr),
+                            MostRecent, IFERROR(TEXTBEFORE(cm, CHAR(10)), cm),
+                            LastUpdateTxt, IFERROR(
+                                TEXTBEFORE(MostRecent, " | "),
+                                ""
+                            ),
+                            LastUpdateNum, IFERROR(
+                                --LastUpdateTxt,
+                                IFERROR(DATEVALUE(LastUpdateTxt), "")
+                            ),
+                            LastUpdateShort, IF(
+                                LastUpdateNum <> "",
+                                TEXT(LastUpdateNum, "mm-dd"),
+                                ""
+                            ),
+                            SummaryLine, TEXTJOIN(
+                                " | ",
+                                TRUE,
+                                IF(gg <> "", grpLabel & ": " & gg, ""),
+                                st,
+                                sg,
+                                IF(
+                                    projN > 0,
+                                    TEXT(yy, "$#,##0") & "/" &
+                                        TEXT(projN, "$#,##0"),
+                                    ""
+                                ),
+                                IF(projN > 0, TEXT(yy / projN, "0%") & " spent", "")
+                            ),
+                            PlanBody, TEXTJOIN(
+                                "; ",
+                                TRUE,
+                                IF(tl <> "", tl, ""),
+                                IF(note <> "", note, "")
+                            ),
+                            PlanTail, TEXTJOIN(
+                                " ",
+                                TRUE,
+                                IF(pm <> "", "(" & pm & ")", ""),
+                                IF(
+                                    LastUpdateShort <> "",
+                                    "📅 " & LastUpdateShort,
+                                    ""
+                                )
+                            ),
+                            PlanLine, IF(
+                                TEXTJOIN("", TRUE, PlanBody, PlanTail) = "",
+                                "",
+                                TEXTJOIN(
+                                    " ",
+                                    TRUE,
+                                    "Plan:",
+                                    IF(PlanBody <> "", PlanBody, ""),
+                                    IF(PlanTail <> "", PlanTail, "")
+                                )
+                            ),
+                            TEXTJOIN(" | ", TRUE, SummaryLine, PlanLine)
+                        )
+                    )
+                )
+            )
+        )
+    )
+);
+
+Existing = LET(
+    budgetBlock, TRIMRANGE_KEEPBLANKS('Planning Table'!$A$2:$BM$150),
+    budgetHdr, TAKE(budgetBlock, 1),
+    budgetData, DROP(budgetBlock, 1),
+
+    /*=====Budget header map=====*/
+    idxBudgetDesc, XMATCH("Project Description", budgetHdr, 0),
+    idxBudgetStatus, XMATCH("Status", budgetHdr, 0),
+    idxBudgetStage, XMATCH("Stage", budgetHdr, 0),
+    idxBudgetPM, XMATCH("PM", budgetHdr, 0),
+    idxBudgetPlanningNotes, XMATCH("Planning Notes", budgetHdr, 0),
+    idxBudgetComments, XMATCH("Comments", budgetHdr, 0),
+    idxBudgetProj, XMATCH("2026 Projected", budgetHdr, 0),
+    idxBudgetTimeline,
+        XMATCH("Timeline", budgetHdr, 0
+    ),
+
+    /*=====Budget vectors=====*/
+    budgetKey, TRIM(CHOOSECOLS(budgetData, idxBudgetDesc)),
+    colStatus, CHOOSECOLS(budgetData, idxBudgetStatus),
+    colStage, CHOOSECOLS(budgetData, idxBudgetStage),
+    colPM, CHOOSECOLS(budgetData, idxBudgetPM),
+    colPlanningNotes, CHOOSECOLS(budgetData, idxBudgetPlanningNotes),
+    colComments, CHOOSECOLS(budgetData, idxBudgetComments),
+    colTimeline, CHOOSECOLS(budgetData, idxBudgetTimeline),
+    colProj, CHOOSECOLS(budgetData, idxBudgetProj),
+
+    /*=====CapEx report spill=====*/
+    projsRaw, 'Planning Review'!$A$4#,
+    projsHdr, TAKE(projsRaw, 1),
+    projsHdrBase, IFERROR(TEXTBEFORE(projsHdr, CHAR(10)), projsHdr),
+    projsData, DROP(projsRaw, 1),
+
+    /*=====Dynamic report column map=====*/
+    grpLabel, Left(INDEX(projsHdrBase, 1, 1),3),
+    idxProjDesc, XMATCH("Project Description", projsHdrBase, 0),
+    idxYtdDtl, XMATCH("YTD Actuals"&"*", projsHdrBase, 2),
+
+    /*=====Vectors from report spill=====*/
+    descs, TRIM(CHOOSECOLS(projsData, idxProjDesc)),
+    ytds, CHOOSECOLS(projsData, idxYtdDtl),
+    /*=====REGEX "[^A-Z0-9]","")=====*/
+    grpVals, REGEXREPLACE(CHOOSECOLS(projsData, 1),"[^A-Z0-9]",""),
+    /*=====Output=====*/
+    MEETING_NOTE_DESC_SPILL_ENGINE(
+        descs,
+        ytds,
+        grpLabel,
+        grpVals,
+        budgetKey,
+        colStatus,
+        colStage,
+        colPM,
+        colPlanningNotes,
+        colTimeline,
+        colComments,
+        colProj
+    )
+);

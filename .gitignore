@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.env
+
+# Excel/workbook binaries are intentionally out of scope
+*.xlsx
+*.xlsm
+*.xlsb
+*.xls
+~$*
+
+# Local editor state
+.vscode/
+.DS_Store

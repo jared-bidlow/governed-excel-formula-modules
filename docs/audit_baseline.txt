@@ -1,0 +1,11 @@
+# Audit Baseline
+
+This public-template branch does not publish private audit output.
+
+Regenerate audit output locally with:
+
+```bash
+python tools/audit_capex_module.py
+```
+
+Do not commit audit logs that include real workbook paths, workbook names, or source data.

@@ -1,0 +1,58 @@
+Budget_Data = LAMBDA(
+    LET(
+        array, TRIMRANGE('Planning Table'!A2:BO164),
+        hdr, TAKE(array, 1),
+        body, DROP(array, 1),
+        keep, IFERROR(TEXTAFTER(TRIM(CHOOSECOLS(body, 6)), " ", -1), "") <> "Total",
+        VSTACK(hdr, FILTER(body, keep))
+    )
+);
+
+Projects_Health = LAMBDA(keyword, [region], [site], [projectmanager],
+    LET(
+        d, Search.Budget_Data(),
+        hdr, TAKE(d, 1),
+        body0, DROP(d, 1),
+        k, LOWER(TRIM(keyword)),
+        r, IF(ISOMITTED(region), "", LOWER(TRIM(region))),
+        p, IF(ISOMITTED(projectmanager), "", LOWER(TRIM(projectmanager))),
+        s, IF(ISOMITTED(site), "", LOWER(TRIM(site))),
+        desc, LOWER(CHOOSECOLS(body0, 2)),
+        reg, LOWER(CHOOSECOLS(body0, 4)),
+        pm, LOWER(CHOOSECOLS(body0, 9)),
+        si, LOWER(CHOOSECOLS(body0, 5)),
+        hitK, IF(k = "", TRUE, ISNUMBER(SEARCH(k, desc))),
+        hitR, IF(r = "", TRUE, reg = r),
+        hitP, IF(p = "", TRUE, pm = p),
+        hitS, IF(s = "", TRUE, si = s),
+        body, FILTER(body0, hitK * hitR * hitP * hitS, ""),
+        HealthFn, LAMBDA(row,
+            LET(
+                proj, TRIM(INDEX(row, 2)),
+                ernum, INDEX(row, 13),
+                chg, TRIM(INDEX(row, 14)),
+                stage, TRIM(INDEX(row, 54)),
+                matur, TRIM(INDEX(row, 55)),
+                issues, TEXTJOIN(
+                    "; ",
+                    TRUE,
+                    IF(proj = "", "Missing Project", ""),
+                    IF(OR(ernum = "", ernum = 0), "Missing ER#", ""),
+                    IF(chg = "", "Missing Chargeable", ""),
+                    IF(
+                        AND(chg = "Y", OR(ernum = "", ernum = 0)),
+                        "Chargeable=Y but ER# blank",
+                        ""
+                    ),
+                    IF(stage = "", "Missing Stage", ""),
+                    IF(matur = "", "Missing Planning Maturity", "")
+                ),
+                IF(issues = "", "OK", issues)
+            )
+        ),
+        health, BYROW(body, HealthFn),
+        result, VSTACK(HSTACK(hdr, "Health"), HSTACK(body, health)),
+        result2, CHOOSECOLS(result, 1, 2, 4, 5, 7, 8, -1),
+        result2
+    )
+);

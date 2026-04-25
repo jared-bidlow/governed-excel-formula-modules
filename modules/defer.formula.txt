@@ -1,0 +1,789 @@
+NormText = LAMBDA(x, UPPER(TRIM(x & "")));
+
+IsClosedStatus = LAMBDA(statusText,
+    LET(s, NormText(statusText), --(((s = "IN SERVICE") + (s = "CLOSED")) > 0))
+);
+
+ParseTimelineYear = LAMBDA(timelineRaw, budgetYear,
+    LET(
+        t, NormText(timelineRaw),
+        monthAbbr, UPPER(TEXT(DATE(2000, SEQUENCE(12), 1), "MMM")),
+        isMonthOnly, --ISNUMBER(XMATCH(t, monthAbbr)),
+        IF(
+            isMonthOnly,
+            budgetYear,
+            IF(
+                LEFT(t, 4) = "TBD-",
+                IFERROR(--RIGHT(t, 4), 0),
+                IFERROR(--RIGHT(t, 4), 0)
+            )
+        )
+    )
+);
+
+ParseTimelineNote = LAMBDA(timelineRaw, budgetYear,
+    LET(
+        t, NormText(timelineRaw),
+        monthAbbr, UPPER(TEXT(DATE(2000, SEQUENCE(12), 1), "MMM")),
+        isMonthOnly, --ISNUMBER(XMATCH(t, monthAbbr)),
+        parsedYear, ParseTimelineYear(timelineRaw, budgetYear),
+        IF(
+            t = "HOLD",
+            "Hold",
+            IF(
+                isMonthOnly,
+                "Current-year month",
+                IF(
+                    LEFT(t, 4) = "TBD-",
+                    IF(parsedYear > 0, "TBD year", "TBD parse failed"),
+                    IF(
+                        parsedYear > 0,
+                        "Explicit year suffix",
+                        IF(
+                            ((t = "N/A") + (t = "NO CHANGE")) > 0,
+                            "No schedule change / N/A",
+                            "No parsed year"
+                        )
+                    )
+                )
+            )
+        )
+    )
+);
+
+IsDesignStatus = LAMBDA(statusText,
+    LET(s, NormText(statusText), --ISNUMBER(SEARCH("DESIGN", s)))
+);
+
+IsOutYearTimeline = LAMBDA(timelineRaw, budgetYear,
+    LET(y, ParseTimelineYear(timelineRaw, budgetYear), --(y >= budgetYear + 1))
+);
+
+IsBU15000 = LAMBDA(buCode, --(buCode = "15000"));
+
+IsTotalComposite = LAMBDA(compText,
+    --(IFERROR(TEXTAFTER(compText, " ", -1), "") = "Total")
+);
+
+PolicyExcludeFlag = LAMBDA(timelineRaw, budgetYear, buCode, statusText, compText,
+    LET(
+        outYearFlag, IsOutYearTimeline(timelineRaw, budgetYear),
+        holdFlag, IsHoldTimeline(timelineRaw),
+        bu15000Flag, IsBU15000(buCode),
+        designStatusFlag, IsDesignStatus(statusText),
+        closedStatusFlag, IsClosedStatus(statusText),
+        isTotalRow, IsTotalComposite(compText),
+        --(
+            (
+                outYearFlag + holdFlag + bu15000Flag + designStatusFlag +
+                    closedStatusFlag + isTotalRow
+            ) > 0
+        )
+    )
+);
+
+DoNotDeferFlag = LAMBDA(
+    spentPct,
+    closed_fin,
+    closed_life,
+    flagOut,
+    projected,
+    ytdActuals,
+    LET(
+        retAdj, --ISNUMBER(SEARCH("↥ Retention Adj.", flagOut & "")),
+        mobilizedZero, --((projected = 0) * (ytdActuals > 0)),
+        spentLock, --(spentPct >= 0.35),
+        finLock, --(closed_fin > 0),
+        lifeLock, --(closed_life > 0),
+        retLock, --(retAdj > 0),
+        mobLock, --(mobilizedZero > 0),
+        --((spentLock + finLock + lifeLock + retLock + mobLock) > 0)
+    )
+);
+
+PolicyExcludeParts = LAMBDA(timelineRaw, budgetYear, buCode, statusText, compText,
+    LET(
+        outYearFlag, IsOutYearTimeline(timelineRaw, budgetYear),
+        holdFlag, IsHoldTimeline(timelineRaw),
+        bu15000Flag, IsBU15000(buCode),
+        designStatusFlag, IsDesignStatus(statusText),
+        closedStatusFlag, IsClosedStatus(statusText),
+        isTotalRow, IsTotalComposite(compText),
+        policyExcludeFlag, --(
+            (
+                outYearFlag + holdFlag + bu15000Flag + designStatusFlag +
+                    closedStatusFlag + isTotalRow
+            ) > 0
+        ),
+        HSTACK(
+            outYearFlag,
+            holdFlag,
+            bu15000Flag,
+            designStatusFlag,
+            closedStatusFlag,
+            isTotalRow,
+            policyExcludeFlag
+        )
+    )
+);
+
+DoNotDeferParts = LAMBDA(
+    spentPct,
+    closed_fin,
+    closed_life,
+    flagOut,
+    projected,
+    ytdActuals,
+    LET(
+        retAdj, --ISNUMBER(SEARCH("↥ Retention Adj.", flagOut & "")),
+        mobilizedZero, --((projected = 0) * (ytdActuals > 0)),
+        spentLock, --(spentPct >= 0.35),
+        finLock, --(closed_fin > 0),
+        lifeLock, --(closed_life > 0),
+        retLock, --(retAdj > 0),
+        mobLock, --(mobilizedZero > 0),
+        doNotDeferFlag, --((spentLock + finLock + lifeLock + retLock + mobLock) > 0),
+        HSTACK(
+            retAdj,
+            mobilizedZero,
+            spentLock,
+            finLock,
+            lifeLock,
+            retLock,
+            mobLock,
+            doNotDeferFlag
+        )
+    )
+);
+
+IsHoldTimeline = LAMBDA(timelineRaw, --(NormText(timelineRaw) = "HOLD"));
+
+Selector = LAMBDA(targetRec,
+    LET(
+        FinanceBlock, get.GetFinanceBlock(),
+        BudgetRows, get.GetBudgetDetailRows(),
+        Hdr, TAKE(BudgetRows, 1),
+        IdxBU, XMATCH("BU", Hdr, 0),
+        IdxDesc, XMATCH("Project Description", Hdr, 0),
+        IdxPM, XMATCH("PM", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxProj, XMATCH("2026 Projected", Hdr, 0),
+        IdxComp, XMATCH("Composite Cat", Hdr, 0),
+        IdxStart, XMATCH("Earliest Start (Internal)", Hdr, 0),
+        IdxTimeline, XMATCH("Timeline", Hdr, 0),
+        EarliestStartRaw, DROP(CHOOSECOLS(BudgetRows, IdxStart), 1),
+        TimelineRaw, DROP(CHOOSECOLS(BudgetRows, IdxTimeline), 1),
+        BURaw, DROP(CHOOSECOLS(BudgetRows, IdxBU), 1),
+        Desc, DROP(CHOOSECOLS(BudgetRows, IdxDesc), 1),
+        PMRaw, DROP(CHOOSECOLS(BudgetRows, IdxPM), 1),
+        StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
+        Projected, DROP(CHOOSECOLS(BudgetRows, IdxProj), 1),
+        CompRaw, DROP(CHOOSECOLS(BudgetRows, IdxComp), 1),
+        PMVal, IF(PMRaw = "", "(Unassigned)", PMRaw),
+        BUCode, TEXTBEFORE(BURaw, ":", , , 1),
+        StatusNorm, defer.NormText(StatusRaw),
+        budgetYear, --TEXTBEFORE(INDEX(Hdr, 1, IdxProj), " "),
+        isTotalRow, defer.IsTotalComposite(CompRaw),
+        capVec, kind.CapByBU(BUCode),
+        Projections, get.GetProjections(FinanceBlock),
+        Projections12, get.GetFinalProj12(FinanceBlock),
+        Actuals12, get.GetActuals12(FinanceBlock),
+        Budget12, get.GetBudget12(FinanceBlock),
+        AsOfMonth, kind.MonthNum('Planning Review'!$N$2),
+        YTDActuals, kind.GetYTDActuals(Actuals12, AsOfMonth),
+        StartMonthVec, kind.GetStartMonthVec(EarliestStartRaw),
+        Proj12Anchored, kind.AnchorProj12(
+            Projections,
+            Projections12,
+            StartMonthVec,
+            AsOfMonth
+        ),
+        SchedRemaining, BYROW(Proj12Anchored, LAMBDA(rw, SUM(DROP(rw, , AsOfMonth)))),
+        RemainingAuthRaw, Projected - YTDActuals,
+        RemainingAuth, IF(RemainingAuthRaw > 0, RemainingAuthRaw, 0),
+        TWBaseRaw, IF(
+            RemainingAuth < SchedRemaining,
+            RemainingAuth,
+            SchedRemaining
+        ),
+        TWRecoverable, IF(TWBaseRaw > 0, TWBaseRaw, 0),
+        SignalPack, kind.SpendSignalPack(
+            Projections,
+            YTDActuals,
+            Actuals12,
+            Budget12,
+            StartMonthVec,
+            AsOfMonth,
+            capVec
+        ),
+        CPSvec, CHOOSECOLS(SignalPack, 1),
+        EarlySpendFlagVec, CHOOSECOLS(SignalPack, 2),
+        DriftVec, CHOOSECOLS(SignalPack, 3),
+        r, IF(YTDActuals < 10000, 100, IF(YTDActuals < 250000, 500, 1000)),
+        AdjustedProjected, IF(
+            YTDActuals > Projected,
+            CEILING(YTDActuals, r),
+            Projected
+        ),
+        ClosedFin, (YTDActuals > 0) * (Projected > 0) *
+            (ABS(YTDActuals - Projected) <= 0.01 * Projected),
+        ClosedLife, defer.IsClosedStatus(StatusRaw),
+        Closed, ClosedFin + ClosedLife,
+        LineRemainingPct, IFERROR((Projected - YTDActuals) / Projected, ""),
+        zeros, 0 * Projected,
+        FlagDisp, kind.FlagsOut(
+            Projected,
+            YTDActuals,
+            AdjustedProjected,
+            LineRemainingPct,
+            Closed,
+            EarlySpendFlagVec,
+            zeros,
+            EXPAND(FALSE, ROWS(Projected), , FALSE),
+            zeros,
+            zeros,
+            zeros,
+            kind.CapTotal,
+            DriftVec
+        ),
+        UniverseMask, (
+            (StatusNorm <> "IN SERVICE") + (YTDActuals < Projected) +
+                (YTDActuals > Projected) + ((Projected = 0) * (YTDActuals > 0))
+        ) * (1 - isTotalRow),
+        InUniverseFlag, --(UniverseMask > 0),
+        SpentPct, IF(Projected > 0, YTDActuals / Projected, 0),
+        policyExcludeFlag, defer.PolicyExcludeFlag(
+            TimelineRaw,
+            budgetYear,
+            BUCode,
+            StatusRaw,
+            CompRaw
+        ),
+        doNotDeferFlag, defer.DoNotDeferFlag(
+            SpentPct,
+            ClosedFin,
+            ClosedLife,
+            FlagDisp,
+            Projected,
+            YTDActuals
+        ),
+        hasRecoverableFlag, --(TWRecoverable > 0),
+        lowSpentFlag, --(SpentPct < 0.1),
+        unlockedFlag, --(doNotDeferFlag = 0),
+        notPolicyExcludedFlag, --(policyExcludeFlag = 0),
+        eligibleMask, InUniverseFlag * hasRecoverableFlag * lowSpentFlag *
+            unlockedFlag * notPolicyExcludedFlag,
+        effScore, IF(SpentPct = 0, 1000000000000, TWRecoverable / SpentPct),
+        pool, FILTER(
+            HSTACK(
+                Desc,
+                PMVal,
+                Projected,
+                TWRecoverable,
+                YTDActuals,
+                SpentPct,
+                StartMonthVec,
+                CPSvec,
+                FlagDisp,
+                effScore
+            ),
+            IFNA(eligibleMask, FALSE)
+        ),
+        sorted, SORTBY(
+            pool,
+            CHOOSECOLS(pool, 10),
+            -1,
+            CHOOSECOLS(pool, 4),
+            -1,
+            CHOOSECOLS(pool, 3),
+            -1
+        ),
+        recAmt, CHOOSECOLS(sorted, 4),
+        runRec, SCAN(0, recAmt, LAMBDA(acc, x, acc + x)),
+        k, IFERROR(MATCH(TRUE, runRec >= targetRec, 0), ROWS(runRec)),
+        picked, TAKE(HSTACK(CHOOSECOLS(sorted, 1, 2, 3, 4, 5, 6, 7, 8, 9), runRec), k),
+        PMRollRaw, GROUPBY(
+            CHOOSECOLS(picked, 2),
+            CHOOSECOLS(picked, 4),
+            SUM,
+            0,
+            0,
+            1
+        ),
+        DetailHdr, {
+            "Project Description",
+            "PM",
+            "Annual Projected",
+            "TW Recoverable",
+            "YTD Actuals",
+            "% Spent",
+            "Start Month",
+            "CPS",
+            "Flags",
+            "Run TW Recoverable"
+        },
+        PMHdr, {"PM", "Deferred TW Recoverable"},
+        spacer, MAKEARRAY(1, COLUMNS(DetailHdr), LAMBDA(rw, c, "")),
+        PMHdrRow, HSTACK(
+            PMHdr,
+            MAKEARRAY(
+                1,
+                COLUMNS(DetailHdr) - COLUMNS(PMHdr),
+                LAMBDA(rw, c, "")
+            )
+        ),
+        PMBlock, HSTACK(
+            PMRollRaw,
+            MAKEARRAY(
+                ROWS(PMRollRaw),
+                COLUMNS(DetailHdr) - COLUMNS(PMRollRaw),
+                LAMBDA(rw, c, "")
+            )
+        ),
+        ResultRows, IFERROR(
+            VSTACK(DetailHdr, picked, spacer, PMHdrRow, PMBlock),
+            "No eligible defer candidates under current rules"
+        ),
+        ResultRows
+    )
+);
+
+Selectorv2 = LAMBDA(targetRec,
+    LET(
+        FinanceBlock, get.GetFinanceBlock(),
+        BudgetRows, get.GetBudgetDetailRows(),
+        Hdr, TAKE(BudgetRows, 1),
+        IdxBU, XMATCH("BU", Hdr, 0),
+        IdxDesc, XMATCH("Project Description", Hdr, 0),
+        IdxPM, XMATCH("PM", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxProj, get.GetAnnualProjectedPosFromHdr(Hdr),
+        IdxAuth, XMATCH("Current Authorized Amount", Hdr, 0),
+        IdxCanceled, IFERROR(XMATCH("Canceled", Hdr, 0), 0),
+        IdxStart, XMATCH("Earliest Start (Internal)", Hdr, 0),
+        IdxTimeline, XMATCH("Timeline", Hdr, 0),
+        EarliestStartRaw, DROP(CHOOSECOLS(BudgetRows, IdxStart), 1),
+        TimelineRaw, DROP(CHOOSECOLS(BudgetRows, IdxTimeline), 1),
+        BURaw, DROP(CHOOSECOLS(BudgetRows, IdxBU), 1),
+        Desc, DROP(CHOOSECOLS(BudgetRows, IdxDesc), 1),
+        PMRaw, DROP(CHOOSECOLS(BudgetRows, IdxPM), 1),
+        StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
+        Projected, DROP(CHOOSECOLS(BudgetRows, IdxProj), 1),
+        PMVal, IF(PMRaw = "", "(Unassigned)", PMRaw),
+        BUCode, TEXTBEFORE(BURaw, ":", , , 1),
+        StatusNorm, defer.NormText(StatusRaw),
+        budgetYear, --TEXTBEFORE(INDEX(Hdr, 1, IdxProj), " "),
+        capVec, kind.CapByBU(BUCode),
+        Projections, get.GetProjections(FinanceBlock),
+        Proj12Raw, get.GetProj12Raw(FinanceBlock),
+        Projections12, get.GetFinalProj12(FinanceBlock),
+        Actuals12, get.GetActuals12(FinanceBlock),
+        Budget12, get.GetBudget12(FinanceBlock),
+        AsOfMonth, kind.MonthNum('Planning Review'!$N$2),
+        YTDActuals, kind.GetYTDActuals(Actuals12, AsOfMonth),
+        StartMonthVec, kind.GetStartMonthVec(EarliestStartRaw),
+        Proj12Anchored, kind.AnchorProj12(
+            Projections,
+            Proj12Raw,
+            StartMonthVec,
+            AsOfMonth
+        ),
+        SchedRemaining, BYROW(Proj12Anchored, LAMBDA(rw, SUM(DROP(rw, , AsOfMonth)))),
+        RemainingAuthRaw, Projected - YTDActuals,
+        RemainingAuth, IF(RemainingAuthRaw > 0, RemainingAuthRaw, 0),
+        TWBaseRaw, IF(
+            RemainingAuth < SchedRemaining,
+            RemainingAuth,
+            SchedRemaining
+        ),
+        TWRecoverable, IF(TWBaseRaw > 0, TWBaseRaw, 0),
+        SignalPack, kind.SpendSignalPack(
+            Projections,
+            YTDActuals,
+            Actuals12,
+            Budget12,
+            StartMonthVec,
+            AsOfMonth,
+            capVec
+        ),
+        CPSvec, CHOOSECOLS(SignalPack, 1),
+        EarlySpendFlagVec, CHOOSECOLS(SignalPack, 2),
+        DriftVec, CHOOSECOLS(SignalPack, 3),
+        r, IF(YTDActuals < 10000, 100, IF(YTDActuals < 250000, 500, 1000)),
+        AdjustedProjected, IF(
+            YTDActuals > Projected,
+            CEILING(YTDActuals, r),
+            Projected
+        ),
+        ClosedFin, (YTDActuals > 0) * (Projected > 0) *
+            (ABS(YTDActuals - Projected) <= 0.01 * Projected),
+        ClosedLife, defer.IsClosedStatus(StatusRaw),
+        Closed, ClosedFin + ClosedLife,
+        LineRemainingPct, IFERROR((Projected - YTDActuals) / Projected, ""),
+        zeros, 0 * Projected,
+        FlagDisp, kind.FlagsOut(
+            Projected,
+            YTDActuals,
+            AdjustedProjected,
+            LineRemainingPct,
+            Closed,
+            EarlySpendFlagVec,
+            zeros,
+            EXPAND(FALSE, ROWS(Projected), , FALSE),
+            zeros,
+            zeros,
+            zeros,
+            kind.CapTotal,
+            DriftVec
+        ),
+        AuthHRs, CHOOSECOLS(BudgetRows, IdxAuth),
+        StatusHRs, CHOOSECOLS(BudgetRows, IdxStatus),
+        ProjectedHRs, CHOOSECOLS(BudgetRows, IdxProj),
+        ActHRs, VSTACK("YTD Actuals", YTDActuals),
+        CanceledHRs, IF(
+            IdxCanceled > 0,
+            CHOOSECOLS(BudgetRows, IdxCanceled),
+            VSTACK("Canceled", 0 * Projected)
+        ),
+        UniverseMask, DROP(
+            kind.CapConsumeMask(
+                BudgetRows,
+                StatusHRs,
+                AuthHRs,
+                ProjectedHRs,
+                ActHRs,
+                CanceledHRs
+            ),
+            1
+        ),
+        InUniverseFlag, --UniverseMask,
+        SpentPct, IF(Projected > 0, YTDActuals / Projected, 0),
+        policyExcludeFlag, defer.PolicyExcludeFlag(
+            TimelineRaw,
+            budgetYear,
+            BUCode,
+            StatusRaw,
+            ""
+        ),
+        doNotDeferFlag, defer.DoNotDeferFlag(
+            SpentPct,
+            ClosedFin,
+            ClosedLife,
+            FlagDisp,
+            Projected,
+            YTDActuals
+        ),
+        hasRecoverableFlag, --(TWRecoverable > 0),
+        lowSpentFlag, --(SpentPct < 0.1),
+        unlockedFlag, --(doNotDeferFlag = 0),
+        notPolicyExcludedFlag, --(policyExcludeFlag = 0),
+        eligibleMask, InUniverseFlag * hasRecoverableFlag * lowSpentFlag *
+            unlockedFlag * notPolicyExcludedFlag,
+        effScore, IF(SpentPct = 0, 1000000000000, TWRecoverable / SpentPct),
+        pool, FILTER(
+            HSTACK(
+                Desc,
+                PMVal,
+                Projected,
+                TWRecoverable,
+                YTDActuals,
+                SpentPct,
+                StartMonthVec,
+                CPSvec,
+                FlagDisp,
+                effScore
+            ),
+            IFNA(eligibleMask, FALSE)
+        ),
+        sorted, SORTBY(
+            pool,
+            CHOOSECOLS(pool, 10),
+            -1,
+            CHOOSECOLS(pool, 4),
+            -1,
+            CHOOSECOLS(pool, 3),
+            -1
+        ),
+        recAmt, CHOOSECOLS(sorted, 4),
+        runRec, SCAN(0, recAmt, LAMBDA(acc, x, acc + x)),
+        k, IFERROR(MATCH(TRUE, runRec >= targetRec, 0), ROWS(runRec)),
+        picked, TAKE(HSTACK(CHOOSECOLS(sorted, 1, 2, 3, 4, 5, 6, 7, 8, 9), runRec), k),
+        PMRollRaw, GROUPBY(
+            CHOOSECOLS(picked, 2),
+            CHOOSECOLS(picked, 4),
+            SUM,
+            0,
+            0,
+            1
+        ),
+        DetailHdr, {
+            "Project Description",
+            "PM",
+            "Annual Projected",
+            "TW Recoverable",
+            "YTD Actuals",
+            "% Spent",
+            "Start Month",
+            "CPS",
+            "Flags",
+            "Run TW Recoverable"
+        },
+        PMHdr, {"PM", "Deferred TW Recoverable"},
+        spacer, MAKEARRAY(1, COLUMNS(DetailHdr), LAMBDA(rw, c, "")),
+        PMHdrRow, HSTACK(
+            PMHdr,
+            MAKEARRAY(
+                1,
+                COLUMNS(DetailHdr) - COLUMNS(PMHdr),
+                LAMBDA(rw, c, "")
+            )
+        ),
+        PMBlock, HSTACK(
+            PMRollRaw,
+            MAKEARRAY(
+                ROWS(PMRollRaw),
+                COLUMNS(DetailHdr) - COLUMNS(PMRollRaw),
+                LAMBDA(rw, c, "")
+            )
+        ),
+        ResultRows, IFERROR(
+            VSTACK(DetailHdr, picked, spacer, PMHdrRow, PMBlock),
+            "No eligible defer candidates under current rules"
+        ),
+        FlagDisp
+    )
+);
+
+Audit = LAMBDA(targetRec,
+    LET(
+        FinanceBlock, get.GetFinanceBlock(),
+        BudgetRows, get.GetBudgetActiveRows(),
+        Hdr, TAKE(BudgetRows, 1),
+        IdxBU, XMATCH("BU", Hdr, 0),
+        IdxDesc, XMATCH("Project Description", Hdr, 0),
+        IdxPM, XMATCH("PM", Hdr, 0),
+        IdxStatus, XMATCH("Status", Hdr, 0),
+        IdxProj, XMATCH("2026 Projected", Hdr, 0),
+        IdxComp, XMATCH("Composite Cat", Hdr, 0),
+        IdxStart, XMATCH("Earliest Start (Internal)", Hdr, 0),
+        IdxTimeline, XMATCH("Timeline", Hdr, 0),
+        EarliestStartRaw, DROP(CHOOSECOLS(BudgetRows, IdxStart), 1),
+        TimelineRaw, DROP(CHOOSECOLS(BudgetRows, IdxTimeline), 1),
+        BURaw, DROP(CHOOSECOLS(BudgetRows, IdxBU), 1),
+        Desc, DROP(CHOOSECOLS(BudgetRows, IdxDesc), 1),
+        PMRaw, DROP(CHOOSECOLS(BudgetRows, IdxPM), 1),
+        StatusRaw, DROP(CHOOSECOLS(BudgetRows, IdxStatus), 1),
+        Projected, DROP(CHOOSECOLS(BudgetRows, IdxProj), 1),
+        CompRaw, DROP(CHOOSECOLS(BudgetRows, IdxComp), 1),
+        PMVal, IF(PMRaw = "", "(Unassigned)", PMRaw),
+        BUCode, TEXTBEFORE(BURaw, ":", , , 1),
+        StatusNorm, defer.NormText(StatusRaw),
+        TimelineNorm, defer.NormText(TimelineRaw),
+        budgetYear, --TEXTBEFORE(INDEX(Hdr, 1, IdxProj), " "),
+        startYearNum, defer.ParseTimelineYear(TimelineRaw, budgetYear),
+        parseNote, defer.ParseTimelineNote(TimelineRaw, budgetYear),
+        isTotalRow, defer.IsTotalComposite(CompRaw),
+        capVec, kind.CapByBU(BUCode),
+        Projections, get.GetProjections(FinanceBlock),
+        Projections12, get.GetFinalProj12(FinanceBlock),
+        Actuals12, get.GetActuals12(FinanceBlock),
+        Budget12, get.GetBudget12(FinanceBlock),
+        AsOfMonth, kind.MonthNum('Planning Review'!$N$2),
+        YTDActuals, kind.GetYTDActuals(Actuals12, AsOfMonth),
+        StartMonthVec, kind.GetStartMonthVec(EarliestStartRaw),
+        Proj12Anchored, kind.AnchorProj12(
+            Projections,
+            Projections12,
+            StartMonthVec,
+            AsOfMonth
+        ),
+        SchedRemaining, BYROW(Proj12Anchored, LAMBDA(rw, SUM(DROP(rw, , AsOfMonth)))),
+        RemainingAuthRaw, Projected - YTDActuals,
+        RemainingAuth, IF(RemainingAuthRaw > 0, RemainingAuthRaw, 0),
+        TWBaseRaw, IF(
+            RemainingAuth < SchedRemaining,
+            RemainingAuth,
+            SchedRemaining
+        ),
+        TWRecoverable, IF(TWBaseRaw > 0, TWBaseRaw, 0),
+        SignalPack, kind.SpendSignalPack(
+            Projections,
+            YTDActuals,
+            Actuals12,
+            Budget12,
+            StartMonthVec,
+            AsOfMonth,
+            capVec
+        ),
+        CPSvec, CHOOSECOLS(SignalPack, 1),
+        EarlySpendFlagVec, CHOOSECOLS(SignalPack, 2),
+        DriftVec, CHOOSECOLS(SignalPack, 3),
+        r, IF(YTDActuals < 10000, 100, IF(YTDActuals < 250000, 500, 1000)),
+        AdjustedProjected, IF(
+            YTDActuals > Projected,
+            CEILING(YTDActuals, r),
+            Projected
+        ),
+        ClosedFin, (YTDActuals > 0) * (Projected > 0) *
+            (ABS(YTDActuals - Projected) <= 0.01 * Projected),
+        ClosedLife, defer.IsClosedStatus(StatusRaw),
+        Closed, ClosedFin + ClosedLife,
+        LineRemainingPct, IFERROR((Projected - YTDActuals) / Projected, ""),
+        zeros, 0 * Projected,
+        FlagDisp, kind.FlagsOut(
+            Projected,
+            YTDActuals,
+            AdjustedProjected,
+            LineRemainingPct,
+            Closed,
+            EarlySpendFlagVec,
+            zeros,
+            EXPAND(FALSE, ROWS(Projected), , FALSE),
+            zeros,
+            zeros,
+            zeros,
+            kind.CapTotal,
+            DriftVec
+        ),
+        UniverseMask, (
+            (StatusNorm <> "IN SERVICE") + (YTDActuals < Projected) +
+                (YTDActuals > Projected) + ((Projected = 0) * (YTDActuals > 0))
+        ) * (1 - isTotalRow),
+        InUniverseFlag, --(UniverseMask > 0),
+        SpentPct, IF(Projected > 0, YTDActuals / Projected, 0),
+        policyParts, defer.PolicyExcludeParts(
+            TimelineRaw,
+            budgetYear,
+            BUCode,
+            StatusRaw,
+            CompRaw
+        ),
+        outYearFlag, CHOOSECOLS(policyParts, 1),
+        holdFlag, CHOOSECOLS(policyParts, 2),
+        bu15000Flag, CHOOSECOLS(policyParts, 3),
+        designStatusFlag, CHOOSECOLS(policyParts, 4),
+        closedStatusFlag, CHOOSECOLS(policyParts, 5),
+        totalCompositeFlag, CHOOSECOLS(policyParts, 6),
+        policyExcludeFlag, CHOOSECOLS(policyParts, 7),
+        lockParts, defer.DoNotDeferParts(
+            SpentPct,
+            ClosedFin,
+            ClosedLife,
+            FlagDisp,
+            Projected,
+            YTDActuals
+        ),
+        retAdj, CHOOSECOLS(lockParts, 1),
+        mobilizedZero, CHOOSECOLS(lockParts, 2),
+        spentLock, CHOOSECOLS(lockParts, 3),
+        finLock, --(ClosedFin > 0),
+        lifeLock, --(ClosedLife > 0),
+        retLock, --(retAdj > 0),
+        mobLock, --(mobilizedZero > 0),
+        doNotDeferSum, spentLock + finLock + lifeLock + retLock + mobLock,
+        doNotDeferFlag, --(doNotDeferSum > 0),
+        hasRecoverableFlag, --(TWRecoverable > 0),
+        lowSpentFlag, --(SpentPct < 0.1),
+        unlockedFlag, --(doNotDeferFlag = 0),
+        notPolicyExcludedFlag, --(policyExcludeFlag = 0),
+        eligibleMask, InUniverseFlag * hasRecoverableFlag * lowSpentFlag *
+            unlockedFlag * notPolicyExcludedFlag,
+        effScore, IF(SpentPct = 0, 1000000000000, TWRecoverable / SpentPct),
+        AuditHdr, {
+            "Project Description",
+            "BU",
+            "PM",
+            "Status",
+            "Status Norm",
+            "Timeline",
+            "Parse Note",
+            "Earliest Start (Internal)",
+            "Start Year",
+            "Start Month",
+            "Composite Cat",
+            "Projected",
+            "Adjusted Projected",
+            "YTD Actuals",
+            "% Spent",
+            "Sched Remaining",
+            "Remaining Auth",
+            "TW Recoverable",
+            "Acct Universe Raw",
+            "Acct Universe OK",
+            "Is Total Row",
+            "Out Year",
+            "Hold",
+            "BU 15000",
+            "Design Status",
+            "Closed Status",
+            "Policy Exclude",
+            "Closed Fin",
+            "Closed Life",
+            "Retention Adj",
+            "Mobilized Zero",
+            "Spent Lock",
+            "Fin Lock",
+            "Life Lock",
+            "Ret Lock",
+            "Mob Lock",
+            "Do Not Defer",
+            "Has Recoverable",
+            "Low Spent",
+            "Unlocked",
+            "Not Policy Excl",
+            "Eligible",
+            "CPS",
+            "Flags",
+            "EffScore"
+        },
+        AuditRows, HSTACK(
+            Desc,
+            BUCode,
+            PMVal,
+            StatusRaw,
+            StatusNorm,
+            TimelineRaw,
+            parseNote,
+            EarliestStartRaw,
+            startYearNum,
+            StartMonthVec,
+            CompRaw,
+            Projected,
+            AdjustedProjected,
+            YTDActuals,
+            SpentPct,
+            SchedRemaining,
+            RemainingAuth,
+            TWRecoverable,
+            UniverseMask,
+            InUniverseFlag,
+            isTotalRow,
+            outYearFlag,
+            holdFlag,
+            bu15000Flag,
+            designStatusFlag,
+            closedStatusFlag,
+            policyExcludeFlag,
+            ClosedFin,
+            ClosedLife,
+            retAdj,
+            mobilizedZero,
+            spentLock,
+            finLock,
+            lifeLock,
+            retLock,
+            mobLock,
+            doNotDeferFlag,
+            hasRecoverableFlag,
+            lowSpentFlag,
+            unlockedFlag,
+            notPolicyExcludedFlag,
+            eligibleMask,
+            CPSvec,
+            FlagDisp,
+            effScore
+        ),
+        ResultRows, VSTACK(AuditHdr, AuditRows),
+        ResultRows
+    )
+);
