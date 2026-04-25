@@ -1,5 +1,24 @@
 # Change Log
 
+## 2026-04-25 - Guard starter report subtotal errors
+
+Semantic change:
+
+- Guarded the main report's hidden-burn and BU cap subtotal lookups so public starter data does not surface `#VALUE!` in subtotal flag or remaining columns.
+- Empty hidden-burn groupings now behave as zero hidden burn.
+
+Minimal diff summary:
+
+- Updated `modules/capital_planning_report.formula.txt`.
+- Added audit coverage for hidden-burn and BU-cap fallback logic.
+
+Visible impact:
+
+- Workbook behavior: starter subtotal rows should render clean flag and remaining values.
+- Main report totals: no intended change except replacing error cells with zero-fallback subtotal math.
+- Subtotal flags: can change from `#VALUE!` to a blank or cap flag where applicable.
+- Cap remaining values: can change from `#VALUE!` to the calculated remaining cap.
+
 ## 2026-04-25 - Add workbook-control defaults
 
 Semantic change:

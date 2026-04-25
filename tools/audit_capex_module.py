@@ -715,6 +715,7 @@ def audit_docs(results: list[Result]) -> None:
 
 def audit_cap_setup_contract(results: list[Result]) -> None:
     kind = read_text(MODULES / "kind.formula.txt")
+    report = read_text(MODULES / "capital_planning_report.formula.txt")
 
     check_required_regex(
         results,
@@ -739,6 +740,22 @@ def audit_cap_setup_contract(results: list[Result]) -> None:
         "BU cap lookup uses BU key path",
         r"CapByBU\s*=\s*LAMBDA\(bu,.*TEXTBEFORE\(bu & \"\",\s*\":\".*XLOOKUP\(TRIM\(buKey\),\s*CapBUKeys,\s*CapBUVals",
         "Use the BU code before a colon as the cap-table lookup key.",
+    )
+    check_required_regex(
+        results,
+        "modules/kind.formula.txt",
+        kind,
+        "hidden burn helper guards empty group",
+        r"HiddenBurnByBU\s*=\s*LAMBDA\(.*IFERROR\(GROUPBY\(BUCode,\s*HiddenBurnAmtVec,\s*SUM,\s*0,\s*0,\s*1,\s*HiddenMask\),\s*HSTACK\(\"\",\s*0\)\)",
+        "Treat an empty hidden-burn grouping as zero so starter subtotals do not spill errors.",
+    )
+    check_required_regex(
+        results,
+        "modules/capital_planning_report.formula.txt",
+        report,
+        "main report guards BU cap lookup",
+        r"GrpCap,\s*IF\(.*IsGroupBU,\s*IFERROR\(kind\.CapByBU\(GrpBuKey\),\s*0\)",
+        "Keep subtotal cap math from surfacing #VALUE or #N/A when a BU key is missing.",
     )
 
 

@@ -364,7 +364,7 @@ SubtotalMetricPack = LAMBDA(CatGrp, Desc, ProjAuth, ActYtd,
 HiddenBurnByBU = LAMBDA(BUCode, StatusRaw, Projections, YTDActuals, HiddenBurnAmtVec,
     LET(
         HiddenMask, HiddenMaskLogic(StatusRaw, Projections, YTDActuals),
-        GROUPBY(BUCode, HiddenBurnAmtVec, SUM, 0, 0, 1, HiddenMask)
+        IFERROR(GROUPBY(BUCode, HiddenBurnAmtVec, SUM, 0, 0, 1, HiddenMask), HSTACK("", 0))
     )
 );
 

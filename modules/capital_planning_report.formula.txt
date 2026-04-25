@@ -169,7 +169,7 @@ CAPITAL_PLANNING_REPORT = LAMBDA(
             ),
             0
         ),
-        /*Hidden burn by BU*/HiddenBurnRows, kind.HiddenBurnByBU(
+        HiddenBurnRows, kind.HiddenBurnByBU(
             BUCode,
             StatusRaw,
             Projections,
@@ -224,12 +224,19 @@ CAPITAL_PLANNING_REPORT = LAMBDA(
         GrpValue, CHOOSECOLS(MetricPack, 7),
         CatGrp, CHOOSECOLS(MetricPack, 8),
         GrpBuKey, TEXTBEFORE(GrpValue, ":", , , 1),
-        /*BU hidden burn and cap context*/HiddenBurnBu, IF(
-            IsGroupBU,
-            XLOOKUP(GrpBuKey, HiddenBUKey, HiddenBUVal, 0),
+        HiddenBurnBu, IFERROR(
+            IF(
+                IsGroupBU,
+                XLOOKUP(GrpBuKey, HiddenBUKey, HiddenBUVal, 0),
+                0
+            ),
             0
         ),
-        GrpCap, IF(IsGroupBU, kind.CapByBU(GrpBuKey), PflCapBinding),
+        GrpCap, IF(
+            IsGroupBU,
+            IFERROR(kind.CapByBU(GrpBuKey), 0),
+            PflCapBinding
+        ),
         /*Project close/adjustment state*/ClosePack, kind.CloseMetricPack(
             ProjAuth,
             ActYtd,
