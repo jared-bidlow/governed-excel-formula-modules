@@ -24,6 +24,7 @@ The add-in is an installer and validator. It does not replace the formula module
 - Validates required sheets, names, starter header order, cap setup shape, visible control values, bound control names, row-validation headers, and compatibility helpers such as `TRIMRANGE_KEEPBLANKS` and `RBYROW`.
 - Prints a validation summary showing sheets present, workbook names installed, header count, configured cap rows, bound controls, dropdown lists, and row-validation rules.
 - Inserts demo output formulas into predictable review sheets so a reviewer can inspect the implemented screens without typing formula names.
+- Provides an `ApplyNotes` setup helper in the task pane that loads the script template from `../ApplyNotes`, copies it when clipboard access is available, displays the script text when clipboard access is blocked, and shows the exact Excel `Automate -> New Script` import step.
 
 ## Local Trial Shape
 
@@ -72,6 +73,14 @@ Insert Demo Outputs
 ```
 
 That button validates the workbook first, checks `Planning Review!A4:N200` for cells that would block the main report spill, then places demo formulas at fixed locations. If `Planning Review!A4` already contains the expected main report formula and is not showing `#SPILL!`, the button is safe to rerun.
+
+The task pane also includes this helper:
+
+```text
+Copy ApplyNotes Script
+```
+
+That helper loads the `ApplyNotes` template from the repo into the task pane, copies it to the clipboard when the host allows clipboard access, and leaves the script text visible in the pane if clipboard access is blocked. In Excel, use `Automate -> New Script`, replace the default code, then save the script as `ApplyNotes`.
 
 | Sheet | Cell | Formula |
 |---|---|---|

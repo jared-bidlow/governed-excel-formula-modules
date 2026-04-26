@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-04-26 - Add in-add-in ApplyNotes script handoff
+
+Semantic change:
+
+- Added a task-pane `ApplyNotes` section so operators no longer need to manually browse the repo to find the script template.
+- Added a one-click `Copy ApplyNotes Script` action that reads `../ApplyNotes`, displays the script text in the task pane, and copies it to the clipboard when host permissions allow it.
+- Added a blocked-clipboard fallback that selects the visible script text inside the add-in.
+- Added explicit in-pane import instructions for `Automate -> New Script` and added static audit coverage for the new handoff path.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.html`, `addin/taskpane.js`, and `addin/taskpane.css`.
+- Updated `docs/office_addin.md`.
+- Updated `tools/audit_capex_module.py`.
+
+Visible impact:
+
+- Workbook behavior: sideloaded add-in now includes an explicit ApplyNotes script setup path.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-26 - Tailor worktree roles to Excel workflow
 
 Semantic change:

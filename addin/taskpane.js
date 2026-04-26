@@ -155,8 +155,10 @@
   const rowValidationRules = applicationData.rowValidationRules;
   const demoOutputs = applicationData.demoOutputs;
   const requiredNames = applicationData.requiredNames;
+  const applyNotesScriptPath = "../ApplyNotes";
 
   const logEl = document.getElementById("log");
+  const applyNotesScriptTextEl = document.getElementById("applyNotesScriptText");
   const buttons = Array.from(document.querySelectorAll("button"));
 
   Office.onReady((info) => {
@@ -170,6 +172,7 @@
     bind("installModules", installModules);
     bind("validateWorkbook", validateWorkbook);
     bind("insertDemoOutputs", insertDemoOutputs);
+    bind("copyApplyNotesScript", copyApplyNotesScript);
     bind("runAll", runAll);
     writeLog("Ready.");
     setButtons(true);
@@ -196,6 +199,20 @@
     await installModules();
     await validateWorkbook();
     await insertDemoOutputs({ validateFirst: false });
+  }
+
+  async function copyApplyNotesScript() {
+    appendLog("Loading ApplyNotes script template...");
+    const applyNotesText = await fetchText(applyNotesScriptPath);
+    showApplyNotesScript(applyNotesText);
+    const copied = await copyTextToClipboard(applyNotesText);
+    if (copied) {
+      appendLog("ApplyNotes script copied.");
+    } else {
+      selectApplyNotesScript();
+      appendLog("Clipboard was blocked. The ApplyNotes script text is displayed in the task pane.");
+    }
+    appendLog("In Excel: Automate > New Script, replace the default code, then save as ApplyNotes.");
   }
 
   async function setupWorkbook() {
@@ -738,6 +755,48 @@
       throw new Error(`Unable to load ${path}: ${response.status}`);
     }
     return response.text();
+  }
+
+  async function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (error) {
+        // Fall through to the older task-pane-compatible copy path.
+      }
+    }
+    return legacyCopyText(text);
+  }
+
+  function legacyCopyText(text) {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "true");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    area.style.pointerEvents = "none";
+    document.body.appendChild(area);
+    area.focus();
+    area.select();
+    let copied = false;
+    try {
+      copied = document.execCommand("copy");
+    } catch (error) {
+      copied = false;
+    }
+    document.body.removeChild(area);
+    return copied;
+  }
+
+  function showApplyNotesScript(text) {
+    applyNotesScriptTextEl.value = text;
+    applyNotesScriptTextEl.hidden = false;
+  }
+
+  function selectApplyNotesScript() {
+    applyNotesScriptTextEl.focus();
+    applyNotesScriptTextEl.select();
   }
 
   function parseTsv(text) {

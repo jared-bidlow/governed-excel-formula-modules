@@ -1475,6 +1475,13 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("checks main report spill range", r'getRange\("A4:N200"\).*load\(\["values", "formulas"\]\).*assertMainReportSpillReady'),
         ("reports demo spill blockers", r"assertMainReportSpillReady.*blocks the main report spill"),
         ("renders demo output summary", r"renderDemoOutputSummary.*Demo outputs inserted"),
+        ("defines ApplyNotes template path", r'applyNotesScriptPath\s*=\s*"../ApplyNotes"'),
+        ("binds ApplyNotes copy action", r'bind\("copyApplyNotesScript",\s*copyApplyNotesScript\)'),
+        ("loads and displays ApplyNotes script text", r"copyApplyNotesScript.*fetchText\(applyNotesScriptPath\).*showApplyNotesScript\(applyNotesText\)"),
+        ("copies ApplyNotes script text", r"copyApplyNotesScript.*copyTextToClipboard\(applyNotesText\)"),
+        ("logs ApplyNotes script import step", r"Automate > New Script"),
+        ("uses clipboard fallback", r"copyTextToClipboard.*navigator\.clipboard.*catch.*legacyCopyText"),
+        ("selects ApplyNotes text when clipboard is blocked", r"selectApplyNotesScript.*focus\(\).*select\(\)"),
         ("strips module comments", r"stripBlockComments"),
         ("compacts installed formula bodies", r"compactFormulaBody.*stripBlockComments.*inQuotedSheet"),
     ]
@@ -1536,6 +1543,38 @@ def audit_addin_contract(results: list[Result]) -> None:
         "task pane has demo output button",
         r'id="insertDemoOutputs".*Insert Demo Outputs',
         "Expose the output insertion rerun action.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
+        "task pane has ApplyNotes copy button",
+        r'id="copyApplyNotesScript".*Copy ApplyNotes Script',
+        "Expose a one-click ApplyNotes script handoff for sideload users.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
+        "task pane has ApplyNotes import instruction",
+        r"Automate</code> -> <code>New Script</code>.*save as <code>ApplyNotes</code>",
+        "Show the exact script import step in the task pane.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
+        "task pane shows ApplyNotes source path",
+        r"Template source:\s*<code>\.\./ApplyNotes</code>",
+        "Keep the source template path visible in the task pane.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
+        "task pane has ApplyNotes script text fallback",
+        r'id="applyNotesScriptText".*readonly.*hidden',
+        "Keep a visible in-pane fallback for blocked clipboard access.",
     )
     check_required_regex(
         results,
@@ -1643,6 +1682,22 @@ def audit_addin_contract(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document ApplyNotes helper",
+        r"`ApplyNotes` setup helper.*loads the script template from `\.\./ApplyNotes`.*displays the script text when clipboard access is blocked",
+        "Document the ApplyNotes script handoff and blocked-clipboard fallback inside the add-in.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document ApplyNotes import step",
+        r"Copy ApplyNotes Script.*clipboard access is blocked.*Automate -> New Script.*save the script as `ApplyNotes`",
+        "Document the operator path for importing the ApplyNotes script.",
+    )
+    check_required_regex(
+        results,
         "README.md",
         readme,
         "README mentions Office.js starter",
@@ -1688,6 +1743,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records npm smoke metadata",
         r"Add npm smoke-test package metadata",
         "Record the npm smoke-test package metadata.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records ApplyNotes add-in handoff",
+        r"Add in-add-in ApplyNotes script handoff",
+        "Record the task-pane ApplyNotes script setup path.",
     )
 
 

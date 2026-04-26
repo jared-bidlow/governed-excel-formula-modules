@@ -44,6 +44,34 @@ header p {
   gap: 8px;
 }
 
+.apply-notes {
+  display: grid;
+  gap: 8px;
+}
+
+.apply-notes code {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+}
+
+.apply-notes-step,
+.apply-notes-source {
+  color: #555;
+  font-size: 12px;
+}
+
+.script-preview {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font: 12px/1.35 Consolas, "Courier New", monospace;
+  min-height: 180px;
+  overflow: auto;
+  padding: 8px;
+  resize: vertical;
+  width: 100%;
+}
+
 button {
   border: 1px solid #8a8a8a;
   border-radius: 6px;
@@ -83,6 +111,11 @@ pre {
     color: #c8c8c8;
   }
 
+  .apply-notes-step,
+  .apply-notes-source {
+    color: #c8c8c8;
+  }
+
   button {
     background: #1f1f1f;
     border-color: #6f6f6f;
@@ -92,5 +125,11 @@ pre {
   pre {
     background: #151515;
     border-color: #444;
+  }
+
+  .script-preview {
+    background: #151515;
+    border-color: #444;
+    color: #f5f5f5;
   }
 }

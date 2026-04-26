@@ -22,6 +22,15 @@
       <button id="insertDemoOutputs" type="button">Insert Demo Outputs</button>
     </section>
 
+    <section class="apply-notes" aria-label="ApplyNotes Script">
+      <h2>ApplyNotes Script</h2>
+      <p>Use this to stage and apply note updates from <code>Decision Staging</code> into <code>Planning Table</code>.</p>
+      <button id="copyApplyNotesScript" type="button">Copy ApplyNotes Script</button>
+      <p class="apply-notes-step">In Excel, go to <code>Automate</code> -> <code>New Script</code>, replace the default code, then save as <code>ApplyNotes</code>.</p>
+      <p class="apply-notes-source">Template source: <code>../ApplyNotes</code></p>
+      <textarea id="applyNotesScriptText" class="script-preview" aria-label="ApplyNotes script text" readonly spellcheck="false" hidden></textarea>
+    </section>
+
     <section>
       <h2>Status</h2>
       <pre id="log" aria-live="polite">Waiting for Excel...</pre>
