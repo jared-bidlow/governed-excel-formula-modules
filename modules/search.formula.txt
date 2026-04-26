@@ -1,11 +1,5 @@
 Budget_Data = LAMBDA(
-    LET(
-        array, TRIMRANGE('Planning Table'!A2:BO164),
-        hdr, TAKE(array, 1),
-        body, DROP(array, 1),
-        keep, IFERROR(TEXTAFTER(TRIM(CHOOSECOLS(body, 6)), " ", -1), "") <> "Total",
-        VSTACK(hdr, FILTER(body, keep))
-    )
+    get.GetBudgetDetailRows()
 );
 
 Projects_Health = LAMBDA(keyword, [region], [site], [projectmanager],
@@ -13,14 +7,22 @@ Projects_Health = LAMBDA(keyword, [region], [site], [projectmanager],
         d, Search.Budget_Data(),
         hdr, TAKE(d, 1),
         body0, DROP(d, 1),
+        HeaderPos, LAMBDA(header, IFERROR(XMATCH(header, hdr, 0), 0)),
+        BlankCol, EXPAND("", ROWS(body0), 1, ""),
+        ColOrBlank, LAMBDA(header,
+            LET(
+                idx, HeaderPos(header),
+                IF(idx > 0, CHOOSECOLS(body0, idx), BlankCol)
+            )
+        ),
         k, LOWER(TRIM(keyword)),
         r, IF(ISOMITTED(region), "", LOWER(TRIM(region))),
         p, IF(ISOMITTED(projectmanager), "", LOWER(TRIM(projectmanager))),
         s, IF(ISOMITTED(site), "", LOWER(TRIM(site))),
-        desc, LOWER(CHOOSECOLS(body0, 2)),
-        reg, LOWER(CHOOSECOLS(body0, 4)),
-        pm, LOWER(CHOOSECOLS(body0, 9)),
-        si, LOWER(CHOOSECOLS(body0, 5)),
+        desc, LOWER(ColOrBlank("Project Description")),
+        reg, LOWER(ColOrBlank("Region")),
+        pm, LOWER(ColOrBlank("PM")),
+        si, LOWER(ColOrBlank("Site")),
         hitK, IF(k = "", TRUE, ISNUMBER(SEARCH(k, desc))),
         hitR, IF(r = "", TRUE, reg = r),
         hitP, IF(p = "", TRUE, pm = p),
@@ -28,11 +30,17 @@ Projects_Health = LAMBDA(keyword, [region], [site], [projectmanager],
         body, FILTER(body0, hitK * hitR * hitP * hitS, ""),
         HealthFn, LAMBDA(row,
             LET(
-                proj, TRIM(INDEX(row, 2)),
-                jobId, INDEX(row, 13),
-                chargeable, TRIM(INDEX(row, 14)),
-                stage, TRIM(INDEX(row, 54)),
-                matur, TRIM(INDEX(row, 55)),
+                RowValue, LAMBDA(header,
+                    LET(
+                        idx, HeaderPos(header),
+                        IF(idx > 0, INDEX(row, 1, idx), "")
+                    )
+                ),
+                proj, TRIM(RowValue("Project Description")),
+                jobId, RowValue("Job ID"),
+                chargeable, TRIM(RowValue("Chargeable")),
+                stage, TRIM(RowValue("Stage")),
+                matur, TRIM(RowValue("Planning Maturity")),
                 issues, TEXTJOIN(
                     "; ",
                     TRUE,

@@ -1,107 +1,160 @@
 (function () {
   "use strict";
 
-  const moduleFiles = [
-    { prefix: "Controls", path: "../modules/controls.formula.txt" },
-    { prefix: "get", path: "../modules/get.formula.txt" },
-    { prefix: "kind", path: "../modules/kind.formula.txt" },
-    { prefix: "CapitalPlanning", path: "../modules/capital_planning_report.formula.txt" },
-    { prefix: "Analysis", path: "../modules/analysis.formula.txt" },
-    { prefix: "defer", path: "../modules/defer.formula.txt" },
-    { prefix: "Notes", path: "../modules/notes.formula.txt" },
-    { prefix: "Phasing", path: "../modules/phasing.formula.txt" },
-    { prefix: "Ready", path: "../modules/ready.formula.txt" },
-    { prefix: "Search", path: "../modules/search.formula.txt" }
-  ];
-
-  const starterTables = [
-    { sheet: "Planning Table", address: "A2", path: "../samples/planning_table_starter.tsv" },
-    { sheet: "Cap Setup", address: "A2", path: "../samples/cap_setup_starter.tsv" }
-  ];
-
-  const reviewSheet = "Planning Review";
-  const validationSheet = "Validation Lists";
-  const requiredSheets = ["Planning Table", "Cap Setup", reviewSheet, validationSheet];
-  const validationLists = {
-    months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    groupFields: ["BU", "Region", "Site", "PM", "Category", "Revised Group", "Status", "Type"],
-    futureFilters: ["All", "Exclude Future", "Keep F1 Only", "Keep F1+F2"],
-    closedRows: ["SHOW", "HIDE"],
-    statuses: ["Active", "Hold", "Closed", "In Service", "Skipping", "Canceled"],
-    yesNo: ["Y", "N"]
+  const applicationData = {
+    sheets: {
+      planningTable: "Planning Table",
+      capSetup: "Cap Setup",
+      planningReview: "Planning Review",
+      validationLists: "Validation Lists"
+    },
+    planningTable: {
+      headerRange: "A2:BL2",
+      headerRow: 2,
+      dataStartRow: 3,
+      maxValidationRow: 2000,
+      requiredHeaderFill: ["F2", "G2", "O2", "P2", "BE2"],
+      numberFormats: [
+        { address: "O3:AZ234", rows: 232, columns: 38, format: "$#,##0" },
+        { address: "BJ3:BJ234", rows: 232, columns: 1, format: "0" }
+      ]
+    },
+    capSetup: {
+      headerRange: "A2:B2",
+      dataRange: "A3:B100",
+      capRange: "B3:B100"
+    },
+    starterTables: [
+      { sheet: "Planning Table", address: "A2", path: "../samples/planning_table_starter.tsv" },
+      { sheet: "Cap Setup", address: "A2", path: "../samples/cap_setup_starter.tsv" }
+    ],
+    moduleFiles: [
+      { prefix: "Controls", path: "../modules/controls.formula.txt" },
+      { prefix: "get", path: "../modules/get.formula.txt" },
+      { prefix: "kind", path: "../modules/kind.formula.txt" },
+      { prefix: "CapitalPlanning", path: "../modules/capital_planning_report.formula.txt" },
+      { prefix: "Analysis", path: "../modules/analysis.formula.txt" },
+      { prefix: "defer", path: "../modules/defer.formula.txt" },
+      { prefix: "Notes", path: "../modules/notes.formula.txt" },
+      { prefix: "Phasing", path: "../modules/phasing.formula.txt" },
+      { prefix: "Ready", path: "../modules/ready.formula.txt" },
+      { prefix: "Search", path: "../modules/search.formula.txt" }
+    ],
+    dropdownLists: {
+      months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      groupFields: ["Revised Group", "Site", "Region", "PM", "BU", "Category"],
+      futureFilters: ["All", "Exclude Future", "Keep F1 Only", "Keep F1+F2"],
+      closedRows: ["SHOW", "HIDE"],
+      statuses: ["Active", "Hold", "Closed", "In Service", "Skipping", "Canceled"],
+      yesNo: ["Y", "N"]
+    },
+    validationListColumns: [
+      { key: "months", header: "Month" },
+      { key: "groupFields", header: "Group Field" },
+      { key: "futureFilters", header: "Future Filter" },
+      { key: "closedRows", header: "Closed Rows" },
+      { key: "statuses", header: "Status" },
+      { key: "yesNo", header: "Yes No" }
+    ],
+    visibleControls: [
+      { name: "PM_Filter_Dropdowns", address: "B2", formula: "='Planning Review'!$B$2" },
+      { name: "Future_Filter_Mode", address: "C2", formula: "='Planning Review'!$C$2" },
+      { name: "HideClosed_Status", address: "D2", formula: "='Planning Review'!$D$2" },
+      { name: "Burndown_Cut_Target", address: "E2", formula: "='Planning Review'!$E$2" }
+    ],
+    rowValidationRules: [
+      { sheet: "Planning Table", header: "Status", listKey: "statuses" },
+      {
+        sheet: "Planning Table",
+        header: "Chargeable",
+        listKey: "yesNo",
+        purpose: "Internal labor chargeability flag used by Search and Ready export helpers."
+      },
+      { sheet: "Planning Table", header: "Internal Eligible", listKey: "yesNo" },
+      { sheet: "Planning Table", header: "Canceled", listKey: "yesNo" }
+    ],
+    demoOutputs: [
+      {
+        sheet: "Planning Review",
+        title: "Capital Planning Report",
+        formula: "=CapitalPlanning.CAPITAL_PLANNING_REPORT()",
+        note: "Main report spill starts at A4."
+      },
+      {
+        sheet: "BU Cap Scorecard",
+        title: "BU Cap Scorecard",
+        formula: "=Analysis.BU_CAP_SCORECARD()",
+        note: "Cap and spend posture by BU."
+      },
+      {
+        sheet: "Reforecast Queue",
+        title: "Reforecast Queue",
+        formula: "=Analysis.REFORECAST_QUEUE()",
+        note: "Grouped action queue for forecast review."
+      },
+      {
+        sheet: "PM Spend Report",
+        title: "PM Spend Report",
+        formula: "=Analysis.PM_SPEND_REPORT()",
+        note: "Existing-work summary and job detail."
+      },
+      {
+        sheet: "Working Budget",
+        title: "Working Budget Screen",
+        formula: "=Analysis.WORKING_BUDGET_SCREEN()",
+        note: "Current-job screening before budget drafting."
+      },
+      {
+        sheet: "Burndown",
+        title: "Burndown Screen",
+        formula: "=Analysis.BURNDOWN_SCREEN()",
+        note: "Meeting view of remaining burn and drivers."
+      },
+      {
+        sheet: "Internal Jobs",
+        title: "Internal Jobs Export",
+        formula: "=Ready.InternalJobs_Export()",
+        note: "Header-driven internal work export for readiness smoke testing."
+      }
+    ],
+    requiredNames: [
+      "PM_Filter_Dropdowns",
+      "Future_Filter_Mode",
+      "HideClosed_Status",
+      "Burndown_Cut_Target",
+      "Controls.PM_Filter_Dropdowns",
+      "TRIMRANGE_KEEPBLANKS",
+      "RBYROW",
+      "get.TRIMRANGE_KEEPBLANKS",
+      "get.GetFinanceBlock",
+      "kind.RBYROW",
+      "kind.CapByBU",
+      "kind.PortfolioCap",
+      "CapitalPlanning.CAPITAL_PLANNING_REPORT",
+      "Analysis.PM_SPEND_REPORT",
+      "Analysis.WORKING_BUDGET_SCREEN",
+      "Analysis.BU_CAP_SCORECARD",
+      "Analysis.REFORECAST_QUEUE",
+      "Analysis.BURNDOWN_SCREEN",
+      "Ready.ColumnOrBlank",
+      "Ready.InternalEligible",
+      "Ready.ChargeableFlag",
+      "Ready.InternalReady3",
+      "Ready.InternalJobs_Export"
+    ]
   };
-  const validationListColumns = [
-    { key: "months", header: "Month" },
-    { key: "groupFields", header: "Group Field" },
-    { key: "futureFilters", header: "Future Filter" },
-    { key: "closedRows", header: "Closed Rows" },
-    { key: "statuses", header: "Status" },
-    { key: "yesNo", header: "Yes No" }
-  ];
-  const visibleControlNames = [
-    { name: "PM_Filter_Dropdowns", address: "B2", formula: "='Planning Review'!$B$2" },
-    { name: "Future_Filter_Mode", address: "C2", formula: "='Planning Review'!$C$2" },
-    { name: "HideClosed_Status", address: "D2", formula: "='Planning Review'!$D$2" },
-    { name: "Burndown_Cut_Target", address: "E2", formula: "='Planning Review'!$E$2" }
-  ];
-  const demoOutputs = [
-    {
-      sheet: reviewSheet,
-      title: "Capital Planning Report",
-      formula: "=CapitalPlanning.CAPITAL_PLANNING_REPORT()",
-      note: "Main report spill starts at A4."
-    },
-    {
-      sheet: "BU Cap Scorecard",
-      title: "BU Cap Scorecard",
-      formula: "=Analysis.BU_CAP_SCORECARD()",
-      note: "Cap and spend posture by BU."
-    },
-    {
-      sheet: "Reforecast Queue",
-      title: "Reforecast Queue",
-      formula: "=Analysis.REFORECAST_QUEUE()",
-      note: "Grouped action queue for forecast review."
-    },
-    {
-      sheet: "PM Spend Report",
-      title: "PM Spend Report",
-      formula: "=Analysis.PM_SPEND_REPORT()",
-      note: "Existing-work summary and job detail."
-    },
-    {
-      sheet: "Working Budget",
-      title: "Working Budget Screen",
-      formula: "=Analysis.WORKING_BUDGET_SCREEN()",
-      note: "Current-job screening before budget drafting."
-    },
-    {
-      sheet: "Burndown",
-      title: "Burndown Screen",
-      formula: "=Analysis.BURNDOWN_SCREEN()",
-      note: "Meeting view of remaining burn and drivers."
-    }
-  ];
-  const requiredNames = [
-    "PM_Filter_Dropdowns",
-    "Future_Filter_Mode",
-    "HideClosed_Status",
-    "Burndown_Cut_Target",
-    "Controls.PM_Filter_Dropdowns",
-    "TRIMRANGE_KEEPBLANKS",
-    "RBYROW",
-    "get.TRIMRANGE_KEEPBLANKS",
-    "get.GetFinanceBlock",
-    "kind.RBYROW",
-    "kind.CapByBU",
-    "kind.PortfolioCap",
-    "CapitalPlanning.CAPITAL_PLANNING_REPORT",
-    "Analysis.PM_SPEND_REPORT",
-    "Analysis.WORKING_BUDGET_SCREEN",
-    "Analysis.BU_CAP_SCORECARD",
-    "Analysis.REFORECAST_QUEUE",
-    "Analysis.BURNDOWN_SCREEN"
-  ];
+
+  const moduleFiles = applicationData.moduleFiles;
+  const starterTables = applicationData.starterTables;
+  const reviewSheet = applicationData.sheets.planningReview;
+  const validationSheet = applicationData.sheets.validationLists;
+  const requiredSheets = Object.values(applicationData.sheets);
+  const validationLists = applicationData.dropdownLists;
+  const validationListColumns = applicationData.validationListColumns;
+  const visibleControlNames = applicationData.visibleControls;
+  const rowValidationRules = applicationData.rowValidationRules;
+  const demoOutputs = applicationData.demoOutputs;
+  const requiredNames = applicationData.requiredNames;
 
   const logEl = document.getElementById("log");
   const buttons = Array.from(document.querySelectorAll("button"));
@@ -142,6 +195,7 @@
     await setupWorkbook();
     await installModules();
     await validateWorkbook();
+    await insertDemoOutputs({ validateFirst: false });
   }
 
   async function setupWorkbook() {
@@ -169,13 +223,24 @@
       }
 
       buildValidationLists(context.workbook.worksheets.getItem(validationSheet));
-      formatPlanningTable(context.workbook.worksheets.getItem("Planning Table"));
-      formatCapSetup(context.workbook.worksheets.getItem("Cap Setup"));
+      formatPlanningTable(
+        context.workbook.worksheets.getItem(applicationData.sheets.planningTable),
+        starterHeadersFor(tables, applicationData.sheets.planningTable)
+      );
+      formatCapSetup(context.workbook.worksheets.getItem(applicationData.sheets.capSetup));
       formatPlanningReview(context.workbook.worksheets.getItem(reviewSheet));
       await context.sync();
     });
 
     appendLog("Starter sheets, visible controls, dropdowns, and formats ready.");
+  }
+
+  function starterHeadersFor(tables, sheetName) {
+    const table = tables.find((item) => item.sheet === sheetName);
+    if (!table || !table.values.length) {
+      throw new Error(`Missing starter table headers for ${sheetName}.`);
+    }
+    return table.values[0];
   }
 
   async function installModules() {
@@ -222,8 +287,12 @@
 
   async function validateWorkbook() {
     appendLog("Validating workbook contract...");
-    const expectedPlanningHeaders = parseTsv(await fetchText("../samples/planning_table_starter.tsv"))[0];
-    const expectedCapHeaders = parseTsv(await fetchText("../samples/cap_setup_starter.tsv"))[0];
+    const expectedPlanningHeaders = parseTsv(
+      await fetchText(starterTables.find((table) => table.sheet === applicationData.sheets.planningTable).path)
+    )[0];
+    const expectedCapHeaders = parseTsv(
+      await fetchText(starterTables.find((table) => table.sheet === applicationData.sheets.capSetup).path)
+    )[0];
 
     const summary = await Excel.run(async (context) => {
       const sheets = {};
@@ -261,13 +330,13 @@
         controlNameItems[control.name] = item;
       }
 
-      const planning = context.workbook.worksheets.getItem("Planning Table");
-      const capSetup = context.workbook.worksheets.getItem("Cap Setup");
+      const planning = context.workbook.worksheets.getItem(applicationData.sheets.planningTable);
+      const capSetup = context.workbook.worksheets.getItem(applicationData.sheets.capSetup);
       const review = context.workbook.worksheets.getItem(reviewSheet);
 
-      const planningHeaders = planning.getRange("A2:BO2");
-      const capHeaders = capSetup.getRange("A2:B2");
-      const capRows = capSetup.getRange("A3:B100");
+      const planningHeaders = planning.getRange(applicationData.planningTable.headerRange);
+      const capHeaders = capSetup.getRange(applicationData.capSetup.headerRange);
+      const capRows = capSetup.getRange(applicationData.capSetup.dataRange);
       const reviewControls = review.getRange("B2:E2");
       const reviewMonths = review.getRange("M2:N2");
 
@@ -280,6 +349,7 @@
 
       assertHeaderOrder(planningHeaders.values[0], expectedPlanningHeaders, "Planning Table");
       assertHeaderOrder(capHeaders.values[0], expectedCapHeaders, "Cap Setup");
+      assertRowValidationRulesConfigured(planningHeaders.values[0]);
       assertCapRowsAreValid(capRows.values);
       assertVisibleControls(reviewControls.values, reviewMonths.values);
       assertControlNamesBound(controlNameItems);
@@ -290,7 +360,8 @@
         planningHeaderCount: expectedPlanningHeaders.length,
         capRowCount: countConfiguredCapRows(capRows.values),
         controlCount: visibleControlNames.length,
-        dropdownListCount: validationListColumns.length
+        dropdownListCount: validationListColumns.length,
+        rowValidationRuleCount: rowValidationRules.length
       };
     });
 
@@ -298,9 +369,12 @@
     appendLog(renderValidationSummary(summary));
   }
 
-  async function insertDemoOutputs() {
-    appendLog("Validating before inserting demo outputs...");
-    await validateWorkbook();
+  async function insertDemoOutputs(options = {}) {
+    const validateFirst = options.validateFirst !== false;
+    if (validateFirst) {
+      appendLog("Validating before inserting demo outputs...");
+      await validateWorkbook();
+    }
     appendLog("Inserting demo output formulas...");
 
     await Excel.run(async (context) => {
@@ -391,23 +465,25 @@
     sheet.getRange("A1:F1").format.fill.color = "#D9EAF7";
   }
 
-  function formatPlanningTable(sheet) {
-    sheet.freezePanes.freezeRows(2);
-    sheet.getRange("A2:BO2").format.font.bold = true;
-    sheet.getRange("A2:BO2").format.wrapText = true;
-    sheet.getRange("A2:BO2").format.fill.color = "#D9EAF7";
-    for (const address of ["F2", "G2", "P2", "Q2", "BE2"]) {
+  function formatPlanningTable(sheet, headers) {
+    const table = applicationData.planningTable;
+    sheet.freezePanes.freezeRows(table.headerRow);
+    sheet.getRange(table.headerRange).format.font.bold = true;
+    sheet.getRange(table.headerRange).format.wrapText = true;
+    sheet.getRange(table.headerRange).format.fill.color = "#D9EAF7";
+    for (const address of table.requiredHeaderFill) {
       sheet.getRange(address).format.fill.color = "#FFF2CC";
     }
-    applyNumberFormat(sheet.getRange("P3:BA234"), 232, 38, "$#,##0");
-    applyNumberFormat(sheet.getRange("BM3:BM234"), 232, 1, "0");
-    applyListValidation(sheet.getRange("F3:F234"), validationSource("E"));
-    applyListValidation(sheet.getRange("M3:M234"), validationSource("F"));
-    applyListValidation(sheet.getRange("O3:O234"), validationSource("F"));
-    applyListValidation(sheet.getRange("BE3:BE234"), validationSource("F"));
-    applyListValidation(sheet.getRange("BG3:BH234"), validationSource("F"));
-    applyListValidation(sheet.getRange("BO3:BO234"), validationSource("F"));
-    sheet.getRange("A:BO").format.autofitColumns();
+    for (const numberFormat of table.numberFormats) {
+      applyNumberFormat(
+        sheet.getRange(numberFormat.address),
+        numberFormat.rows,
+        numberFormat.columns,
+        numberFormat.format
+      );
+    }
+    applyRowValidationRules(sheet, headers);
+    sheet.getRange("A:BL").format.autofitColumns();
   }
 
   function formatCapSetup(sheet) {
@@ -440,17 +516,42 @@
     sheet.getRange("B2:E2").format.fill.color = "#FFF2CC";
     sheet.getRange("M2:N2").format.fill.color = "#FFF2CC";
     applyNumberFormat(sheet.getRange("E2"), 1, 1, "$#,##0");
-    applyListValidation(sheet.getRange("B2"), validationSource("B"));
-    applyListValidation(sheet.getRange("C2"), validationSource("C"));
-    applyListValidation(sheet.getRange("D2"), validationSource("D"));
-    applyListValidation(sheet.getRange("M2:N2"), validationSource("A"));
+    applyListValidation(sheet.getRange("B2"), validationSourceForList("groupFields"));
+    applyListValidation(sheet.getRange("C2"), validationSourceForList("futureFilters"));
+    applyListValidation(sheet.getRange("D2"), validationSourceForList("closedRows"));
+    applyListValidation(sheet.getRange("M2:N2"), validationSourceForList("months"));
     applyNonNegativeValidation(sheet.getRange("E2"));
     sheet.getRange("A:N").format.autofitColumns();
   }
 
-  function validationSource(columnLetter) {
-    const index = columnLetter.charCodeAt(0) - "A".charCodeAt(0);
-    const listKey = validationListColumns[index].key;
+  function applyRowValidationRules(sheet, headers) {
+    for (const rule of rowValidationRulesFor(applicationData.sheets.planningTable)) {
+      const address = dataRangeForHeader(
+        headers,
+        rule.header,
+        applicationData.planningTable.dataStartRow,
+        applicationData.planningTable.maxValidationRow
+      );
+      applyListValidation(sheet.getRange(address), validationSourceForList(rule.listKey));
+    }
+  }
+
+  function dataRangeForHeader(headers, header, startRow, endRow) {
+    const index = headerIndex(headers, header);
+    const column = columnName(index + 1);
+    return `${column}${startRow}:${column}${endRow}`;
+  }
+
+  function rowValidationRulesFor(sheetName) {
+    return rowValidationRules.filter((rule) => rule.sheet === sheetName);
+  }
+
+  function validationSourceForList(listKey) {
+    const index = validationListColumns.findIndex((column) => column.key === listKey);
+    if (index < 0) {
+      throw new Error(`Unknown validation list: ${listKey}`);
+    }
+    const columnLetter = columnName(index + 1);
     const endRow = validationLists[listKey].length + 1;
     return `='${validationSheet}'!$${columnLetter}$2:$${columnLetter}$${endRow}`;
   }
@@ -489,6 +590,24 @@
         throw new Error(`${label} header ${index + 1} should be ${expected}; found ${actual[index] || "(blank)"}.`);
       }
     });
+  }
+
+  function assertRowValidationRulesConfigured(headers) {
+    for (const rule of rowValidationRulesFor(applicationData.sheets.planningTable)) {
+      headerIndex(headers, rule.header);
+      if (!validationLists[rule.listKey]) {
+        throw new Error(`Row validation for ${rule.header} uses unknown list ${rule.listKey}.`);
+      }
+    }
+  }
+
+  function headerIndex(headers, header) {
+    const actual = headers.map((value) => String(value || "").trim());
+    const index = actual.indexOf(header);
+    if (index < 0) {
+      throw new Error(`Planning Table is missing required validation header: ${header}.`);
+    }
+    return index;
   }
 
   function assertCapRowsAreValid(rows) {
@@ -549,7 +668,7 @@
         }
         if (hasCellContent(values[rowIndex][columnIndex]) || hasCellContent(formulas[rowIndex][columnIndex])) {
           const address = `Planning Review!${columnName(columnIndex + 1)}${rowIndex + 4}`;
-          throw new Error(`${address} blocks the main report spill. Clear Planning Review!A4:N200 or rerun Create Starter Sheets before Insert Demo Outputs.`);
+      throw new Error(`${address} blocks the main report spill. Clear Planning Review!A4:N200 or rerun Create Starter Sheets before inserting demo outputs.`);
         }
       }
     }
@@ -586,7 +705,8 @@
       `- Planning Table headers: ${summary.planningHeaderCount}`,
       `- Cap Setup rows with BU: ${summary.capRowCount}`,
       `- Visible controls bound: ${summary.controlCount}/${visibleControlNames.length}`,
-      `- Dropdown lists ready: ${summary.dropdownListCount}`
+      `- Dropdown lists ready: ${summary.dropdownListCount}`,
+      `- Row validations configured: ${summary.rowValidationRuleCount}/${rowValidationRules.length}`
     ].join("\n");
   }
 

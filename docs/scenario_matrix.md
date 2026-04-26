@@ -67,6 +67,29 @@ Use this as a lightweight validation checklist after formula changes.
 | Future or closed-row controls hide projected work | Hidden dollars appear in the controls section and the group summary. |
 | A cut target is entered | Candidate rows are labeled against the cut target without changing source data. |
 
+## Dropdown Application Data
+
+| Scenario | Expected behavior |
+|---|---|
+| Starter setup runs | `Planning Review!B2:D2` get dropdowns from the centralized `applicationData` model. |
+| Default controls are unchanged | Baseline behavior stays `BU`, `All`, `SHOW`, cut target `0`, and month `Mar`. |
+| Group, future, or closed-row controls change | The report and Analysis screens react through the sheet-linked workbook names. |
+| `Planning Table` contains a `Chargeable` header | Rows `3:2000` receive a `Y,N` dropdown by header-driven validation. |
+| The `Chargeable` header is missing | Workbook validation fails before treating the starter layout as valid. |
+
+## Ready And Row Flags
+
+| Scenario | Expected behavior |
+|---|---|
+| `Chargeable` is set to `Y` | `Search` can require a job id, and `Ready.InternalJobs_Export` uses `Chargeable` as the chargeability input for its example internal-ready calculation. |
+| `Ready.ChargeableFlag` is evaluated | The helper finds the `Chargeable` column by header name instead of assuming column `O`. |
+| `Ready.InternalEligible` is evaluated | The helper finds `Internal Eligible` by header name; no separate visible `Eligible` fallback column is present in the starter. |
+| The starter workbook is created | No `JobFlag` column and no source-table `Internal Ready` column are present; `Chargeable` is the only starter chargeability flag. |
+| Demo outputs are inserted | The `Internal Jobs` sheet spills `=Ready.InternalJobs_Export()` at `A4` for readiness review. |
+| Internal jobs are exported | `Ready.InternalJobs_Export` emits computed `Internal Ready Final` from eligibility, maturity, stage, and chargeability instead of reading a manual override column. |
+| Operators use Excel Data > Subtotal | `Composite Cat` remains available as a manual pre-formula helper for sort, dedupe, and subtotal workflows without becoming formula output. |
+| Readiness behavior is changed later | Formula logic, this scenario section, and audit checks are updated in the same pass before `Ready` is treated as production-validated. |
+
 ## Public Safety
 
 | Scenario | Expected behavior |

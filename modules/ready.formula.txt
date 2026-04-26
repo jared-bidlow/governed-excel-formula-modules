@@ -1,14 +1,26 @@
-Eligible = 'Planning Table'!$BE$5:$BE$200;
+ColumnOrBlank = LAMBDA(header,
+    LET(
+        Hdr, get.GetBudgetHeaders(),
+        Body, get.GetBudgetBody(),
+        BlankCol, EXPAND("", ROWS(Body), 1, ""),
+        Idx, IFERROR(XMATCH(header, Hdr, 0), 0),
+        IF(Idx > 0, CHOOSECOLS(Body, Idx), BlankCol)
+    )
+);
 
-Maturity = 'Planning Table'!$BD$5:$BD$200;
+InternalEligible = Ready.ColumnOrBlank("Internal Eligible");
 
-Stage = 'Planning Table'!$BC$5:$BC$200;
+Maturity = Ready.ColumnOrBlank("Planning Maturity");
 
-JobFlag = 'Planning Table'!$O$5:$O$200;
+Stage = Ready.ColumnOrBlank("Stage");
+
+ChargeableFlag = Ready.ColumnOrBlank("Chargeable");
 
 cReadyExec = "Ready for Execution";
 
-lstExecStages = Lists!$S$2:$S$5;
+ReadyMaturityKeys = {"READY"; "READY FOR EXECUTION"};
+
+lstExecStages = {"Execution"; "Demo"; "Procurement"; "Install"; "Commissioning"};
 
 NormText = LAMBDA(x, UPPER(TRIM(x & "")));
 
@@ -17,6 +29,8 @@ ReadyExecKey = NormText(cReadyExec);
 ExecStageKeys = MAP(lstExecStages, LAMBDA(v, NormText(v)));
 
 IsExecStage = LAMBDA(x, ISNUMBER(XMATCH(NormText(x), ExecStageKeys, 0, -1)));
+
+IsReadyMaturity = LAMBDA(x, ISNUMBER(XMATCH(NormText(x), ReadyMaturityKeys, 0)));
 
 TruthyFlag = LAMBDA(x,
     LET(
@@ -36,23 +50,23 @@ CanceledFlag = LAMBDA(x,
 IsBaseReadyRow = LAMBDA(eligible, maturity, stage,
     LET(
         eligibleFlag, --eligible,
-        readyExecFlag, --(NormText(maturity) = ReadyExecKey),
+        readyExecFlag, --IsReadyMaturity(maturity),
         execStageFlag, --IsExecStage(stage),
         --((eligibleFlag * readyExecFlag * execStageFlag) > 0)
     )
 );
 
-InternalReady3 = LAMBDA(eligible, maturity, stage, jobFlag,
+InternalReady3 = LAMBDA(eligible, maturity, stage, chargeableFlag,
     LET(
         eligibleFlag, --eligible,
-        readyExecFlag, --(NormText(maturity) = ReadyExecKey),
+        readyExecFlag, --IsReadyMaturity(maturity),
         execStageFlag, --IsExecStage(stage),
-        jobYesFlag, --(NormText(jobFlag) = "Y"),
-        strictReady, --((eligibleFlag * readyExecFlag * execStageFlag * jobYesFlag) > 0),
+        chargeableYesFlag, --(NormText(chargeableFlag) = "Y"),
+        strictReady, --((eligibleFlag * readyExecFlag * execStageFlag * chargeableYesFlag) > 0),
         anyProgress, --(
             (
                 (NormText(maturity) <> "") + (NormText(stage) <> "") +
-                    (NormText(jobFlag) <> "")
+                    (NormText(chargeableFlag) <> "")
             ) > 0
         ),
         IF(
@@ -75,8 +89,6 @@ InternalJobs_Export = LAMBDA(
                 IF(idx > 0, CHOOSECOLS(Body, idx), BlankCol)
             )
         ),
-        IdxInternalEligible, HeaderPos("Internal Eligible"),
-        IdxEligible, HeaderPos("Eligible"),
         ProjectDescription, ColOrBlank("Project Description"),
         BU, ColOrBlank("BU"),
         Region, ColOrBlank("Region"),
@@ -95,7 +107,6 @@ InternalJobs_Export = LAMBDA(
         StageCol, ColOrBlank("Stage"),
         PlanningMaturity, ColOrBlank("Planning Maturity"),
         InternalEligibleRaw, ColOrBlank("Internal Eligible"),
-        InternalReadyRaw, ColOrBlank("Internal Ready"),
         EarliestStart, ColOrBlank("Earliest Start (Internal)"),
         BlockedReason, ColOrBlank("Blocked Reason (Internal)"),
         Timeline, ColOrBlank("Timeline"),
@@ -104,18 +115,14 @@ InternalJobs_Export = LAMBDA(
         RevisedGroup, ColOrBlank("Revised Group"),
         FutureTierOverride, ColOrBlank("Future Tier Override"),
         CanceledRaw, ColOrBlank("Canceled"),
-        InternalEligibleOut, IF(
-            IdxInternalEligible > 0,
-            InternalEligibleRaw,
-            IF(IdxEligible > 0, ColOrBlank("Eligible"), BlankCol)
-        ),
+        InternalEligibleOut, InternalEligibleRaw,
         IsRollup, ((CompositeCat = "Grand Total") + (RIGHT(CompositeCat, 5) = "Total")) >
             0,
         IsCanceled, CanceledFlag(CanceledRaw),
         IsEligible, TruthyFlag(InternalEligibleOut),
         HasProgress, (
             (NormText(StageCol) <> "") + (NormText(PlanningMaturity) <> "") +
-                (NormText(InternalReadyRaw) <> "") + (NormText(EarliestStart) <> "") +
+                (NormText(EarliestStart) <> "") +
                 (NormText(BlockedReason) <> "") + (NormText(Timeline) <> "") +
                 (NormText(Person) <> "") + (NormText(Hours) <> "") +
                 (NormText(RevisedGroup) <> "") + (NormText(FutureTierOverride) <> "")
@@ -126,16 +133,12 @@ InternalJobs_Export = LAMBDA(
             StageCol,
             Chargeable
         ),
-        InternalReadyFinal, IF(
-            NormText(InternalReadyRaw) <> "",
-            InternalReadyRaw,
-            InternalReadyComputed
-        ),
+        InternalReadyFinal, InternalReadyComputed,
         OutHdr, {
             "Project Description", "BU", "Region", "Site", "Composite Cat", "Status",
             "Planning Notes", "Carry-over", "PM", "Type", "Category", "Source ID",
             "Job ID", "Chargeable", "Comments", "Stage", "Planning Maturity",
-            "Internal Eligible", "Internal Ready", "Internal Ready Final",
+            "Internal Eligible", "Internal Ready Final",
             "Earliest Start (Internal)", "Blocked Reason (Internal)", "Timeline",
             "Person", "Hours", "Revised Group", "Future Tier Override", "Canceled"
         },
@@ -158,7 +161,6 @@ InternalJobs_Export = LAMBDA(
             StageCol,
             PlanningMaturity,
             InternalEligibleOut,
-            InternalReadyRaw,
             InternalReadyFinal,
             EarliestStart,
             BlockedReason,

@@ -1,5 +1,228 @@
 # Change Log
 
+## 2026-04-25 - Keep Composite Cat manual and compute readiness output
+
+Semantic change:
+
+- Kept `Composite Cat` as a manual pre-formula planning-table helper for Excel sort, remove-duplicates, and Data > Subtotal workflows.
+- Removed the source-table `Internal Ready` override column from the public starter contract.
+- Made `Ready.InternalJobs_Export` emit computed `Internal Ready Final` directly from eligibility, maturity, stage, and chargeability.
+- Shifted the starter workbook width from `A:BM` to `A:BL`.
+
+Minimal diff summary:
+
+- Updated `samples/planning_table_starter.tsv`, `addin/taskpane.js`, `modules/get.formula.txt`, and `modules/ready.formula.txt`.
+- Updated starter, add-in, scenario, import-map, and structure-map docs.
+- Updated static audit coverage for the 64-column starter contract and computed readiness output.
+
+Visible impact:
+
+- Workbook behavior: new starter workbooks expose `Composite Cat`, `Chargeable`, `Internal Eligible`, and `Canceled`, but no source-table `Internal Ready` override.
+- Formula logic: `Ready.InternalJobs_Export` output changes by removing the raw `Internal Ready` column and computing `Internal Ready Final` directly.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Expand Planning Table structure map
+
+Semantic change:
+
+- Expanded the public-safe structure map from Yes/No fields to the full 65-column `Planning Table` contract.
+- Documented each column's role, validation or formatting treatment, and primary formula/add-in dependencies.
+- Kept the reference parse facts separate from the public starter contract.
+
+Minimal diff summary:
+
+- Updated `docs/planning_worksheet_structure_map.md`.
+- Updated static audit coverage for the full-column map.
+
+Visible impact:
+
+- Workbook behavior: no intended change.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Remove Eligible fallback column
+
+Semantic change:
+
+- Removed the visible `Eligible` column from the public starter `Planning Table`.
+- Made `Internal Eligible` the only readiness eligibility input in the starter contract.
+- Removed the `Ready` fallback path that looked for a legacy `Eligible` column.
+- Shifted the starter workbook width from `A:BN` to `A:BM`.
+
+Minimal diff summary:
+
+- Updated `samples/planning_table_starter.tsv`.
+- Updated `addin/taskpane.js`, `modules/get.formula.txt`, and `modules/ready.formula.txt`.
+- Updated starter, add-in, import-map, and structure-map docs.
+- Updated static audit coverage for the 65-column starter contract and no visible `Eligible` fallback column.
+
+Visible impact:
+
+- Workbook behavior: new starter workbooks expose one eligibility flag, `Internal Eligible`, instead of both `Eligible` and `Internal Eligible`.
+- Formula logic: `Ready.InternalEligible` now resolves `Internal Eligible` directly; older fallback behavior is intentionally removed.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Document Yes/No planning worksheet dependencies
+
+Semantic change:
+
+- Added a public-safe planning worksheet structure map derived from the reference parse.
+- Listed the complete public starter Yes/No field set and their formula dependencies.
+- Documented that the old explicit `Y,N` validation position is now handled by header-driven `Chargeable` validation.
+
+Minimal diff summary:
+
+- Added `docs/planning_worksheet_structure_map.md`.
+- Linked the structure map from starter and import docs.
+- Updated static audit coverage for the Yes/No dependency map.
+
+Visible impact:
+
+- Workbook behavior: no intended change.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Fold demo outputs into setup action
+
+Semantic change:
+
+- Changed the primary task-pane action from `Setup + Install + Validate` to `Setup + Install + Validate + Outputs`.
+- The combined action now inserts the public demo output sheets after validation succeeds.
+- Kept the standalone `Insert Demo Outputs` action for rerunning only output insertion.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.html` and `addin/taskpane.js`.
+- Updated Office add-in and starter workbook docs.
+- Updated smoke helper text and static audit coverage for the four-step action.
+
+Visible impact:
+
+- Workbook behavior: the primary setup button now creates output sheets automatically.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Add Internal Jobs demo sheet
+
+Semantic change:
+
+- Added an `Internal Jobs` demo sheet to the task-pane `Insert Demo Outputs` flow.
+- The sheet places `=Ready.InternalJobs_Export()` at `A4` so readiness output can be smoke-tested like the Analysis screens.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js`.
+- Updated starter workbook, Office add-in, and scenario docs.
+- Updated static audit coverage for the new demo sheet.
+
+Visible impact:
+
+- Workbook behavior: `Insert Demo Outputs` now creates an `Internal Jobs` sheet for the Ready export.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Remove JobFlag starter column
+
+Semantic change:
+
+- Removed `JobFlag` from the public starter `Planning Table` contract.
+- Shifted the starter workbook width from `A:BO` to `A:BN`.
+- Updated `Search` helper logic to find health-check inputs by header name instead of hardcoded row ordinals.
+
+Minimal diff summary:
+
+- Updated `samples/planning_table_starter.tsv`.
+- Updated `addin/taskpane.js`, `modules/get.formula.txt`, and `modules/search.formula.txt`.
+- Updated starter workbook, Office add-in, workbook import map, and scenario docs.
+- Updated static audit coverage for the 66-column starter contract and absence of `JobFlag` from live starter/setup contracts.
+
+Visible impact:
+
+- Workbook behavior: new starter workbooks no longer include a `JobFlag` column, and `Search.Projects_Health` follows headers after the width change.
+- Formula logic: `get` range bounds and `Search` helper lookup behavior changed; main report, Analysis, and Ready chargeability logic were not otherwise changed.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Stabilize Ready chargeability helper
+
+Semantic change:
+
+- Replaced the stale `Ready.JobFlag` column helper with `Ready.ChargeableFlag`.
+- Made the public `Ready` range helpers find starter inputs by header name instead of hardcoded old-workbook columns.
+- Made the example execution-stage list self-contained so `Ready.InternalReady3` no longer depends on an uncreated workbook list sheet.
+
+Minimal diff summary:
+
+- Updated `modules/ready.formula.txt`.
+- Updated add-in required-name validation for the public `Ready` helpers.
+- Updated starter workbook, Office add-in, workbook import map, and scenario docs.
+- Updated static audit coverage for the `Ready.ChargeableFlag` contract and stale `Ready.JobFlag` removal.
+
+Visible impact:
+
+- Workbook behavior: `Ready` example outputs can now resolve the public `Chargeable` column by header and no longer treat public column `O` as chargeability.
+- Formula logic: `Ready` helper logic changed; main report and Analysis formulas were not changed.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Clarify Chargeable and JobFlag readiness contract
+
+Semantic change:
+
+- Documented `Chargeable` as the canonical internal-labor chargeability flag for the public starter workbook.
+- Documented `JobFlag` as a separate starter yes/no planning flag that formula modules do not currently consume.
+- Added audit coverage so future changes keep the add-in data model, starter docs, import map, and scenario matrix aligned.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js` row-validation metadata.
+- Updated starter workbook, Office add-in, workbook import map, and scenario docs.
+- Updated static audit coverage for the `Chargeable` versus `JobFlag` contract.
+
+Visible impact:
+
+- Workbook behavior: no dropdown behavior change; the starter still validates both public yes/no columns by header.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-25 - Centralize dropdown application data
+
+Semantic change:
+
+- Refactored add-in setup data into one `applicationData` model for sheets, dropdown lists, visible controls, and row-validation rules.
+- Changed starter row dropdown setup to find validation targets by header name, including `Chargeable` rows `3:2000` with `Y,N`.
+- Kept the spill-safe `Planning Review!B2:E2` control layout and `M2:N2` month controls.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js`.
+- Updated add-in, starter workbook, and scenario docs.
+- Updated static audit coverage for the centralized dropdown contract.
+
+Visible impact:
+
+- Workbook behavior: dropdown setup becomes model-driven and `Chargeable` validation extends through row `2000`.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Guard main report demo spill range
 
 Semantic change:

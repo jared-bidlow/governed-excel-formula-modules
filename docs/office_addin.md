@@ -11,15 +11,17 @@ The add-in is an installer and validator. It does not replace the formula module
 - Pastes the public starter TSV data into `Planning Table!A2` and `Cap Setup!A2`.
 - Formats starter headers, freezes top rows, applies currency formats, and adds non-negative cap validation.
 - Adds visible `Planning Review` controls in `B2:E2`, with as-of month cells in `M2:N2`.
-- Applies dropdown validation for month, group, future-filter, closed-row, status, and yes/no fields.
+- Uses one `applicationData` model for starter sheets, dropdown source lists, control bindings, and row-validation rules.
+- Applies dropdown validation for month, group, future-filter, closed-row, status, and yes/no fields, including header-driven `Chargeable` validation on `Planning Table`.
+- Validates the public `Ready` helpers, including the header-driven `Ready.ChargeableFlag` name used by example readiness exports.
 - Reads `modules/*.formula.txt` from the hosted repo root.
 - Installs workbook defined names through the Excel JavaScript API.
 - Installs default workbook-control names such as `PM_Filter_Dropdowns`, `Future_Filter_Mode`, `HideClosed_Status`, and `Burndown_Cut_Target`.
 - Rebinds the unqualified workbook-control names to the visible `Planning Review` cells after module installation.
 - Adds module-qualified names such as `kind.CapByBU` and `Analysis.REFORECAST_QUEUE`.
 - Adds unqualified compatibility aliases for the first occurrence of each formula name.
-- Validates required sheets, names, starter header order, cap setup shape, visible control values, bound control names, and compatibility helpers such as `TRIMRANGE_KEEPBLANKS` and `RBYROW`.
-- Prints a validation summary showing sheets present, workbook names installed, header count, configured cap rows, bound controls, and dropdown lists.
+- Validates required sheets, names, starter header order, cap setup shape, visible control values, bound control names, row-validation headers, and compatibility helpers such as `TRIMRANGE_KEEPBLANKS` and `RBYROW`.
+- Prints a validation summary showing sheets present, workbook names installed, header count, configured cap rows, bound controls, dropdown lists, and row-validation rules.
 - Inserts demo output formulas into predictable review sheets so a reviewer can inspect the implemented screens without typing formula names.
 
 ## Local Trial Shape
@@ -46,10 +48,10 @@ The helper:
 After Excel opens, use the task pane button:
 
 ```text
-Setup + Install + Validate
+Setup + Install + Validate + Outputs
 ```
 
-When validation succeeds, the task pane status area ends with a compact validation summary:
+The combined button creates the starter sheets, installs formulas, validates the workbook contract, checks the main report spill range, and inserts the demo output formulas. When validation succeeds, the task pane status area includes a compact validation summary:
 
 ```text
 Validation summary:
@@ -59,9 +61,10 @@ Validation summary:
 - Cap Setup rows with BU
 - Visible controls bound
 - Dropdown lists ready
+- Row validations configured
 ```
 
-Then use:
+The standalone output button remains available when you want to rerun only the output-sheet insertion:
 
 ```text
 Insert Demo Outputs
@@ -77,6 +80,7 @@ That button validates the workbook first, checks `Planning Review!A4:N200` for c
 | `PM Spend Report` | `A4` | `=Analysis.PM_SPEND_REPORT()` |
 | `Working Budget` | `A4` | `=Analysis.WORKING_BUDGET_SCREEN()` |
 | `Burndown` | `A4` | `=Analysis.BURNDOWN_SCREEN()` |
+| `Internal Jobs` | `A4` | `=Ready.InternalJobs_Export()` |
 
 When the test session is done, run:
 
@@ -108,11 +112,14 @@ The task pane reads formula modules and samples by relative path, so it needs th
 
 The setup path is intentionally small and inspectable:
 
-- `Planning Table` starts at `A2`, freezes the top two rows, formats the 67-column starter contract, and adds dropdowns for common status and yes/no fields.
+- `Planning Table` starts at `A2`, freezes the top two rows, formats the 64-column starter contract, and adds model-driven dropdowns for common status and yes/no fields.
+- The `Chargeable` dropdown is applied by finding the `Chargeable` header on row `2`, then validating rows `3:2000` against `Y,N`.
+- `Chargeable` is the chargeability input used by the `Search` and `Ready` helper modules. `Internal Eligible` is the readiness eligibility input used by `Ready.InternalEligible`. `Ready.InternalJobs_Export` computes `Internal Ready Final`; there is no source-table `Internal Ready`, no `JobFlag` starter column, and no separate visible `Eligible` fallback column.
+- `Composite Cat` remains a manual pre-formula helper for operator sorting, dedupe, and Excel Data > Subtotal workflows.
 - `Cap Setup` starts at `A2`, formats `Cap` as currency, and validates caps as non-negative numbers.
 - `Planning Review` uses `B2:E2` for visible controls, `M2:N2` for month controls, leaves `A4:N200` open for the main report spill, and leaves `O4:R200` open for note examples.
 - `Validation Lists` stores the dropdown values used by the starter workbook.
-- Demo output sheets are created by the task pane only when `Insert Demo Outputs` is clicked.
+- Demo output sheets are created by the combined `Setup + Install + Validate + Outputs` action, or by the standalone `Insert Demo Outputs` rerun action.
 
 The unqualified control names are rebound to the visible cells:
 

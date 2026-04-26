@@ -152,6 +152,15 @@ REQUIRED_FORMULAS = {
         "CAPITAL_PLANNING_REPORT",
     ],
     "modules/analysis.formula.txt": ANALYSIS_PUBLIC_FORMULAS,
+    "modules/ready.formula.txt": [
+        "ColumnOrBlank",
+        "InternalEligible",
+        "Maturity",
+        "Stage",
+        "ChargeableFlag",
+        "InternalReady3",
+        "InternalJobs_Export",
+    ],
 }
 
 NAMED_FORMULA_BUDGETS = [
@@ -357,6 +366,100 @@ def audit_formula_files(results: list[Result]) -> None:
             f"Split {name} into helpers before it exceeds {MAX_NAMED_FORMULA_CHARS} chars.",
         )
 
+    ready = read_text(ROOT / "modules" / "ready.formula.txt")
+    check_required_regex(
+        results,
+        "modules/ready.formula.txt",
+        ready,
+        "Ready helper uses header-driven ChargeableFlag",
+        r"ChargeableFlag\s*=\s*Ready\.ColumnOrBlank\(\"Chargeable\"\)",
+        "Keep Ready chargeability tied to the Chargeable header, not a column letter.",
+    )
+    check_required_regex(
+        results,
+        "modules/ready.formula.txt",
+        ready,
+        "Ready eligibility uses Internal Eligible directly",
+        r"InternalEligible\s*=\s*Ready\.ColumnOrBlank\(\"Internal Eligible\"\)",
+        "Do not reintroduce an older visible Eligible fallback column.",
+    )
+    add(
+        results,
+        'ColumnOrBlank("Eligible")' not in ready and 'HeaderPos("Eligible")' not in ready,
+        "modules/ready.formula.txt",
+        "Ready module does not fallback to visible Eligible column",
+        "legacy fallback absent",
+        "Use Internal Eligible as the sole readiness eligibility input.",
+    )
+    check_required_regex(
+        results,
+        "modules/ready.formula.txt",
+        ready,
+        "Ready helper uses chargeability parameter name",
+        r"InternalReady3\s*=\s*LAMBDA\(eligible,\s*maturity,\s*stage,\s*chargeableFlag",
+        "Use Chargeable wording for the fourth InternalReady3 input.",
+    )
+    check_required_regex(
+        results,
+        "modules/ready.formula.txt",
+        ready,
+        "Ready helper has self-contained execution stage list",
+        r"lstExecStages\s*=\s*\{\"Execution\";\s*\"Demo\";\s*\"Procurement\";\s*\"Install\";\s*\"Commissioning\"\}",
+        "Keep Ready independent from private workbook list sheets.",
+    )
+    add(
+        results,
+        not has_formula(ready, "JobFlag"),
+        "modules/ready.formula.txt",
+        "Ready module does not define stale JobFlag helper",
+        "stale helper absent",
+        "Use Ready.ChargeableFlag for chargeability.",
+    )
+    add(
+        results,
+        'ColOrBlank("Internal Ready")' not in ready and "InternalReadyRaw" not in ready,
+        "modules/ready.formula.txt",
+        "Ready export does not read source-table Internal Ready",
+        "source-table override absent",
+        "Compute Internal Ready Final in Ready.InternalJobs_Export instead of reading a manual override column.",
+    )
+    check_required_regex(
+        results,
+        "modules/ready.formula.txt",
+        ready,
+        "Ready export emits computed Internal Ready Final",
+        r"InternalReadyFinal,\s*InternalReadyComputed.*\"Internal Ready Final\"",
+        "Keep readiness output formula-owned and avoid a mixed manual/computed source field.",
+    )
+
+    get = read_text(ROOT / "modules" / "get.formula.txt")
+    check_required_regex(
+        results,
+        "modules/get.formula.txt",
+        get,
+        "get module uses 64-column starter bounds",
+        r"GetBudgetHeaders\s*=\s*LAMBDA\('Planning Table'!\$A\$2:\$BL\$2\).*GetBudgetBodyRaw\s*=\s*LAMBDA\(TRIMRANGE_KEEPBLANKS\('Planning Table'!\$A\$3:\$BL\$234\)\)",
+        "Keep get range bounds aligned to the no-JobFlag and no-Eligible-fallback starter contract.",
+    )
+
+    search = read_text(ROOT / "modules" / "search.formula.txt")
+    check_required_regex(
+        results,
+        "modules/search.formula.txt",
+        search,
+        "Search helper uses header-driven columns",
+        r"HeaderPos.*ColOrBlank.*RowValue.*RowValue\(\"Job ID\"\).*RowValue\(\"Chargeable\"\).*RowValue\(\"Stage\"\).*RowValue\(\"Planning Maturity\"\)",
+        "Keep Search resilient to starter-column movement.",
+    )
+    add(
+        results,
+        "INDEX(row, 13)" not in search and "INDEX(row, 14)" not in search and "INDEX(row, 54)" not in search,
+        "modules/search.formula.txt",
+        "Search helper avoids stale row ordinals",
+        "stale ordinals absent",
+        "Use header lookup for Projects_Health inputs.",
+    )
+
 
 def audit_docs(results: list[Result]) -> None:
     readme = read_text(ROOT / "README.md")
@@ -368,6 +471,7 @@ def audit_docs(results: list[Result]) -> None:
     starter = read_text(ROOT / "docs" / "starter_workbook.md")
     review = read_text(ROOT / "docs" / "technical_review_guide.md")
     import_map = read_text(ROOT / "docs" / "workbook_import_map.md")
+    structure_map = read_text(ROOT / "docs" / "planning_worksheet_structure_map.md")
     push_helper = read_text(ROOT / "tools" / "push_public.ps1")
     addin_smoke = read_text(ROOT / "tools" / "start_addin_smoke_test.ps1")
     addin_server = read_text(ROOT / "tools" / "start_addin_dev_server.ps1")
@@ -593,6 +697,22 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/scenario_matrix.md",
+        scenarios,
+        "scenario matrix covers dropdown application data",
+        r"Dropdown Application Data.*Planning Review!B2:D2.*Chargeable.*Y,N",
+        "Cover model-driven dropdown behavior in the scenario matrix.",
+    )
+    check_required_regex(
+        results,
+        "docs/scenario_matrix.md",
+        scenarios,
+        "scenario matrix covers ready row flags",
+        r"Ready And Row Flags.*Ready\.ChargeableFlag.*Chargeable.*Ready\.InternalEligible.*Internal Eligible.*no separate visible `Eligible` fallback column.*No `JobFlag` column and no source-table `Internal Ready` column are present.*Ready\.InternalJobs_Export.*computed `Internal Ready Final`.*Data > Subtotal.*`Composite Cat`",
+        "Cover the no-JobFlag, no-source-Internal-Ready, and manual Composite Cat boundaries.",
+    )
+    check_required_regex(
+        results,
         "docs/change_log.md",
         changelog,
         "change log records technical review guide",
@@ -673,6 +793,86 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/change_log.md",
+        changelog,
+        "change log records dropdown application data",
+        r"Centralize dropdown application data",
+        "Record the model-driven dropdown setup change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records Chargeable JobFlag contract",
+        r"Clarify Chargeable and JobFlag readiness contract",
+        "Record the Chargeable versus JobFlag documentation guardrail.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records Ready chargeability helper",
+        r"Stabilize Ready chargeability helper",
+        "Record the Ready formula snapshot stabilization.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records JobFlag removal",
+        r"Remove JobFlag starter column",
+        "Record the starter contract width change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records Internal Jobs demo sheet",
+        r"Add Internal Jobs demo sheet",
+        "Record the Ready demo-output sheet.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records combined setup outputs action",
+        r"Fold demo outputs into setup action",
+        "Record the primary task-pane action creating demo outputs.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records Yes/No dependency map",
+        r"Document Yes/No planning worksheet dependencies",
+        "Record the public-safe structure map update.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records Eligible fallback removal",
+        r"Remove Eligible fallback column",
+        "Record the starter contract simplification.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records computed readiness output",
+        r"Keep Composite Cat manual and compute readiness output",
+        "Record the Composite Cat and Internal Ready source-column decision.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records full Planning Table structure map",
+        r"Expand Planning Table structure map",
+        "Record the full-column structure map update.",
+    )
+    check_required_regex(
+        results,
         "docs/public_release_checklist.md",
         release,
         "release checklist requires clean-history export",
@@ -723,7 +923,7 @@ def audit_docs(results: list[Result]) -> None:
                 ("guards stale dev server reuse", r"Stop-StaleDevServer.*probeUrl.*taskpane\.js.*Invoke-WebRequest.*Stop-Process"),
                 ("falls back without npm", r"npm is not on PATH.*sideload addin\\manifest\.xml manually"),
                 ("starts server helper", r"start_addin_dev_server\.ps1"),
-                ("documents demo output smoke step", r"Setup \+ Install \+ Validate, then Insert Demo Outputs"),
+                ("documents demo output smoke step", r"Setup \+ Install \+ Validate \+ Outputs"),
             ],
         ),
         (
@@ -809,7 +1009,7 @@ def audit_docs(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter,
         "starter guide documents demo outputs",
-        r"Insert Demo Outputs.*BU Cap Scorecard.*Reforecast Queue.*PM Spend Report.*Working Budget.*Burndown",
+        r"Insert Demo Outputs.*BU Cap Scorecard.*Reforecast Queue.*PM Spend Report.*Working Budget.*Burndown.*Internal Jobs.*Ready\.InternalJobs_Export",
         "Document the optional demo output sheets.",
     )
     check_required_regex(
@@ -819,6 +1019,46 @@ def audit_docs(results: list[Result]) -> None:
         "starter guide documents demo spill guard",
         r"Insert Demo Outputs.*Planning Review!A4:N200.*block the spill",
         "Document the pre-insert main report spill guard.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents application data dropdown contract",
+        r"`applicationData`.*dropdown lists.*control bindings.*row-validation rules.*`Chargeable`.*`Y,N`.*row `3` through row `2000`",
+        "Document the centralized dropdown contract and Chargeable validation.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents no JobFlag column",
+        r"`Chargeable`.*canonical internal-labor chargeability flag.*`Internal Eligible`.*canonical readiness eligibility flag.*`Ready\.ChargeableFlag`.*`Ready\.InternalEligible`.*`Ready\.InternalJobs_Export` computes `Internal Ready Final`.*source table does not carry a separate `Internal Ready` override column.*The starter no longer carries a `JobFlag` column or a separate visible `Eligible` fallback column",
+        "Document the current Chargeable/Internal Eligible Ready inputs.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents manual Composite Cat",
+        r"`Composite Cat` remains a manual pre-formula planning-table helper.*Excel's built-in sort.*remove-duplicates.*Data > Subtotal",
+        "Document Composite Cat as an operator worksheet helper, not formula output.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide links planning worksheet structure map",
+        r"planning_worksheet_structure_map\.md.*Yes/No columns.*formula dependencies",
+        "Link the Yes/No dependency structure map from the starter guide.",
+    )
+    check_required_regex(
+        results,
+        "docs/workbook_import_map.md",
+        import_map,
+        "import map documents Ready chargeability input",
+        r"`Ready`.*Ready\.ChargeableFlag.*`Chargeable`.*Ready\.InternalEligible.*`Internal Eligible`.*Ready\.InternalJobs_Export.*`Internal Ready Final` is computed in the export.*no source-table `Internal Ready`.*no `JobFlag` starter column.*no visible `Eligible` fallback column",
+        "Document Ready's current Chargeable/Internal Eligible input boundary.",
     )
     check_required_regex(
         results,
@@ -835,6 +1075,96 @@ def audit_docs(results: list[Result]) -> None:
         "import map documents visible control bindings",
         r"`PM_Filter_Dropdowns`.*\$B\$2.*`Burndown_Cut_Target`.*\$E\$2",
         "Document worksheet-visible control name bindings.",
+    )
+    check_required_regex(
+        results,
+        "docs/workbook_import_map.md",
+        import_map,
+        "import map links planning worksheet structure map",
+        r"planning_worksheet_structure_map\.md.*Yes/No inputs.*formula dependencies",
+        "Link the Yes/No dependency structure map from the import map.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_worksheet_structure_map.md",
+        structure_map,
+        "structure map documents reference parse shape",
+        r"Used range.*`A1:BM98`.*Explicit list validation.*`O3:O98`.*`Y,N`",
+        "Keep the public-safe reference parse facts visible.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_worksheet_structure_map.md",
+        structure_map,
+        "structure map documents full Planning Table span",
+        r"64-column table from `A:BL`.*`A`.*`Composite Cat`.*`O`.*`Annual Projected`.*`AZ`.*`December`.*`BA`.*`Comments`.*`BL`.*`Canceled`",
+        "Document the whole public Planning Table, not only the Yes/No subset.",
+    )
+    if starter_rows:
+        missing_headers = [header for header in starter_rows[0] if f"`{header}`" not in structure_map]
+        add(
+            results,
+            not missing_headers,
+            "docs/planning_worksheet_structure_map.md",
+            "structure map covers all starter headers",
+            "all starter headers present" if not missing_headers else "missing: " + ", ".join(missing_headers),
+            "Keep the structure map aligned to samples/planning_table_starter.tsv.",
+        )
+    check_required_regex(
+        results,
+        "docs/planning_worksheet_structure_map.md",
+        structure_map,
+        "structure map lists all Yes/No columns",
+        r"`M`.*`Chargeable`.*`BE`.*`Internal Eligible`.*`BL`.*`Canceled`",
+        "List the complete public starter Yes/No field set.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_worksheet_structure_map.md",
+        structure_map,
+        "structure map documents Chargeable dependencies",
+        r"`Chargeable`.*Ready\.ChargeableFlag.*Ready\.InternalReady3.*Ready\.InternalJobs_Export.*Search\.Projects_Health",
+        "Document the Chargeable formula dependency chain.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_worksheet_structure_map.md",
+        structure_map,
+        "structure map documents readiness dependencies",
+        r"`Internal Eligible`.*Ready\.InternalEligible.*Ready\.InternalJobs_Export.*computed `Internal Ready Final`.*no source-table `Internal Ready` override column",
+        "Document the Ready helper dependencies for eligibility and readiness fields.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_worksheet_structure_map.md",
+        structure_map,
+        "structure map documents manual Composite Cat",
+        r"`Composite Cat` is kept as a manual pre-formula planning-table helper.*Excel's built-in sort.*remove-duplicates.*Data > Subtotal",
+        "Keep Composite Cat outside formula-owned output.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_worksheet_structure_map.md",
+        structure_map,
+        "structure map documents no visible Eligible fallback",
+        r"`Internal Eligible` is the canonical readiness eligibility field.*Do not add a separate visible `Eligible` fallback column",
+        "Prevent reintroducing duplicate eligibility flags.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_worksheet_structure_map.md",
+        structure_map,
+        "structure map documents Canceled dependencies",
+        r"`Canceled`.*kind\.CapConsumeMask.*main report.*analysis screens.*defer helpers.*Ready\.InternalJobs_Export",
+        "Document the cancellation dependency chain.",
+    )
+    check_required_regex(
+        results,
+        "docs/planning_worksheet_structure_map.md",
+        structure_map,
+        "structure map documents non-Yes/No exceptions",
+        r"`Carry-over` and `Future Tier Override` are not Yes/No columns",
+        "Prevent confusing adjacent planning fields with Yes/No flags.",
     )
     check_required_regex(
         results,
@@ -862,11 +1192,27 @@ def audit_docs(results: list[Result]) -> None:
     )
     add(
         results,
-        bool(starter_rows) and all(len(row) == 67 for row in starter_rows),
+        bool(starter_rows) and all(len(row) == 64 for row in starter_rows),
         "samples/planning_table_starter.tsv",
         "starter table row width",
-        "all rows have 67 tab-delimited columns" if starter_rows else "starter table is empty",
-        "Keep every starter row aligned to the 67-column Planning Table contract.",
+        "all rows have 64 tab-delimited columns" if starter_rows else "starter table is empty",
+        "Keep every starter row aligned to the 64-column Planning Table contract.",
+    )
+    add(
+        results,
+        bool(starter_rows) and "Eligible" not in starter_rows[0],
+        "samples/planning_table_starter.tsv",
+        "starter table omits visible Eligible fallback",
+        "Eligible header absent" if starter_rows else "starter table is empty",
+        "Use Internal Eligible as the sole readiness eligibility input.",
+    )
+    add(
+        results,
+        bool(starter_rows) and "Internal Ready" not in starter_rows[0],
+        "samples/planning_table_starter.tsv",
+        "starter table omits source-table Internal Ready",
+        "Internal Ready header absent" if starter_rows else "starter table is empty",
+        "Keep Internal Ready Final computed in Ready.InternalJobs_Export.",
     )
     check_required_regex(
         results,
@@ -964,8 +1310,12 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("loads Office.js", r"Office\.onReady"),
         ("uses Excel.run", r"Excel\.run"),
         ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review.*Validation Lists"),
-        ("defines validation lists", r"validationLists\s*=\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo"),
-        ("defines visible controls", r"visibleControlNames.*PM_Filter_Dropdowns.*B2.*Burndown_Cut_Target.*E2"),
+        ("defines application data", r"applicationData\s*=\s*\{.*starterTables.*dropdownLists.*visibleControls.*rowValidationRules"),
+        ("defines validation lists", r"dropdownLists\s*:\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo"),
+        ("defines visible controls", r"visibleControls.*PM_Filter_Dropdowns.*B2.*Burndown_Cut_Target.*E2"),
+        ("defines row validation max row", r"maxValidationRow:\s*2000"),
+        ("defines header-driven Chargeable validation", r"rowValidationRules.*header:\s*\"Chargeable\".*listKey:\s*\"yesNo\""),
+        ("uses 64-column starter layout", r"headerRange:\s*\"A2:BL2\".*requiredHeaderFill:\s*\[\"F2\",\s*\"G2\",\s*\"O2\",\s*\"P2\",\s*\"BE2\"\].*address:\s*\"O3:AZ234\".*address:\s*\"BJ3:BJ234\""),
         ("loads workbook controls", r"../modules/controls\.formula\.txt"),
         ("loads formula modules", r"../modules/kind\.formula\.txt.*../modules/analysis\.formula\.txt"),
         ("installs workbook names", r"context\.workbook\.names\.add"),
@@ -975,18 +1325,22 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("validates required names", r"requiredNames"),
         ("validates workbook control names", r"PM_Filter_Dropdowns.*Future_Filter_Mode.*HideClosed_Status.*Burndown_Cut_Target"),
         ("validates implemented analysis screens", r"Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN"),
+        ("validates Ready helpers", r"Ready\.ColumnOrBlank.*Ready\.InternalEligible.*Ready\.ChargeableFlag.*Ready\.InternalReady3.*Ready\.InternalJobs_Export"),
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
         ("formats starter workbook", r"formatPlanningTable.*formatCapSetup.*formatPlanningReview"),
         ("applies dropdown validation", r"applyListValidation.*dataValidation\.rule"),
+        ("applies row validation by header", r"applyRowValidationRules.*dataRangeForHeader.*validationSourceForList"),
         ("applies non-negative validation", r"applyNonNegativeValidation.*greaterThanOrEqualTo"),
         ("validates starter header order", r"assertHeaderOrder\(planningHeaders\.values\[0\], expectedPlanningHeaders"),
+        ("validates row validation rules", r"assertRowValidationRulesConfigured.*headerIndex"),
         ("validates spill-safe control band", r'review\.getRange\("B2:E2"\)'),
         ("validates visible controls", r"assertVisibleControls\(reviewControls\.values, reviewMonths\.values\)"),
         ("validates bound control names", r"assertControlNamesBound\(controlNameItems\)"),
         ("validates cap setup rows", r"assertCapRowsAreValid\(capRows\.values\)"),
         ("renders validation summary", r"renderValidationSummary.*Sheets present.*Workbook names installed.*Dropdown lists ready"),
         ("clears stale spill blockers", r'getRange\("J2:K6"\)\.clear'),
-        ("defines demo outputs", r"demoOutputs\s*=\s*\[.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Analysis\.BU_CAP_SCORECARD.*Analysis\.REFORECAST_QUEUE.*Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN"),
+        ("defines demo outputs", r"demoOutputs\s*:\s*\[.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Analysis\.BU_CAP_SCORECARD.*Analysis\.REFORECAST_QUEUE.*Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN.*Ready\.InternalJobs_Export"),
+        ("runs demo outputs from combined setup", r"runAll\(\).*setupWorkbook\(\).*installModules\(\).*validateWorkbook\(\).*insertDemoOutputs\(\{\s*validateFirst:\s*false\s*\}\)"),
         ("binds demo output action", r"bind\(\"insertDemoOutputs\",\s*insertDemoOutputs\)"),
         ("inserts demo output formulas", r"insertDemoOutputs.*validateWorkbook\(\).*placeDemoOutput"),
         ("checks main report spill range", r'getRange\("A4:N200"\).*load\(\["values", "formulas"\]\).*assertMainReportSpillReady'),
@@ -1004,6 +1358,31 @@ def audit_addin_contract(results: list[Result]) -> None:
             "Keep the add-in as a formula-module installer and validator.",
         )
 
+    add(
+        results,
+        "JobFlag" not in taskpane,
+        "addin/taskpane.js",
+        "task pane does not configure JobFlag",
+        "JobFlag absent",
+        "Do not reintroduce JobFlag to the starter setup contract.",
+    )
+    add(
+        results,
+        'header: "Eligible"' not in taskpane,
+        "addin/taskpane.js",
+        "task pane does not configure visible Eligible fallback",
+        "Eligible row validation absent",
+        "Use Internal Eligible as the starter readiness eligibility field.",
+    )
+    add(
+        results,
+        'header: "Internal Ready"' not in taskpane,
+        "addin/taskpane.js",
+        "task pane does not configure source-table Internal Ready",
+        "Internal Ready row validation absent",
+        "Keep Internal Ready Final computed in Ready.InternalJobs_Export.",
+    )
+
     check_required_regex(
         results,
         "addin/taskpane.html",
@@ -1016,9 +1395,17 @@ def audit_addin_contract(results: list[Result]) -> None:
         results,
         "addin/taskpane.html",
         taskpane_html,
+        "task pane has combined setup output button",
+        r'id="runAll".*Setup \+ Install \+ Validate \+ Outputs',
+        "Make the primary setup path create the demo output sheets.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
         "task pane has demo output button",
         r'id="insertDemoOutputs".*Insert Demo Outputs',
-        "Expose the optional demo output insertion action.",
+        "Expose the output insertion rerun action.",
     )
     check_required_regex(
         results,
@@ -1035,6 +1422,38 @@ def audit_addin_contract(results: list[Result]) -> None:
         "add-in docs document validation lists",
         r"Creates the `Validation Lists` sheet",
         "Document that the add-in creates dropdown source lists.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document application data contract",
+        r"`applicationData` model.*starter sheets.*dropdown source lists.*control bindings.*row-validation rules",
+        "Document the centralized add-in data model.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document Chargeable validation",
+        r"`Chargeable` dropdown.*header.*row `2`.*rows `3:2000`.*`Y,N`",
+        "Document header-driven Chargeable dropdown validation.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document no JobFlag starter column",
+        r"`Chargeable`.*chargeability input.*`Search`.*`Ready`.*`Internal Eligible`.*readiness eligibility input.*Ready\.InternalEligible.*Ready\.InternalJobs_Export.*computes `Internal Ready Final`.*no source-table `Internal Ready`.*no `JobFlag` starter column.*no separate visible `Eligible` fallback column",
+        "Document the current starter chargeability and eligibility inputs.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document manual Composite Cat",
+        r"`Composite Cat` remains a manual pre-formula helper.*Excel Data > Subtotal",
+        "Document Composite Cat as a worksheet-layer helper.",
     )
     check_required_regex(
         results,
@@ -1072,9 +1491,17 @@ def audit_addin_contract(results: list[Result]) -> None:
         results,
         "docs/office_addin.md",
         addin_doc,
+        "add-in docs document combined setup output action",
+        r"Setup \+ Install \+ Validate \+ Outputs.*creates the starter sheets.*installs formulas.*validates the workbook contract.*inserts the demo output formulas",
+        "Document that the primary add-in action now creates outputs.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
         "add-in docs document demo outputs",
-        r"Insert Demo Outputs.*Planning Review.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Burndown.*Analysis\.BURNDOWN_SCREEN",
-        "Document the optional demo output insertion action.",
+        r"Insert Demo Outputs.*Planning Review.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Burndown.*Analysis\.BURNDOWN_SCREEN.*Internal Jobs.*Ready\.InternalJobs_Export",
+        "Document the output insertion rerun action.",
     )
     check_required_regex(
         results,

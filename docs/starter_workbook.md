@@ -93,7 +93,7 @@ After those spill successfully, the other implemented planning screens are:
 
 ## Starter Layout And Controls
 
-The Office.js starter can create the workbook layout for you. It writes the starter data, creates the `Validation Lists` sheet, formats the source sheets, and adds a visible control panel on `Planning Review`.
+The Office.js starter can create the workbook layout for you. It writes the starter data, creates the `Validation Lists` sheet, formats the source sheets, and adds a visible control panel on `Planning Review`. Its setup behavior is driven by the `applicationData` model in `addin/taskpane.js`, which defines dropdown lists, control bindings, and row-validation rules in one place.
 
 The public control cells are:
 
@@ -117,9 +117,17 @@ Burndown_Cut_Target -> 'Planning Review'!$E$2
 
 The module-qualified `Controls.*` names remain defaults and documentation fallbacks.
 
+On `Planning Table`, the add-in finds row-validation targets by header name. The `Chargeable`, `Internal Eligible`, and `Canceled` columns receive `Y,N` dropdowns from row `3` through row `2000`; the same model also drives the current status dropdown.
+
+Treat `Chargeable` as the canonical internal-labor chargeability flag and `Internal Eligible` as the canonical readiness eligibility flag. The `Search` helpers inspect `Chargeable`, and the `Ready` export helpers use both fields when deriving the example internal-ready output. `Ready.ChargeableFlag` and `Ready.InternalEligible` resolve these inputs by header name, not by hardcoded column letters. `Ready.InternalJobs_Export` computes `Internal Ready Final` in its output; the source table does not carry a separate `Internal Ready` override column. The starter no longer carries a `JobFlag` column or a separate visible `Eligible` fallback column.
+
+`Composite Cat` remains a manual pre-formula planning-table helper. It can be used for Excel's built-in sort, remove-duplicates, and Data > Subtotal workflows before the formula reports run; the add-in does not try to compute it.
+
+See `docs/planning_worksheet_structure_map.md` for the public-safe reference map of Yes/No columns and formula dependencies.
+
 Keep `Planning Review!A4:N200` clear for the main report spill. Keep `Planning Review!O4:R200` clear for the note-context example formulas. The visible control band stays above row 4 so it does not block the report spill.
 
-Use the task-pane `Insert Demo Outputs` button after setup and validation if you want the public demo sheets created automatically. Before it writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis screens at `A4` on separate sheets named `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, and `Burndown`.
+The task-pane `Setup + Install + Validate + Outputs` button creates the public demo sheets as part of the full starter flow. The standalone `Insert Demo Outputs` button remains available for rerunning only the output insertion. Before either path writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis screens at `A4` on separate sheets named `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, and `Burndown`. It also creates an `Internal Jobs` sheet at `A4` with `=Ready.InternalJobs_Export()` for readiness smoke testing.
 
 ## Add-In Option
 

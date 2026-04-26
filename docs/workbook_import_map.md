@@ -40,13 +40,15 @@ The starter also reserves `Planning Review!M2` for report and analysis as-of mon
 
 The `get` and `kind` modules also include small compatibility helpers that older workbook copies may have held as workbook-local names, including `TRIMRANGE_KEEPBLANKS` and `RBYROW`. Importing the modules, or using the Office.js installer, should create those names in a blank workbook.
 
+Use `docs/planning_worksheet_structure_map.md` as the public-safe column reference for Yes/No inputs and their formula dependencies.
+
 ## Supporting Modules
 
 | Workbook name | Repo source | Dependency note |
 |---|---|---|
 | `Notes` | `modules/notes.formula.txt` | Example note-context module. |
 | `Phasing` | `modules/phasing.formula.txt` | Example monthly phasing helpers. |
-| `Ready` | `modules/ready.formula.txt` | Example readiness export helpers. |
+| `Ready` | `modules/ready.formula.txt` | Example readiness export helpers. `Ready.ChargeableFlag` finds `Chargeable` by header name, and `Ready.InternalEligible` finds `Internal Eligible` by header name for `Ready.InternalJobs_Export`; `Internal Ready Final` is computed in the export, with no source-table `Internal Ready`, no `JobFlag` starter column, and no visible `Eligible` fallback column. |
 | `Search` | `modules/search.formula.txt` | Example budget search helpers. |
 | `defer` | `modules/defer.formula.txt` | Example deferral-selector helpers. |
 
