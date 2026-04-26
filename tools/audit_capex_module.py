@@ -273,6 +273,45 @@ def extract_named_formula(text: str, name: str) -> str:
     return match.group(0).strip() if match else ""
 
 
+def extract_named_formula_bodies(text: str) -> list[tuple[str, str]]:
+    pattern = r"(?ms)^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?);\s*(?=\n[A-Za-z_][A-Za-z0-9_]*\s*=|\Z)"
+    return [(match.group(1), match.group(2).strip()) for match in re.finditer(pattern, text)]
+
+
+def compact_formula_body(text: str) -> str:
+    source = strip_block_comments(text)
+    out: list[str] = []
+    in_string = False
+    in_quoted_sheet = False
+    i = 0
+    while i < len(source):
+        ch = source[i]
+        if ch == '"' and not in_quoted_sheet:
+            out.append(ch)
+            if in_string and i + 1 < len(source) and source[i + 1] == '"':
+                out.append(source[i + 1])
+                i += 2
+                continue
+            in_string = not in_string
+            i += 1
+            continue
+        if ch == "'" and not in_string:
+            out.append(ch)
+            if in_quoted_sheet and i + 1 < len(source) and source[i + 1] == "'":
+                out.append(source[i + 1])
+                i += 2
+                continue
+            in_quoted_sheet = not in_quoted_sheet
+            i += 1
+            continue
+        if not in_string and not in_quoted_sheet and ch.isspace():
+            i += 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def has_formula(text: str, name: str) -> bool:
     return re.search(rf"(?m)^{re.escape(name)}\s*=", text) is not None
 
@@ -364,6 +403,21 @@ def audit_formula_files(results: list[Result]) -> None:
             f"{name} char budget",
             f"{len(formula)} chars",
             f"Split {name} into helpers before it exceeds {MAX_NAMED_FORMULA_CHARS} chars.",
+        )
+
+    for path in sorted(MODULES.glob("*.formula.txt")):
+        lengths = [
+            (name, len("=" + compact_formula_body(body)))
+            for name, body in extract_named_formula_bodies(read_text(path))
+        ]
+        max_name, max_len = max(lengths, key=lambda item: item[1]) if lengths else ("", 0)
+        add(
+            results,
+            max_len <= MAX_NAMED_FORMULA_CHARS,
+            rel(path),
+            "installed formula bodies fit Excel save limit",
+            f"max compacted formula is {max_name} at {max_len} chars",
+            "Keep Office.js-installed formulas under Excel's 8192-character save limit after compaction.",
         )
 
     ready = read_text(ROOT / "modules" / "ready.formula.txt")
@@ -1347,6 +1401,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("reports demo spill blockers", r"assertMainReportSpillReady.*blocks the main report spill"),
         ("renders demo output summary", r"renderDemoOutputSummary.*Demo outputs inserted"),
         ("strips module comments", r"stripBlockComments"),
+        ("compacts installed formula bodies", r"compactFormulaBody.*stripBlockComments.*inQuotedSheet"),
     ]
     for check, pattern in taskpane_checks:
         check_required_regex(

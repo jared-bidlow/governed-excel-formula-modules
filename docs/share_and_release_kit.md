@@ -9,7 +9,7 @@ Use the current starter contract checkpoint as the first public workbook-templat
 Suggested tag:
 
 ```text
-v0.1.0-starter-workbook
+v0.1.1-starter-workbook
 ```
 
 Suggested release title:
@@ -68,7 +68,6 @@ Release: add the GitHub release link here after publishing
 
 1. Create the sanitized demo workbook outside the repository.
 2. Export a short PDF preview or use workbook screenshots for LinkedIn.
-3. Create a GitHub Release from `v0.1.0-starter-workbook`.
+3. Create a GitHub Release from `v0.1.1-starter-workbook`.
 4. Attach the sanitized `.xlsx` and optional preview PDF as release assets.
 5. Publish the LinkedIn post with the repo and release links.
-

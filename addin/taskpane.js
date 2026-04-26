@@ -758,13 +758,48 @@
       }
       return {
         name,
-        formula: `=${stripBlockComments(body)}`
+        formula: `=${compactFormulaBody(body)}`
       };
     });
   }
 
   function stripBlockComments(text) {
     return text.replace(/\/\*[\s\S]*?\*\//g, "");
+  }
+
+  function compactFormulaBody(text) {
+    const source = stripBlockComments(text);
+    let out = "";
+    let inString = false;
+    let inQuotedSheet = false;
+    for (let i = 0; i < source.length; i++) {
+      const ch = source[i];
+      if (ch === '"' && !inQuotedSheet) {
+        out += ch;
+        if (inString && source[i + 1] === '"') {
+          out += source[i + 1];
+          i += 1;
+        } else {
+          inString = !inString;
+        }
+        continue;
+      }
+      if (ch === "'" && !inString) {
+        out += ch;
+        if (inQuotedSheet && source[i + 1] === "'") {
+          out += source[i + 1];
+          i += 1;
+        } else {
+          inQuotedSheet = !inQuotedSheet;
+        }
+        continue;
+      }
+      if (!inString && !inQuotedSheet && /\s/.test(ch)) {
+        continue;
+      }
+      out += ch;
+    }
+    return out;
   }
 
   function setButtons(enabled) {

@@ -1,5 +1,27 @@
 # Change Log
 
+## 2026-04-25 - Compact installed formula names for workbook save
+
+Semantic change:
+
+- Changed the Office.js installer to compact formula whitespace and block comments before creating workbook defined names.
+- Kept the source formula modules readable in the repository while reducing the workbook-installed formula text.
+- Added audit coverage that checks compacted installed formula bodies stay within Excel's `8192` character save limit.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js`.
+- Updated `tools/audit_capex_module.py`.
+- Updated add-in docs.
+
+Visible impact:
+
+- Workbook behavior: rerunning formula install should repair workbooks that fail to save because installed names are too long.
+- Formula logic: no intended logic change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Keep Composite Cat manual and compute readiness output
 
 Semantic change:

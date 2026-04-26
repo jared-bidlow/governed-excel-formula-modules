@@ -17,6 +17,9 @@ package-lock.json
 *.xls
 ~$*
 
+# Generated release attachments stay outside source control
+release_artifacts/
+
 # Local editor state
 .vscode/
 .DS_Store
