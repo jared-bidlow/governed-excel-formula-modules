@@ -18,6 +18,8 @@ Start with `docs/technical_review_guide.md` if you are reviewing this repo as ev
 
 That guide explains how the pieces fit together: source-controlled formula modules, workbook contracts, static audits, starter data, Office.js installation tooling, and the public/private boundary. It is written for someone who wants to understand the engineering pattern without needing a private workbook or production data.
 
+For the durable architecture map, see `docs/reference_architecture_tree.md`.
+
 ## Layout
 
 ```text
@@ -42,6 +44,7 @@ governed-excel-formula-modules/
 |   +-- operating_contract.md
 |   +-- planning_plugins.md
 |   +-- public_release_checklist.md
+|   +-- reference_architecture_tree.md
 |   +-- scenario_matrix.md
 |   +-- starter_workbook.md
 |   +-- technical_review_guide.md

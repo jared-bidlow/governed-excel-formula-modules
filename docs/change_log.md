@@ -1,6 +1,4 @@
-# Change Log
-
-## 2026-04-26 - Clarify optional asset setup UI
+2026-04-26 - Clarify optional asset setup UI
 
 Semantic change:
 
