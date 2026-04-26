@@ -1,0 +1,195 @@
+PROJECT_PROMOTION_QUEUE = LET(
+    rows, get.GetBudgetDetailRows(),
+    hdr, TAKE(rows, 1),
+    data, DROP(rows, 1),
+    idxDesc, XMATCH("Project Description", hdr, 0),
+    idxSource, XMATCH("Source ID", hdr, 0),
+    idxJob, XMATCH("Job ID", hdr, 0),
+    idxCategory, XMATCH("Category", hdr, 0),
+    desc, TRIM(CHOOSECOLS(data, idxDesc) & ""),
+    sourceId, TRIM(CHOOSECOLS(data, idxSource) & ""),
+    jobId, TRIM(CHOOSECOLS(data, idxJob) & ""),
+    category, TRIM(CHOOSECOLS(data, idxCategory) & ""),
+    projectKey, IF(sourceId <> "", sourceId, IF(jobId <> "", jobId, desc)),
+    candidateId, IF(jobId <> "", jobId, projectKey),
+    constCol, LAMBDA(value, MAKEARRAY(ROWS(data), 1, LAMBDA(r, c, value))),
+    mapped, IFERROR(COUNTIF(tblProjectAssetMap[ProjectKey], projectKey), 0) > 0,
+    keep, (projectKey <> "") * NOT(mapped),
+    headers, {
+        "ProjectKey",
+        "CandidateAssetId",
+        "ProjectDescription",
+        "AssetLabel",
+        "AssetType",
+        "ProposedChangeType",
+        "SourceAssetId",
+        "TargetAssetId",
+        "InstalledState",
+        "EvidenceId",
+        "PromotionStatus",
+        "ApplyReady",
+        "ApplyStatus",
+        "AppliedOn",
+        "ApplyMessage"
+    },
+    queue, HSTACK(
+        projectKey,
+        candidateId,
+        desc,
+        IF(category <> "", category & " asset", desc),
+        constCol("Asset"),
+        constCol("new_asset"),
+        constCol(""),
+        candidateId,
+        constCol("planned"),
+        constCol(""),
+        constCol("Review"),
+        constCol(FALSE),
+        constCol(""),
+        constCol(""),
+        constCol("Review only; Office Script controls writes")
+    ),
+    VSTACK(headers, IFERROR(FILTER(queue, keep), MAKEARRAY(1, COLUMNS(headers), LAMBDA(r, c, ""))))
+);
+
+ASSET_MAPPING_ISSUES = LET(
+    projectKey, TRIM(tblAssetMappingStaging[ProjectKey] & ""),
+    changeType, LOWER(TRIM(tblAssetMappingStaging[ChangeType] & "")),
+    sourceId, TRIM(tblAssetMappingStaging[SourceAssetId] & ""),
+    targetId, TRIM(tblAssetMappingStaging[TargetAssetId] & ""),
+    assetId, TRIM(tblAssetMappingStaging[AssetId] & ""),
+    installedState, LOWER(TRIM(tblAssetMappingStaging[InstalledState] & "")),
+    evidenceId, TRIM(tblAssetMappingStaging[EvidenceId] & ""),
+    issue, MAP(
+        projectKey,
+        changeType,
+        sourceId,
+        targetId,
+        assetId,
+        installedState,
+        evidenceId,
+        LAMBDA(pk, ct, src, tgt, asset, inst, evid,
+            TEXTJOIN(
+                "; ",
+                TRUE,
+                IF(pk = "", "ProjectKey missing", ""),
+                IF(ct = "", "ChangeType missing", ""),
+                IF(AND(ct = "new_asset", tgt = ""), "new_asset requires TargetAssetId", ""),
+                IF(AND(ct = "replace_asset", OR(src = "", tgt = "")), "replace_asset requires SourceAssetId and TargetAssetId", ""),
+                IF(AND(ct = "upgrade_asset", src <> tgt), "upgrade_asset requires SourceAssetId = TargetAssetId", ""),
+                IF(AND(inst = "installed", evid = ""), "installed asset requires EvidenceId", ""),
+                IF(AND(asset = "", tgt = "", src = ""), "Asset identity missing", "")
+            )
+        )
+    ),
+    headers, {"SourceTable", "ProjectKey", "ChangeType", "SourceAssetId", "TargetAssetId", "Issue"},
+    constCol, LAMBDA(value, MAKEARRAY(ROWS(projectKey), 1, LAMBDA(r, c, value))),
+    queue, HSTACK(constCol("tblAssetMappingStaging"), projectKey, changeType, sourceId, targetId, issue),
+    VSTACK(headers, IFERROR(FILTER(queue, issue <> ""), MAKEARRAY(1, COLUMNS(headers), LAMBDA(r, c, ""))))
+);
+
+ASSET_CHANGE_ISSUES = LET(
+    changeId, TRIM(tblAssetChanges[ChangeId] & ""),
+    projectKey, TRIM(tblAssetChanges[ProjectKey] & ""),
+    changeType, LOWER(TRIM(tblAssetChanges[ChangeType] & "")),
+    sourceId, TRIM(tblAssetChanges[SourceAssetId] & ""),
+    targetId, TRIM(tblAssetChanges[TargetAssetId] & ""),
+    installedState, LOWER(TRIM(tblAssetChanges[InstalledState] & "")),
+    evidenceId, TRIM(tblAssetChanges[EvidenceId] & ""),
+    issue, MAP(
+        changeId,
+        projectKey,
+        changeType,
+        sourceId,
+        targetId,
+        installedState,
+        evidenceId,
+        LAMBDA(chg, pk, ct, src, tgt, inst, evid,
+            TEXTJOIN(
+                "; ",
+                TRUE,
+                IF(chg = "", "ChangeId missing", ""),
+                IF(pk = "", "ProjectKey missing", ""),
+                IF(ct = "", "ChangeType missing", ""),
+                IF(AND(ct = "new_asset", tgt = ""), "new_asset requires TargetAssetId", ""),
+                IF(AND(ct = "replace_asset", OR(src = "", tgt = "")), "replace_asset requires SourceAssetId and TargetAssetId", ""),
+                IF(AND(ct = "upgrade_asset", src <> tgt), "upgrade_asset requires SourceAssetId = TargetAssetId", ""),
+                IF(AND(inst = "installed", evid = ""), "installed asset requires EvidenceId", "")
+            )
+        )
+    ),
+    headers, {"SourceTable", "ChangeId", "ProjectKey", "ChangeType", "TargetAssetId", "Issue"},
+    constCol, LAMBDA(value, MAKEARRAY(ROWS(changeId), 1, LAMBDA(r, c, value))),
+    queue, HSTACK(constCol("tblAssetChanges"), changeId, projectKey, changeType, targetId, issue),
+    VSTACK(headers, IFERROR(FILTER(queue, issue <> ""), MAKEARRAY(1, COLUMNS(headers), LAMBDA(r, c, ""))))
+);
+
+INSTALLED_WITHOUT_EVIDENCE = LET(
+    mapSource, MAKEARRAY(ROWS(tblProjectAssetMap[ProjectKey]), 1, LAMBDA(r, c, "tblProjectAssetMap")),
+    changeSource, MAKEARRAY(ROWS(tblAssetChanges[ProjectKey]), 1, LAMBDA(r, c, "tblAssetChanges")),
+    mapRows, HSTACK(
+        mapSource,
+        TRIM(tblProjectAssetMap[ProjectKey] & ""),
+        TRIM(tblProjectAssetMap[AssetId] & ""),
+        LOWER(TRIM(tblProjectAssetMap[AssetState] & "")),
+        TRIM(tblProjectAssetMap[EvidenceId] & "")
+    ),
+    changeRows, HSTACK(
+        changeSource,
+        TRIM(tblAssetChanges[ProjectKey] & ""),
+        TRIM(tblAssetChanges[TargetAssetId] & ""),
+        LOWER(TRIM(tblAssetChanges[InstalledState] & "")),
+        TRIM(tblAssetChanges[EvidenceId] & "")
+    ),
+    rows, VSTACK(mapRows, changeRows),
+    state, CHOOSECOLS(rows, 4),
+    evidence, CHOOSECOLS(rows, 5),
+    headers, {"SourceTable", "ProjectKey", "AssetId", "InstalledState", "EvidenceId", "Issue"},
+    queue, HSTACK(rows, MAKEARRAY(ROWS(rows), 1, LAMBDA(r, c, "Installed asset requires EvidenceId"))),
+    VSTACK(headers, IFERROR(FILTER(queue, (state = "installed") * (evidence = "")), MAKEARRAY(1, COLUMNS(headers), LAMBDA(r, c, ""))))
+);
+
+REPLACEMENT_SOURCE_TARGET_ISSUES = LET(
+    mappingSource, MAKEARRAY(ROWS(tblAssetMappingStaging[ProjectKey]), 1, LAMBDA(r, c, "tblAssetMappingStaging")),
+    changeSource, MAKEARRAY(ROWS(tblAssetChanges[ProjectKey]), 1, LAMBDA(r, c, "tblAssetChanges")),
+    mappingRows, HSTACK(
+        mappingSource,
+        TRIM(tblAssetMappingStaging[ProjectKey] & ""),
+        LOWER(TRIM(tblAssetMappingStaging[ChangeType] & "")),
+        TRIM(tblAssetMappingStaging[SourceAssetId] & ""),
+        TRIM(tblAssetMappingStaging[TargetAssetId] & "")
+    ),
+    changeRows, HSTACK(
+        changeSource,
+        TRIM(tblAssetChanges[ProjectKey] & ""),
+        LOWER(TRIM(tblAssetChanges[ChangeType] & "")),
+        TRIM(tblAssetChanges[SourceAssetId] & ""),
+        TRIM(tblAssetChanges[TargetAssetId] & "")
+    ),
+    rows, VSTACK(mappingRows, changeRows),
+    changeType, CHOOSECOLS(rows, 3),
+    sourceId, CHOOSECOLS(rows, 4),
+    targetId, CHOOSECOLS(rows, 5),
+    issue, MAP(
+        changeType,
+        sourceId,
+        targetId,
+        LAMBDA(ct, src, tgt,
+            TEXTJOIN(
+                "; ",
+                TRUE,
+                IF(AND(ct = "replace_asset", OR(src = "", tgt = "")), "replace_asset requires source and target", ""),
+                IF(AND(ct = "upgrade_asset", src <> tgt), "upgrade_asset source and target must match", "")
+            )
+        )
+    ),
+    headers, {"SourceTable", "ProjectKey", "ChangeType", "SourceAssetId", "TargetAssetId", "Issue"},
+    queue, HSTACK(rows, issue),
+    VSTACK(
+        headers,
+        IFERROR(
+            FILTER(queue, (issue <> "") * (((changeType = "replace_asset") + (changeType = "upgrade_asset")) > 0)),
+            MAKEARRAY(1, COLUMNS(headers), LAMBDA(r, c, ""))
+        )
+    )
+);

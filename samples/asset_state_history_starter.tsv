@@ -1,0 +1,2 @@
+EventId	AssetId	ProjectKey	AssetState	EvidenceId	EventSource	EventOn	ApplyMessage
+EVT-001	ASSET-001	SRC-001-JOB-001	planned		starter		Starter state row

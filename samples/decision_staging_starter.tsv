@@ -1,0 +1,2 @@
+GroupType	GroupValue	Category	ProjDesc	AnnualProj	ActualsYTD	ExistingMeetingNotes	NewPlanningNotes	NewTimeline	NewStatus	ApplyAction	PlanningNotes_New	Timeline_New	Comments_New	Status_New	KeyStatus	BudgetMatchCount	ApplyReady	ApplyStatus	AppliedOn	ApplyMessage	BudgetRowFound
+BU	BU-A	Sample Category	Sample over-projected work	50000	30000	Existing starter note	Review forecast against latest meeting note	Jan	Active	UPDATE	Review forecast against latest meeting note	Jan	Starter decision row	Active	OK	1	FALSE	Starter		Starter row; not ready	3
