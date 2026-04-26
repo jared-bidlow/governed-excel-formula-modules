@@ -33,9 +33,12 @@ governed-excel-formula-modules/
 |   +-- get.formula.txt
 |   +-- kind.formula.txt
 |   +-- capital_planning_report.formula.txt
+|   +-- assets.formula.txt
 |   +-- analysis.formula.txt
 |   \-- supporting workbook modules
 +-- docs/
+|   +-- asset_setup_workflow.md
+|   +-- notes_apply_workflow.md
 |   +-- operating_contract.md
 |   +-- planning_plugins.md
 |   +-- public_release_checklist.md
@@ -45,9 +48,14 @@ governed-excel-formula-modules/
 |   +-- office_addin.md
 |   +-- workbook_import_map.md
 |   \-- change_log.md
++-- office-scripts/
+|   +-- README.md
+|   +-- apply_notes.ts
+|   \-- apply_asset_mappings.ts
 +-- samples/
 |   +-- planning_table_starter.tsv
-|   \-- cap_setup_starter.tsv
+|   +-- cap_setup_starter.tsv
+|   \-- workflow starter TSVs
 +-- package.json
 \-- tools/
     +-- audit_capex_module.py
@@ -156,6 +164,17 @@ When the test session is done:
 ```
 
 See `docs/office_addin.md`.
+
+## Notes And Asset Workflows
+
+The v0.2.0 workflow layer adds a controlled notes/status/timeline apply path and an optional asset setup path.
+
+- `Setup Notes Workflow` creates `Planning Review!O:R` notes columns and `Decision Staging` / `tblDecisionStaging`.
+- `office-scripts/apply_notes.ts` performs the two-pass prepare/apply writeback to `Planning Notes`, `Timeline`, `Comments`, and `Status`.
+- `Setup Asset Workflow` is optional and creates asset review/apply tables for controlled workbook writes.
+- `modules/assets.formula.txt` contains review queues only; Office Scripts perform controlled writes.
+
+See `docs/notes_apply_workflow.md`, `docs/asset_setup_workflow.md`, and `office-scripts/README.md`.
 
 ## Core Pattern
 

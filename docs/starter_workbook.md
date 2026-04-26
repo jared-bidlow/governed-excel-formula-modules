@@ -12,7 +12,15 @@ Create these worksheets:
 | `Cap Setup` | Business-unit cap limits used by `kind.CapByBU` and `kind.PortfolioCap`. |
 | `Planning Review` | Output/control sheet for report formulas and the as-of month cell. |
 | `Validation Lists` | Dropdown source values used by the starter add-in. |
-| `Decision Staging` | Optional sheet for staged writeback examples. |
+| `Decision Staging` | Notes/status/timeline staging table created by the notes workflow. |
+
+Optional asset setup creates additional worksheets only when `Setup Asset Workflow` is selected:
+
+- `Asset Setup`
+- `Project Asset Map`
+- `Semantic Assets`
+- `Asset Changes`
+- `Asset State History`
 
 On `Planning Review`, put an as-of month abbreviation such as `Mar` in cell `M2`. Formulas in `defer` use `N2` as their as-of month.
 
@@ -127,10 +135,23 @@ See `docs/planning_worksheet_structure_map.md` for the public-safe reference map
 
 Keep `Planning Review!A4:N200` clear for the main report spill. Keep `Planning Review!O4:R200` clear for the note-context example formulas. The visible control band stays above row 4 so it does not block the report spill.
 
+`Setup Notes Workflow` creates the `Planning Review!O:R` note columns:
+
+- `ExistingMeetingNotes`
+- `NewPlanningNotes`
+- `NewTimeline`
+- `NewStatus`
+
+It also creates or refreshes `Decision Staging` / `tblDecisionStaging` so `office-scripts/apply_notes.ts` can run its two-pass prepare/apply workflow without manual copy/paste.
+
+`Setup Asset Workflow` is optional. It creates the asset setup sheets and tables used by `office-scripts/apply_asset_mappings.ts`; it is not part of the default setup path.
+
 The task-pane `Setup + Install + Validate + Outputs` button creates the public demo sheets as part of the full starter flow. The standalone `Insert Demo Outputs` button remains available for rerunning only the output insertion. Before either path writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis screens at `A4` on separate sheets named `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, and `Burndown`. It also creates an `Internal Jobs` sheet at `A4` with `=Ready.InternalJobs_Export()` for readiness smoke testing.
 
 ## Add-In Option
 
 The `addin/` folder provides an Office.js starter that can create the sheets, paste the starter data, install the named formulas, and validate the workbook contract from a task pane.
 
-See `docs/office_addin.md` for the packaging boundary.
+The normal `Setup + Install + Validate + Outputs` path includes notes workflow setup. Asset workflow setup remains opt-in from the standalone `Setup Asset Workflow` button.
+
+See `docs/office_addin.md` for the packaging boundary, `docs/notes_apply_workflow.md` for the notes apply flow, and `docs/asset_setup_workflow.md` for optional asset setup.

@@ -24,6 +24,8 @@ The add-in is an installer and validator. It does not replace the formula module
 - Validates required sheets, names, starter header order, cap setup shape, visible control values, bound control names, row-validation headers, and compatibility helpers such as `TRIMRANGE_KEEPBLANKS` and `RBYROW`.
 - Prints a validation summary showing sheets present, workbook names installed, header count, configured cap rows, bound controls, dropdown lists, and row-validation rules.
 - Inserts demo output formulas into predictable review sheets so a reviewer can inspect the implemented screens without typing formula names.
+- Runs `Setup Notes Workflow` as part of the normal `Setup + Install + Validate + Outputs` path, creating `Planning Review!O:R` notes columns and `Decision Staging` / `tblDecisionStaging`.
+- Provides a standalone `Setup Asset Workflow` button for optional asset sheets and tables; asset setup is not run from the default path.
 
 ## Local Trial Shape
 
@@ -73,6 +75,22 @@ Insert Demo Outputs
 
 That button validates the workbook first, checks `Planning Review!A4:N200` for cells that would block the main report spill, then places demo formulas at fixed locations. If `Planning Review!A4` already contains the expected main report formula and is not showing `#SPILL!`, the button is safe to rerun.
 
+The normal setup path also runs:
+
+```text
+Setup Notes Workflow
+```
+
+That action creates the notes helper/input columns beside the report and refreshes `Decision Staging` / `tblDecisionStaging` for the controlled ApplyNotes script. See `docs/notes_apply_workflow.md`.
+
+The optional asset workflow is separate:
+
+```text
+Setup Asset Workflow
+```
+
+That action creates the asset setup sheets and tables only when selected. It is intentionally not part of `Setup + Install + Validate + Outputs`. See `docs/asset_setup_workflow.md`.
+
 | Sheet | Cell | Formula |
 |---|---|---|
 | `Planning Review` | `A4` | `=CapitalPlanning.CAPITAL_PLANNING_REPORT()` |
@@ -119,8 +137,11 @@ The setup path is intentionally small and inspectable:
 - `Composite Cat` remains a manual pre-formula helper for operator sorting, dedupe, and Excel Data > Subtotal workflows.
 - `Cap Setup` starts at `A2`, formats `Cap` as currency, and validates caps as non-negative numbers.
 - `Planning Review` uses `B2:E2` for visible controls, `M2:N2` for month controls, leaves `A4:N200` open for the main report spill, and leaves `O4:R200` open for note examples.
+- `Planning Review!O:R` is used by the notes workflow: `ExistingMeetingNotes`, `NewPlanningNotes`, `NewTimeline`, and `NewStatus`.
+- `Decision Staging` stores `tblDecisionStaging`, the controlled staging table consumed by `office-scripts/apply_notes.ts`.
 - `Validation Lists` stores the dropdown values used by the starter workbook.
 - Demo output sheets are created by the combined `Setup + Install + Validate + Outputs` action, or by the standalone `Insert Demo Outputs` rerun action.
+- Optional asset setup creates `Asset Setup`, `Project Asset Map`, `Semantic Assets`, `Asset Changes`, and `Asset State History` with asset workflow tables.
 
 The unqualified control names are rebound to the visible cells:
 
