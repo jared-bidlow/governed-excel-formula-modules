@@ -1,0 +1,4 @@
+ProjectKey	CandidateAssetId	ProjectDescription	AssetLabel	AssetType	ProposedChangeType	SourceAssetId	TargetAssetId	InstalledState	EvidenceId	PromotionStatus	ApplyReady	ApplyStatus	AppliedOn	ApplyMessage
+SRC-001-JOB-001	ASSET-001	Sample over-projected work	Sample asset one	Asset	new_asset		ASSET-001	planned		Review	FALSE	Starter		Starter promotion row
+ProjectKey	ProjectDescription	ChangeType	SourceAssetId	TargetAssetId	AssetId	AssetLabel	AssetType	InstalledState	EvidenceId	MappingStatus	ApplyReady	ApplyStatus	AppliedOn	ApplyMessage
+SRC-001-JOB-001	Sample over-projected work	new_asset		ASSET-001	ASSET-001	Sample asset one	Asset	planned		Review	FALSE	Starter		Starter staging row

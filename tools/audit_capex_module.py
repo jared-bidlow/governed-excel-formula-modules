@@ -125,6 +125,14 @@ ANALYSIS_PUBLIC_FORMULAS = [
     "BURNDOWN_SCREEN",
 ]
 
+ASSET_PUBLIC_FORMULAS = [
+    "PROJECT_PROMOTION_QUEUE",
+    "ASSET_MAPPING_ISSUES",
+    "ASSET_CHANGE_ISSUES",
+    "INSTALLED_WITHOUT_EVIDENCE",
+    "REPLACEMENT_SOURCE_TARGET_ISSUES",
+]
+
 REQUIRED_FORMULAS = {
     "modules/controls.formula.txt": [
         "PM_Filter_Dropdowns",
@@ -152,6 +160,7 @@ REQUIRED_FORMULAS = {
         "CAPITAL_PLANNING_REPORT",
     ],
     "modules/analysis.formula.txt": ANALYSIS_PUBLIC_FORMULAS,
+    "modules/assets.formula.txt": ASSET_PUBLIC_FORMULAS,
     "modules/ready.formula.txt": [
         "ColumnOrBlank",
         "InternalEligible",
@@ -165,7 +174,9 @@ REQUIRED_FORMULAS = {
 
 NAMED_FORMULA_BUDGETS = [
     ("modules/capital_planning_report.formula.txt", "CAPITAL_PLANNING_REPORT"),
-] + [("modules/analysis.formula.txt", name) for name in ANALYSIS_PUBLIC_FORMULAS]
+] + [("modules/analysis.formula.txt", name) for name in ANALYSIS_PUBLIC_FORMULAS] + [
+    ("modules/assets.formula.txt", name) for name in ASSET_PUBLIC_FORMULAS
+]
 
 
 @dataclass
@@ -524,9 +535,17 @@ def audit_docs(results: list[Result]) -> None:
     release = read_text(ROOT / "docs" / "public_release_checklist.md")
     starter = read_text(ROOT / "docs" / "starter_workbook.md")
     review = read_text(ROOT / "docs" / "technical_review_guide.md")
+    notes_workflow = read_text(ROOT / "docs" / "notes_apply_workflow.md")
+    asset_workflow = read_text(ROOT / "docs" / "asset_setup_workflow.md")
+    asset_next_steps = read_text(ROOT / "docs" / "asset_tracker_next_steps.md")
+    v020_release = read_text(ROOT / "docs" / "v0.2.0_release_notes.md")
+    durable_contract = read_text(ROOT / "docs" / "codex_chatgpt_durable_contract.md")
     import_map = read_text(ROOT / "docs" / "workbook_import_map.md")
     structure_map = read_text(ROOT / "docs" / "planning_worksheet_structure_map.md")
     worktree_doc = read_text(ROOT / "docs" / "git_worktree_workflow.md")
+    office_scripts_readme = read_text(ROOT / "office-scripts" / "README.md")
+    apply_notes_script = read_text(ROOT / "office-scripts" / "apply_notes.ts")
+    apply_assets_script = read_text(ROOT / "office-scripts" / "apply_asset_mappings.ts")
     push_helper = read_text(ROOT / "tools" / "push_public.ps1")
     worktree_helper = read_text(ROOT / "tools" / "new_worktree.ps1")
     addin_smoke = read_text(ROOT / "tools" / "start_addin_smoke_test.ps1")
@@ -536,6 +555,12 @@ def audit_docs(results: list[Result]) -> None:
     package_json = read_text(ROOT / "package.json")
     starter_table = read_text(ROOT / "samples" / "planning_table_starter.tsv")
     cap_starter = read_text(ROOT / "samples" / "cap_setup_starter.tsv")
+    decision_starter = read_text(ROOT / "samples" / "decision_staging_starter.tsv")
+    asset_setup_starter = read_text(ROOT / "samples" / "asset_setup_starter.tsv")
+    semantic_assets_starter = read_text(ROOT / "samples" / "semantic_assets_starter.tsv")
+    project_asset_map_starter = read_text(ROOT / "samples" / "project_asset_map_starter.tsv")
+    asset_changes_starter = read_text(ROOT / "samples" / "asset_changes_starter.tsv")
+    asset_state_history_starter = read_text(ROOT / "samples" / "asset_state_history_starter.tsv")
     starter_rows = [line.split("\t") for line in starter_table.splitlines() if line.strip()]
 
     check_required_regex(
@@ -593,6 +618,14 @@ def audit_docs(results: list[Result]) -> None:
         "README documents worktree workflow",
         r"Worktree Workflow.*pristine public template state.*formula/add-in tasks.*workbook-contract review.*automated smoke/lint runs.*workbook-reference analysis.*new_worktree\.ps1.*ready-fix.*docs/git_worktree_workflow\.md",
         "Surface the starter Git worktree workflow from the README.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
+        "README documents v0.2.0 notes and asset workflows",
+        r"Notes And Asset Workflows.*Setup Notes Workflow.*tblDecisionStaging.*office-scripts/apply_notes\.ts.*Setup Asset Workflow.*modules/assets\.formula\.txt.*docs/notes_apply_workflow\.md.*docs/asset_setup_workflow\.md.*office-scripts/README\.md",
+        "Surface the controlled notes apply and optional asset setup workflows from the README.",
     )
     for check, pattern in [
         ("defines smoke script", r'"addin:smoke"\s*:\s*"powershell .*start_addin_smoke_test\.ps1"'),
@@ -670,6 +703,166 @@ def audit_docs(results: list[Result]) -> None:
         "technical review guide states public boundary",
         r"This repo intentionally does not include:.*workbook binaries.*production data",
         "Keep the public/private boundary visible in the reviewer guide.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
+        "notes workflow documents Planning Review note columns",
+        r"Planning Review.*`O`.*ExistingMeetingNotes.*`P`.*NewPlanningNotes.*`Q`.*NewTimeline.*`R`.*NewStatus",
+        "Document the visible notes columns beside the report.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
+        "notes workflow documents Decision Staging table",
+        r"Decision Staging.*tblDecisionStaging",
+        "Document the controlled staging table for ApplyNotes.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
+        "notes workflow documents two-pass ApplyNotes behavior",
+        r"Run 1 is prepare.*Prepared.*BudgetRowFound.*Run 2 is apply",
+        "Document the prepare/apply behavior of office-scripts/apply_notes.ts.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
+        "notes workflow documents writeback targets",
+        r"Planning Notes.*Timeline.*Comments.*Status",
+        "Document the controlled Planning Table writeback targets.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
+        "notes workflow states no manual copy paste",
+        r"without manually copying values|without manual copy/paste",
+        "Keep the notes setup described as workbook-usable from the add-in setup.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents optional setup",
+        r"optional.*not part of the default `Setup \+ Install \+ Validate \+ Outputs` path",
+        "Keep asset setup opt-in.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents created sheets",
+        r"Asset Register.*Asset Setup.*Project Asset Map.*Semantic Assets.*Asset Changes.*Asset State History",
+        "Document the optional asset setup sheets.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents created tables",
+        r"tblAssets.*tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory",
+        "Document the optional asset setup tables.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents asset table map",
+        r"Asset Table Map.*tblAssets.*durable asset records.*tblProjectAssetMap.*relationship table.*tblAssetStateHistory.*event trail",
+        "Document what each asset table owns.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents relationship dropdowns",
+        r"Dropdowns And Relationships.*Asset ID.*Project Key.*advisory dropdowns.*allow new IDs",
+        "Document the dropdown-backed relationship contract.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents setup reset boundary",
+        r"Rerunning this setup recreates the asset workflow tables.*starter/reset action",
+        "Make the destructive reset behavior visible before workbook use.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents review-only formulas and controlled writes",
+        r"dynamic-array review formulas.*do not write rows.*office-scripts/apply_asset_mappings\.ts.*controlled-write action",
+        "Keep asset formulas review-only and Office Scripts as the write layer.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow defers RDF export",
+        r"does not include RDF export.*SHACL validation.*Power Query bridge",
+        "Keep RDF/export out of the v0.2.0 asset setup release.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_tracker_next_steps.md",
+        asset_next_steps,
+        "asset tracker next steps preserve branch boundary",
+        r"reference implementation.*stay separate from the active Capital Planning workbook logic",
+        "Keep asset-tracker follow-up isolated from the active workbook logic.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_tracker_next_steps.md",
+        asset_next_steps,
+        "asset tracker next steps map table ownership",
+        r"Table Ownership.*tblAssets.*Durable asset records.*tblProjectAssetMap.*Current project-to-asset relationships",
+        "Keep a concise table map for the asset tracker path.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_tracker_next_steps.md",
+        asset_next_steps,
+        "asset tracker next steps list verification path",
+        r"Immediate Verification.*workbook copy.*Setup Asset Workflow.*Asset Register.*dropdowns",
+        "Keep the next operator validation steps concrete.",
+    )
+    check_required_regex(
+        results,
+        "docs/v0.2.0_release_notes.md",
+        v020_release,
+        "v0.2.0 release notes name release",
+        r"v0\.2\.0-notes-apply-asset-setup",
+        "Name the release artifact explicitly.",
+    )
+    check_required_regex(
+        results,
+        "docs/v0.2.0_release_notes.md",
+        v020_release,
+        "v0.2.0 release notes summarize additions",
+        r"Setup Notes Workflow.*apply_notes\.ts.*apply_asset_mappings\.ts.*Setup Asset Workflow.*starter TSVs.*modules/assets\.formula\.txt",
+        "Summarize the notes/apply and optional asset setup additions.",
+    )
+    check_required_regex(
+        results,
+        "docs/v0.2.0_release_notes.md",
+        v020_release,
+        "v0.2.0 release notes defer export bridge work",
+        r"RDF/export.*SHACL validation.*Power Query bridge",
+        "Explicitly defer RDF/export, SHACL, and Power Query bridge work.",
+    )
+    check_required_regex(
+        results,
+        "docs/codex_chatgpt_durable_contract.md",
+        durable_contract,
+        "durable contract records Task 4 and Task 5 boundary",
+        r"No RDF/export.*Task 4: added starter TSVs and `modules/assets\.formula\.txt` review formulas.*Task 5: docs, README, audit coverage, and release notes",
+        "Keep the handoff note current for the v0.2.0 task sequence.",
     )
     check_required_regex(
         results,
@@ -1183,6 +1376,30 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents notes workflow setup",
+        r"Setup Notes Workflow.*ExistingMeetingNotes.*NewPlanningNotes.*NewTimeline.*NewStatus.*tblDecisionStaging.*apply_notes\.ts",
+        "Document the notes workflow setup in the starter workbook guide.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents optional asset setup",
+        r"Setup Asset Workflow.*optional.*apply_asset_mappings\.ts.*not part of the default setup path.*docs/asset_setup_workflow\.md",
+        "Document that asset setup remains opt-in.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents asset register setup",
+        r"Asset Register.*Setup Asset Workflow.*tblAssets.*relationship dropdowns.*Rerunning it recreates",
+        "Document tblAssets and reset behavior in the starter guide.",
+    )
+    check_required_regex(
+        results,
         "docs/workbook_import_map.md",
         import_map,
         "import map documents Ready chargeability input",
@@ -1359,6 +1576,73 @@ def audit_docs(results: list[Result]) -> None:
         r"BU-A\t1200000.*BU-B\t800000",
         "Keep cap starter data fake and generic.",
     )
+    workflow_starters = [
+        ("samples/decision_staging_starter.tsv", decision_starter, 22, r"GroupType\tGroupValue\tCategory\tProjDesc.*BudgetRowFound"),
+        ("samples/asset_setup_starter.tsv", asset_setup_starter, 15, r"ProjectKey\tCandidateAssetId\tProjectDescription.*ApplyMessage.*ProjectKey\tProjectDescription\tChangeType.*ApplyMessage"),
+        ("samples/project_asset_map_starter.tsv", project_asset_map_starter, 11, r"ProjectKey\tProjectDescription\tAssetId\tAssetLabel\tAssetType\tAssetState\tEvidenceId\tMappingStatus\tApplyStatus\tAppliedOn\tApplyMessage"),
+        ("samples/semantic_assets_starter.tsv", semantic_assets_starter, 15, r"ProjectKey\tProjectDescription\tCandidateAssetId\tAssetLabel\tAssetType\tProposedChangeType.*ApplyMessage"),
+        ("samples/asset_changes_starter.tsv", asset_changes_starter, 10, r"ChangeId\tProjectKey\tChangeType\tSourceAssetId\tTargetAssetId\tInstalledState\tEvidenceId\tChangeStatus\tAppliedOn\tApplyMessage"),
+        ("samples/asset_state_history_starter.tsv", asset_state_history_starter, 8, r"EventId\tAssetId\tProjectKey\tAssetState\tEvidenceId\tEventSource\tEventOn\tApplyMessage"),
+    ]
+    for file_name, text, expected_width, header_pattern in workflow_starters:
+        rows = [line.split("\t") for line in text.splitlines() if line.strip()]
+        add(
+            results,
+            bool(rows) and all(len(row) == expected_width for row in rows),
+            file_name,
+            "workflow starter row width",
+            f"all rows have {expected_width} tab-delimited columns" if rows else "starter file is empty",
+            "Keep workflow starter TSV rows aligned to the add-in-created table headers.",
+        )
+        check_required_regex(
+            results,
+            file_name,
+            text,
+            "workflow starter headers match setup contract",
+            header_pattern,
+            "Keep starter TSV headers aligned to the add-in-created table headers.",
+        )
+    for file_name, text, checks in [
+        (
+            "office-scripts/README.md",
+            office_scripts_readme,
+            [
+                ("documents apply notes script", r"apply_notes\.ts.*note edits.*Decision Staging.*Planning Table"),
+                ("documents asset mapping script", r"apply_asset_mappings\.ts.*accepted asset setup rows.*asset mapping.*state-history"),
+                ("states formulas review and scripts write", r"Formula modules create review queues.*Office Scripts perform controlled writes"),
+                ("excludes RDF export", r"RDF/export is not part of this release"),
+            ],
+        ),
+        (
+            "office-scripts/apply_notes.ts",
+            apply_notes_script,
+            [
+                ("uses Decision Staging table", r"Decision Staging.*tblDecisionStaging"),
+                ("documents two-pass behavior", r"Run 1 prepares.*Run 2 applies"),
+                ("writes expected fields", r"Planning Notes.*Timeline.*Comments.*Status"),
+            ],
+        ),
+        (
+            "office-scripts/apply_asset_mappings.ts",
+            apply_assets_script,
+            [
+                ("uses expected asset tables", r"tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory"),
+                ("states asset register boundary", r"Asset Register / tblAssets.*does not create, overwrite, or enrich tblAssets"),
+                ("validates new asset rule", r"new_asset requires target_asset_id"),
+                ("validates replacement rule", r"replace_asset requires source_asset_id and target_asset_id"),
+                ("excludes RDF export", r"does not export RDF|RDF/export was not run"),
+            ],
+        ),
+    ]:
+        for check, pattern in checks:
+            check_required_regex(
+                results,
+                file_name,
+                text,
+                f"v0.2.0 Office Script {check}",
+                pattern,
+                "Keep Office Scripts aligned to the controlled-write release boundary.",
+            )
 
 
 def audit_cap_setup_contract(results: list[Result]) -> None:
@@ -1411,6 +1695,7 @@ def audit_addin_contract(results: list[Result]) -> None:
     manifest = read_text(ROOT / "addin" / "manifest.xml")
     taskpane = read_text(ROOT / "addin" / "taskpane.js")
     taskpane_html = read_text(ROOT / "addin" / "taskpane.html")
+    taskpane_css = read_text(ROOT / "addin" / "taskpane.css")
     addin_doc = read_text(ROOT / "docs" / "office_addin.md")
     readme = read_text(ROOT / "README.md")
     operating = read_text(ROOT / "docs" / "operating_contract.md")
@@ -1441,6 +1726,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review.*Validation Lists"),
         ("defines application data", r"applicationData\s*=\s*\{.*starterTables.*dropdownLists.*visibleControls.*rowValidationRules"),
         ("defines validation lists", r"dropdownLists\s*:\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo"),
+        ("defines asset dropdown lists", r"assetStatuses.*assetConditions.*assetCriticalities.*assetChangeTypes.*assetStates.*assetPromotionStatuses.*assetMappingStatuses.*assetChangeStatuses"),
         ("defines visible controls", r"visibleControls.*PM_Filter_Dropdowns.*B2.*Burndown_Cut_Target.*E2"),
         ("defines row validation max row", r"maxValidationRow:\s*2000"),
         ("defines header-driven Chargeable validation", r"rowValidationRules.*header:\s*\"Chargeable\".*listKey:\s*\"yesNo\""),
@@ -1458,6 +1744,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
         ("formats starter workbook", r"formatPlanningTable.*formatCapSetup.*formatPlanningReview"),
         ("applies dropdown validation", r"applyListValidation.*dataValidation\.rule"),
+        ("sizes validation list headers dynamically", r"getResizedRange\(0,\s*validationListColumns\.length - 1\)"),
         ("applies row validation by header", r"applyRowValidationRules.*dataRangeForHeader.*validationSourceForList"),
         ("applies non-negative validation", r"applyNonNegativeValidation.*greaterThanOrEqualTo"),
         ("validates starter header order", r"assertHeaderOrder\(planningHeaders\.values\[0\], expectedPlanningHeaders"),
@@ -1475,13 +1762,22 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("checks main report spill range", r'getRange\("A4:N200"\).*load\(\["values", "formulas"\]\).*assertMainReportSpillReady'),
         ("reports demo spill blockers", r"assertMainReportSpillReady.*blocks the main report spill"),
         ("renders demo output summary", r"renderDemoOutputSummary.*Demo outputs inserted"),
-        ("defines ApplyNotes template path", r'applyNotesScriptPath\s*=\s*"../ApplyNotes"'),
+        ("defines ApplyNotes template path", r'applyNotesScriptPath\s*=\s*"../office-scripts/apply_notes\.ts"'),
         ("binds ApplyNotes copy action", r'bind\("copyApplyNotesScript",\s*copyApplyNotesScript\)'),
         ("loads and displays ApplyNotes script text", r"copyApplyNotesScript.*fetchText\(applyNotesScriptPath\).*showApplyNotesScript\(applyNotesText\)"),
         ("copies ApplyNotes script text", r"copyApplyNotesScript.*copyTextToClipboard\(applyNotesText\)"),
         ("logs ApplyNotes script import step", r"Automate > New Script"),
         ("uses clipboard fallback", r"copyTextToClipboard.*navigator\.clipboard.*catch.*legacyCopyText"),
         ("selects ApplyNotes text when clipboard is blocked", r"selectApplyNotesScript.*focus\(\).*select\(\)"),
+        ("logs standard setup completion", r"Standard setup complete\. Asset workflow remains optional"),
+        ("defines notes workflow setup", r"notesWorkflow.*tblDecisionStaging.*ExistingMeetingNotes.*NewPlanningNotes.*NewTimeline.*NewStatus"),
+        ("defines asset workflow setup", r"assetWorkflow.*tblAssets.*tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory"),
+        ("defines asset relationship lists", r"relationshipLists.*assetIds.*tblAssets\[AssetID\].*projectKeys.*tblAssets\[LinkedProjectID\]"),
+        ("defines asset table validation rules", r"tableValidationRules.*tblAssets.*assetStatuses.*relationshipListKey:\s*\"projectKeys\".*tblProjectAssetMap.*relationshipListKey:\s*\"assetIds\""),
+        ("applies asset table validation", r"setupAssetWorkflow.*buildAssetRelationshipLists.*applyTableValidationRules.*validationSourceForRelationshipList"),
+        ("keeps relationship validation advisory", r"allowUnknown:\s*Boolean\(rule\.relationshipListKey\).*errorAlert.*showAlert:\s*false"),
+        ("sets workflow table header text black", r"getHeaderRowRange\(\).*format\.font\.color\s*=\s*\"#000000\""),
+        ("binds notes and asset setup buttons", r'bind\("setupNotesWorkflow",\s*setupNotesWorkflow\).*bind\("setupAssetWorkflow",\s*setupAssetWorkflow\)'),
         ("strips module comments", r"stripBlockComments"),
         ("compacts installed formula bodies", r"compactFormulaBody.*stripBlockComments.*inQuotedSheet"),
     ]
@@ -1494,6 +1790,24 @@ def audit_addin_contract(results: list[Result]) -> None:
             pattern,
             "Keep the add-in as a formula-module installer and validator.",
         )
+    run_all_match = re.search(r"async function runAll\(\)\s*\{(?P<body>.*?)\n\s*\}", taskpane, flags=re.S)
+    run_all_body = run_all_match.group("body") if run_all_match else ""
+    add(
+        results,
+        "setupNotesWorkflow" in run_all_body,
+        "addin/taskpane.js",
+        "task pane includes notes setup in default runAll",
+        "setupNotesWorkflow is in runAll" if "setupNotesWorkflow" in run_all_body else "setupNotesWorkflow missing from runAll",
+        "Keep notes workflow setup in the normal combined setup path.",
+    )
+    add(
+        results,
+        "setupAssetWorkflow" not in run_all_body,
+        "addin/taskpane.js",
+        "task pane keeps asset setup opt-in",
+        "setupAssetWorkflow absent from runAll" if "setupAssetWorkflow" not in run_all_body else "setupAssetWorkflow is in runAll",
+        "Do not run optional asset setup from the default combined setup path.",
+    )
 
     add(
         results,
@@ -1556,6 +1870,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         results,
         "addin/taskpane.html",
         taskpane_html,
+        "task pane has notes and asset workflow buttons",
+        r'id="setupNotesWorkflow".*Setup Notes Workflow.*id="setupAssetWorkflow".*Setup Asset Workflow',
+        "Expose notes workflow setup and optional asset workflow setup.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
         "task pane has ApplyNotes import instruction",
         r"Automate</code> -> <code>New Script</code>.*save as <code>ApplyNotes</code>",
         "Show the exact script import step in the task pane.",
@@ -1564,17 +1886,33 @@ def audit_addin_contract(results: list[Result]) -> None:
         results,
         "addin/taskpane.html",
         taskpane_html,
+        "task pane has ApplyNotes script text fallback",
+        r'id="applyNotesScriptText".*readonly.*hidden',
+        "Keep a visible in-pane fallback for blocked clipboard access.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
         "task pane shows ApplyNotes source path",
-        r"Template source:\s*<code>\.\./ApplyNotes</code>",
+        r"Template source:\s*<code>\.\./office-scripts/apply_notes\.ts</code>",
         "Keep the source template path visible in the task pane.",
     )
     check_required_regex(
         results,
         "addin/taskpane.html",
         taskpane_html,
-        "task pane has ApplyNotes script text fallback",
-        r'id="applyNotesScriptText".*readonly.*hidden',
-        "Keep a visible in-pane fallback for blocked clipboard access.",
+        "task pane marks asset workflow optional",
+        r'id="setupAssetWorkflow".*class="optional-action".*Setup Asset Workflow.*Optional',
+        "Visually mark asset setup as optional.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.css",
+        taskpane_css,
+        "task pane color-codes optional asset action",
+        r"button\.optional-action.*background:\s*#fff4ce.*border-color:\s*#c19c00.*\.badge",
+        "Keep the optional asset action visually distinct.",
     )
     check_required_regex(
         results,
@@ -1685,8 +2023,16 @@ def audit_addin_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document ApplyNotes helper",
-        r"`ApplyNotes` setup helper.*loads the script template from `\.\./ApplyNotes`.*displays the script text when clipboard access is blocked",
+        r"`ApplyNotes` setup helper.*loads the script template from `\.\./office-scripts/apply_notes\.ts`.*displays the script text when clipboard access is blocked",
         "Document the ApplyNotes script handoff and blocked-clipboard fallback inside the add-in.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document notes setup in normal path",
+        r"Setup Notes Workflow.*normal `Setup \+ Install \+ Validate \+ Outputs` path.*Planning Review!O:R.*tblDecisionStaging",
+        "Document that notes setup is included in the normal setup path.",
     )
     check_required_regex(
         results,
@@ -1695,6 +2041,30 @@ def audit_addin_contract(results: list[Result]) -> None:
         "add-in docs document ApplyNotes import step",
         r"Copy ApplyNotes Script.*clipboard access is blocked.*Automate -> New Script.*save the script as `ApplyNotes`",
         "Document the operator path for importing the ApplyNotes script.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document optional asset setup",
+        r"Setup Asset Workflow.*optional.*not run from the default path.*Asset Register.*tblAssets.*Asset Setup.*Project Asset Map.*Semantic Assets.*Asset Changes.*Asset State History",
+        "Document that asset setup remains opt-in.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document asset relationship dropdowns",
+        r"asset relationship dropdowns.*Rerunning it recreates.*relationship lists for `Asset ID` and `Project Key`",
+        "Document the optional asset setup dropdown and reset behavior.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document optional asset color cue",
+        r"color-codes the asset setup button as optional.*standard setup completion message",
+        "Document the UI cue that asset setup is separate.",
     )
     check_required_regex(
         results,
@@ -1751,6 +2121,22 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records ApplyNotes add-in handoff",
         r"Add in-add-in ApplyNotes script handoff",
         "Record the task-pane ApplyNotes script setup path.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records asset tracker starter",
+        r"Promote asset workflow to tracker starter.*tblAssets.*relationship dropdowns.*starter/reset",
+        "Record the asset tracker starter setup change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records optional asset setup UI",
+        r"Clarify optional asset setup UI.*Color-coded.*Setup Asset Workflow.*black text",
+        "Record the optional asset setup UI correction.",
     )
 
 

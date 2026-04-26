@@ -1,4 +1,46 @@
-# Change Log
+2026-04-26 - Clarify optional asset setup UI
+
+Semantic change:
+
+- Clarified the task-pane standard setup path by logging that asset workflow setup remains optional after notes setup completes.
+- Color-coded the `Setup Asset Workflow` button as optional.
+- Forced workflow table header text to black after table creation so asset table headers remain readable on light header fills.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.html`, `addin/taskpane.css`, and `addin/taskpane.js`.
+- Updated add-in docs and audit coverage.
+
+Visible impact:
+
+- Workbook behavior: optional asset table headers should render with black text; standard setup still does not run asset setup.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-26 - Promote asset workflow to tracker starter
+
+Semantic change:
+
+- Added a first-class `Asset Register` / `tblAssets` starter table to the optional asset workflow.
+- Added asset-specific dropdown lists and advisory relationship dropdowns for asset IDs and project keys.
+- Documented that `Setup Asset Workflow` is a starter/reset action because it recreates the workflow tables from headers.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js` asset workflow table setup and validation data.
+- Updated `office-scripts/apply_asset_mappings.ts` comments to state the `tblAssets` boundary.
+- Updated asset/add-in/starter docs and added `docs/asset_tracker_next_steps.md`.
+- Updated static audit coverage for the asset register, relationship dropdowns, and reset boundary.
+
+Visible impact:
+
+- Workbook behavior: optional asset setup now creates `tblAssets` and applies asset relationship dropdowns when selected.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
 
 ## 2026-04-26 - Add in-add-in ApplyNotes script handoff
 
