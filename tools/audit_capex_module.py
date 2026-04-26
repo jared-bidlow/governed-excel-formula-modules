@@ -591,7 +591,7 @@ def audit_docs(results: list[Result]) -> None:
         "README.md",
         readme,
         "README documents worktree workflow",
-        r"Worktree Workflow.*pristine code.*active `codex/\*` tasks.*review.*fuzz.*scratch.*new_worktree\.ps1.*docs/git_worktree_workflow\.md",
+        r"Worktree Workflow.*pristine public template state.*formula/add-in tasks.*workbook-contract review.*automated smoke/lint runs.*workbook-reference analysis.*new_worktree\.ps1.*ready-fix.*docs/git_worktree_workflow\.md",
         "Surface the starter Git worktree workflow from the README.",
     )
     for check, pattern in [
@@ -939,6 +939,14 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "docs/change_log.md",
         changelog,
+        "change log records Excel worktree workflow",
+        r"Tailor worktree roles to Excel workflow",
+        "Record the Excel-specific Git worktree workflow.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
         "change log records worktree concurrency roles",
         r"Clarify Git worktree concurrency roles",
         "Record the named Git worktree concurrency roles.",
@@ -954,12 +962,18 @@ def audit_docs(results: list[Result]) -> None:
     for check, pattern in [
         ("states stable main and task worktrees", r"`main` as the stable product branch.*`codex/<task>`"),
         ("documents concurrency role model", r"`main`.*`work`.*`review`.*`fuzz`.*`scratch`"),
+        ("maps work role to formula and add-in work", r"`work`.*formula module edits.*Office\.js setup/validation"),
+        ("maps review role to workbook contract review", r"`review`.*workbook contract docs"),
         ("assigns fuzz to automated checks", r"`fuzz`.*automated checks"),
+        ("assigns scratch to workbook reference analysis", r"`scratch`.*uploaded workbook"),
         ("distinguishes worktrees from branches", r"not a replacement for branches"),
-        ("creates feature worktree with helper", r"new_worktree\.ps1 -Name install-docs"),
-        ("checks fast-forward divergence", r"git rev-list --left-right --count origin/main\.\.\.origin/codex/install-docs"),
+        ("creates feature worktree with helper", r"new_worktree\.ps1 -Name ready-fix"),
+        ("documents role-specific prefixes", r"-BranchPrefix review.*-BranchPrefix scratch"),
+        ("checks fast-forward divergence", r"git rev-list --left-right --count origin/main\.\.\.origin/codex/ready-fix"),
         ("removes and prunes worktrees", r"git worktree remove.*git worktree prune"),
         ("keeps workbook binaries out of Git", r"Keep workbook binaries out of Git"),
+        ("keeps workbook copies local", r"Treat workbook copies as local operator artifacts"),
+        ("promotes scratch only as sanitized text", r"Promote scratch findings only by writing sanitized docs, TSV samples, formula modules, add-in source, or audit checks"),
         ("keeps public safety explicit", r"Do not use linked worktrees to hide private data"),
     ]:
         check_required_regex(

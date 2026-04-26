@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-04-26 - Tailor worktree roles to Excel workflow
+
+Semantic change:
+
+- Refined the Git worktree role model around Excel-formula repo work: formula/add-in implementation, workbook contract review, automated smoke/lint runs, and disposable workbook-reference analysis.
+- Clarified that workbook copies remain local operator artifacts and scratch findings must be promoted only as sanitized text artifacts.
+
+Minimal diff summary:
+
+- Updated `docs/git_worktree_workflow.md`.
+- Updated the README worktree starter example.
+- Updated static audit coverage for the Excel-specific worktree role model.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-26 - Clarify Git worktree concurrency roles
 
 Semantic change:

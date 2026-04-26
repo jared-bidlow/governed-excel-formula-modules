@@ -77,10 +77,10 @@ To validate, commit, rebase, and push the public repo in one local command:
 
 ## Worktree Workflow
 
-Use `main` as the stable product branch. Use short-lived worktrees for concurrent roles: `main` for pristine code, `work` for active `codex/*` tasks, `review` for someone else's branch, `fuzz` for automated checks, and `scratch` for disposable experiments.
+Use `main` as the stable product branch. Use short-lived worktrees for concurrent Excel-work roles: `main` for pristine public template state, `work` for formula/add-in tasks, `review` for PR and workbook-contract review, `fuzz` for automated smoke/lint runs, and `scratch` for disposable workbook-reference analysis.
 
 ```powershell
-.\tools\new_worktree.ps1 -Name install-docs
+.\tools\new_worktree.ps1 -Name ready-fix
 ```
 
 See `docs/git_worktree_workflow.md` for the starter workflow.
