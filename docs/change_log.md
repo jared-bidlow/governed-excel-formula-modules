@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-04-26 - Clarify Git worktree concurrency roles
+
+Semantic change:
+
+- Refined the Git worktree workflow around named concurrent roles: `main`, `work`, `review`, `fuzz`, and `scratch`.
+- Kept branches as the source-control primitive and documented worktrees as task-concurrency folders.
+
+Minimal diff summary:
+
+- Updated `docs/git_worktree_workflow.md`.
+- Updated the README worktree summary.
+- Updated static audit coverage for the role model.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-26 - Add Git worktree workflow starter
 
 Semantic change:

@@ -591,7 +591,7 @@ def audit_docs(results: list[Result]) -> None:
         "README.md",
         readme,
         "README documents worktree workflow",
-        r"Worktree Workflow.*new_worktree\.ps1.*docs/git_worktree_workflow\.md",
+        r"Worktree Workflow.*pristine code.*active `codex/\*` tasks.*review.*fuzz.*scratch.*new_worktree\.ps1.*docs/git_worktree_workflow\.md",
         "Surface the starter Git worktree workflow from the README.",
     )
     for check, pattern in [
@@ -939,12 +939,22 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "docs/change_log.md",
         changelog,
+        "change log records worktree concurrency roles",
+        r"Clarify Git worktree concurrency roles",
+        "Record the named Git worktree concurrency roles.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
         "change log records worktree workflow starter",
         r"Add Git worktree workflow starter",
         "Record the Git worktree workflow starter.",
     )
     for check, pattern in [
         ("states stable main and task worktrees", r"`main` as the stable product branch.*`codex/<task>`"),
+        ("documents concurrency role model", r"`main`.*`work`.*`review`.*`fuzz`.*`scratch`"),
+        ("assigns fuzz to automated checks", r"`fuzz`.*automated checks"),
         ("distinguishes worktrees from branches", r"not a replacement for branches"),
         ("creates feature worktree with helper", r"new_worktree\.ps1 -Name install-docs"),
         ("checks fast-forward divergence", r"git rev-list --left-right --count origin/main\.\.\.origin/codex/install-docs"),

@@ -77,7 +77,7 @@ To validate, commit, rebase, and push the public repo in one local command:
 
 ## Worktree Workflow
 
-Use `main` as the stable product branch. Use short-lived `codex/*` worktrees for feature work, review, and experiments.
+Use `main` as the stable product branch. Use short-lived worktrees for concurrent roles: `main` for pristine code, `work` for active `codex/*` tasks, `review` for someone else's branch, `fuzz` for automated checks, and `scratch` for disposable experiments.
 
 ```powershell
 .\tools\new_worktree.ps1 -Name install-docs

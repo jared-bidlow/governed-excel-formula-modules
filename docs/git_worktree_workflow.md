@@ -2,16 +2,29 @@
 
 Use `main` as the stable product branch and use linked worktrees for parallel tasks. A worktree is a Git-managed working directory connected to the same repository history, not a Codex-only concept.
 
+The operating idea is concurrency, not branch replacement. Keep one clean folder for the product state, one folder for active work, one folder for review, one folder for automated checks, and one folder for disposable experiments.
+
 ## Working Model
 
 | Worktree role | Branch | Use |
 |---|---|---|
-| Product | `main` | Stable public state, releases, tags, and final docs. |
-| Feature | `codex/<task>` | One focused implementation or documentation task. |
-| Review | `review/<branch>` | Inspect someone else's branch without disturbing active work. |
-| Scratch | detached or `scratch/<topic>` | Experiments that may be discarded. |
+| `main` | `main` | Pristine public state, releases, tags, and final docs. |
+| `work` | `codex/<task>` | One focused implementation or documentation task. |
+| `review` | `review/<branch>` | Inspect someone else's branch without disturbing active work. |
+| `fuzz` | `codex/fuzz-<topic>` | Let automated checks, generated tests, or stress runs operate away from human edits. |
+| `scratch` | detached or `scratch/<topic>` | Experiments that may be discarded. |
 
 This follows the practical lesson from the Git worktree discussion: worktrees are not a replacement for branches; they are a way to manage concurrent tasks without stashing or switching one working directory in place.
+
+In this repo, the normal day-to-day setup is:
+
+```text
+governed-excel-formula-modules/              main, pristine
+governed-excel-formula-modules-install-docs/ codex/install-docs, active work
+governed-excel-formula-modules-review-pr-12/ review/pr-12, review only
+governed-excel-formula-modules-fuzz-audit/   codex/fuzz-audit, automated checks
+governed-excel-formula-modules-scratch/      scratch/local-idea, disposable
+```
 
 ## Create A Feature Worktree
 
