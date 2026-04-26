@@ -537,6 +537,7 @@ def audit_docs(results: list[Result]) -> None:
     review = read_text(ROOT / "docs" / "technical_review_guide.md")
     notes_workflow = read_text(ROOT / "docs" / "notes_apply_workflow.md")
     asset_workflow = read_text(ROOT / "docs" / "asset_setup_workflow.md")
+    asset_next_steps = read_text(ROOT / "docs" / "asset_tracker_next_steps.md")
     v020_release = read_text(ROOT / "docs" / "v0.2.0_release_notes.md")
     durable_contract = read_text(ROOT / "docs" / "codex_chatgpt_durable_contract.md")
     import_map = read_text(ROOT / "docs" / "workbook_import_map.md")
@@ -756,7 +757,7 @@ def audit_docs(results: list[Result]) -> None:
         "docs/asset_setup_workflow.md",
         asset_workflow,
         "asset workflow documents created sheets",
-        r"Asset Setup.*Project Asset Map.*Semantic Assets.*Asset Changes.*Asset State History",
+        r"Asset Register.*Asset Setup.*Project Asset Map.*Semantic Assets.*Asset Changes.*Asset State History",
         "Document the optional asset setup sheets.",
     )
     check_required_regex(
@@ -764,8 +765,32 @@ def audit_docs(results: list[Result]) -> None:
         "docs/asset_setup_workflow.md",
         asset_workflow,
         "asset workflow documents created tables",
-        r"tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory",
+        r"tblAssets.*tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory",
         "Document the optional asset setup tables.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents asset table map",
+        r"Asset Table Map.*tblAssets.*durable asset records.*tblProjectAssetMap.*relationship table.*tblAssetStateHistory.*event trail",
+        "Document what each asset table owns.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents relationship dropdowns",
+        r"Dropdowns And Relationships.*Asset ID.*Project Key.*advisory dropdowns.*allow new IDs",
+        "Document the dropdown-backed relationship contract.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow documents setup reset boundary",
+        r"Rerunning this setup recreates the asset workflow tables.*starter/reset action",
+        "Make the destructive reset behavior visible before workbook use.",
     )
     check_required_regex(
         results,
@@ -782,6 +807,30 @@ def audit_docs(results: list[Result]) -> None:
         "asset workflow defers RDF export",
         r"does not include RDF export.*SHACL validation.*Power Query bridge",
         "Keep RDF/export out of the v0.2.0 asset setup release.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_tracker_next_steps.md",
+        asset_next_steps,
+        "asset tracker next steps preserve branch boundary",
+        r"reference implementation.*stay separate from the active Capital Planning workbook logic",
+        "Keep asset-tracker follow-up isolated from the active workbook logic.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_tracker_next_steps.md",
+        asset_next_steps,
+        "asset tracker next steps map table ownership",
+        r"Table Ownership.*tblAssets.*Durable asset records.*tblProjectAssetMap.*Current project-to-asset relationships",
+        "Keep a concise table map for the asset tracker path.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_tracker_next_steps.md",
+        asset_next_steps,
+        "asset tracker next steps list verification path",
+        r"Immediate Verification.*workbook copy.*Setup Asset Workflow.*Asset Register.*dropdowns",
+        "Keep the next operator validation steps concrete.",
     )
     check_required_regex(
         results,
@@ -1343,6 +1392,14 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/starter_workbook.md",
+        starter,
+        "starter guide documents asset register setup",
+        r"Asset Register.*Setup Asset Workflow.*tblAssets.*relationship dropdowns.*Rerunning it recreates",
+        "Document tblAssets and reset behavior in the starter guide.",
+    )
+    check_required_regex(
+        results,
         "docs/workbook_import_map.md",
         import_map,
         "import map documents Ready chargeability input",
@@ -1570,6 +1627,7 @@ def audit_docs(results: list[Result]) -> None:
             apply_assets_script,
             [
                 ("uses expected asset tables", r"tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory"),
+                ("states asset register boundary", r"Asset Register / tblAssets.*does not create, overwrite, or enrich tblAssets"),
                 ("validates new asset rule", r"new_asset requires target_asset_id"),
                 ("validates replacement rule", r"replace_asset requires source_asset_id and target_asset_id"),
                 ("excludes RDF export", r"does not export RDF|RDF/export was not run"),
@@ -1637,6 +1695,7 @@ def audit_addin_contract(results: list[Result]) -> None:
     manifest = read_text(ROOT / "addin" / "manifest.xml")
     taskpane = read_text(ROOT / "addin" / "taskpane.js")
     taskpane_html = read_text(ROOT / "addin" / "taskpane.html")
+    taskpane_css = read_text(ROOT / "addin" / "taskpane.css")
     addin_doc = read_text(ROOT / "docs" / "office_addin.md")
     readme = read_text(ROOT / "README.md")
     operating = read_text(ROOT / "docs" / "operating_contract.md")
@@ -1667,6 +1726,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review.*Validation Lists"),
         ("defines application data", r"applicationData\s*=\s*\{.*starterTables.*dropdownLists.*visibleControls.*rowValidationRules"),
         ("defines validation lists", r"dropdownLists\s*:\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo"),
+        ("defines asset dropdown lists", r"assetStatuses.*assetConditions.*assetCriticalities.*assetChangeTypes.*assetStates.*assetPromotionStatuses.*assetMappingStatuses.*assetChangeStatuses"),
         ("defines visible controls", r"visibleControls.*PM_Filter_Dropdowns.*B2.*Burndown_Cut_Target.*E2"),
         ("defines row validation max row", r"maxValidationRow:\s*2000"),
         ("defines header-driven Chargeable validation", r"rowValidationRules.*header:\s*\"Chargeable\".*listKey:\s*\"yesNo\""),
@@ -1684,6 +1744,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
         ("formats starter workbook", r"formatPlanningTable.*formatCapSetup.*formatPlanningReview"),
         ("applies dropdown validation", r"applyListValidation.*dataValidation\.rule"),
+        ("sizes validation list headers dynamically", r"getResizedRange\(0,\s*validationListColumns\.length - 1\)"),
         ("applies row validation by header", r"applyRowValidationRules.*dataRangeForHeader.*validationSourceForList"),
         ("applies non-negative validation", r"applyNonNegativeValidation.*greaterThanOrEqualTo"),
         ("validates starter header order", r"assertHeaderOrder\(planningHeaders\.values\[0\], expectedPlanningHeaders"),
@@ -1701,8 +1762,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("checks main report spill range", r'getRange\("A4:N200"\).*load\(\["values", "formulas"\]\).*assertMainReportSpillReady'),
         ("reports demo spill blockers", r"assertMainReportSpillReady.*blocks the main report spill"),
         ("renders demo output summary", r"renderDemoOutputSummary.*Demo outputs inserted"),
+        ("logs standard setup completion", r"Standard setup complete\. Asset workflow remains optional"),
         ("defines notes workflow setup", r"notesWorkflow.*tblDecisionStaging.*ExistingMeetingNotes.*NewPlanningNotes.*NewTimeline.*NewStatus"),
-        ("defines asset workflow setup", r"assetWorkflow.*tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory"),
+        ("defines asset workflow setup", r"assetWorkflow.*tblAssets.*tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory"),
+        ("defines asset relationship lists", r"relationshipLists.*assetIds.*tblAssets\[AssetID\].*projectKeys.*tblAssets\[LinkedProjectID\]"),
+        ("defines asset table validation rules", r"tableValidationRules.*tblAssets.*assetStatuses.*relationshipListKey:\s*\"projectKeys\".*tblProjectAssetMap.*relationshipListKey:\s*\"assetIds\""),
+        ("applies asset table validation", r"setupAssetWorkflow.*buildAssetRelationshipLists.*applyTableValidationRules.*validationSourceForRelationshipList"),
+        ("keeps relationship validation advisory", r"allowUnknown:\s*Boolean\(rule\.relationshipListKey\).*errorAlert.*showAlert:\s*false"),
+        ("sets workflow table header text black", r"getHeaderRowRange\(\).*format\.font\.color\s*=\s*\"#000000\""),
         ("binds notes and asset setup buttons", r'bind\("setupNotesWorkflow",\s*setupNotesWorkflow\).*bind\("setupAssetWorkflow",\s*setupAssetWorkflow\)'),
         ("strips module comments", r"stripBlockComments"),
         ("compacts installed formula bodies", r"compactFormulaBody.*stripBlockComments.*inQuotedSheet"),
@@ -1791,6 +1858,22 @@ def audit_addin_contract(results: list[Result]) -> None:
         "task pane has notes and asset workflow buttons",
         r'id="setupNotesWorkflow".*Setup Notes Workflow.*id="setupAssetWorkflow".*Setup Asset Workflow',
         "Expose notes workflow setup and optional asset workflow setup.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
+        "task pane marks asset workflow optional",
+        r'id="setupAssetWorkflow".*class="optional-action".*Setup Asset Workflow.*Optional',
+        "Visually mark asset setup as optional.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.css",
+        taskpane_css,
+        "task pane color-codes optional asset action",
+        r"button\.optional-action.*background:\s*#fff4ce.*border-color:\s*#c19c00.*\.badge",
+        "Keep the optional asset action visually distinct.",
     )
     check_required_regex(
         results,
@@ -1909,8 +1992,24 @@ def audit_addin_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document optional asset setup",
-        r"Setup Asset Workflow.*optional.*not run from the default path.*Asset Setup.*Project Asset Map.*Semantic Assets.*Asset Changes.*Asset State History",
+        r"Setup Asset Workflow.*optional.*not run from the default path.*Asset Register.*tblAssets.*Asset Setup.*Project Asset Map.*Semantic Assets.*Asset Changes.*Asset State History",
         "Document that asset setup remains opt-in.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document asset relationship dropdowns",
+        r"asset relationship dropdowns.*Rerunning it recreates.*relationship lists for `Asset ID` and `Project Key`",
+        "Document the optional asset setup dropdown and reset behavior.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document optional asset color cue",
+        r"color-codes the asset setup button as optional.*standard setup completion message",
+        "Document the UI cue that asset setup is separate.",
     )
     check_required_regex(
         results,
@@ -1959,6 +2058,22 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records npm smoke metadata",
         r"Add npm smoke-test package metadata",
         "Record the npm smoke-test package metadata.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records asset tracker starter",
+        r"Promote asset workflow to tracker starter.*tblAssets.*relationship dropdowns.*starter/reset",
+        "Record the asset tracker starter setup change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records optional asset setup UI",
+        r"Clarify optional asset setup UI.*Color-coded.*Setup Asset Workflow.*black text",
+        "Record the optional asset setup UI correction.",
     )
 
 

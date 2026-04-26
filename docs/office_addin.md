@@ -25,7 +25,7 @@ The add-in is an installer and validator. It does not replace the formula module
 - Prints a validation summary showing sheets present, workbook names installed, header count, configured cap rows, bound controls, dropdown lists, and row-validation rules.
 - Inserts demo output formulas into predictable review sheets so a reviewer can inspect the implemented screens without typing formula names.
 - Runs `Setup Notes Workflow` as part of the normal `Setup + Install + Validate + Outputs` path, creating `Planning Review!O:R` notes columns and `Decision Staging` / `tblDecisionStaging`.
-- Provides a standalone `Setup Asset Workflow` button for optional asset sheets and tables; asset setup is not run from the default path.
+- Provides a standalone `Setup Asset Workflow` button for optional asset sheets, `tblAssets`, mapping/change/history tables, and asset relationship dropdowns; asset setup is not run from the default path.
 
 ## Local Trial Shape
 
@@ -89,7 +89,7 @@ The optional asset workflow is separate:
 Setup Asset Workflow
 ```
 
-That action creates the asset setup sheets and tables only when selected. It is intentionally not part of `Setup + Install + Validate + Outputs`. See `docs/asset_setup_workflow.md`.
+That action creates the asset setup sheets and tables only when selected. It is intentionally optional and not run from the default path. The task pane color-codes the asset setup button as optional, and the standard setup completion message states that asset workflow setup is still separate. It creates `Asset Register` / `tblAssets`, `Asset Setup`, `Project Asset Map`, `Semantic Assets`, `Asset Changes`, and `Asset State History`. Rerunning it recreates the asset workflow tables from headers, so treat it as a starter/reset action on a workbook copy or before entering live asset rows. See `docs/asset_setup_workflow.md`.
 
 | Sheet | Cell | Formula |
 |---|---|---|
@@ -141,7 +141,8 @@ The setup path is intentionally small and inspectable:
 - `Decision Staging` stores `tblDecisionStaging`, the controlled staging table consumed by `office-scripts/apply_notes.ts`.
 - `Validation Lists` stores the dropdown values used by the starter workbook.
 - Demo output sheets are created by the combined `Setup + Install + Validate + Outputs` action, or by the standalone `Insert Demo Outputs` rerun action.
-- Optional asset setup creates `Asset Setup`, `Project Asset Map`, `Semantic Assets`, `Asset Changes`, and `Asset State History` with asset workflow tables.
+- Optional asset setup creates `Asset Register`, `Asset Setup`, `Project Asset Map`, `Semantic Assets`, `Asset Changes`, and `Asset State History` with `tblAssets`, asset staging, mapping, change, and state-history tables.
+- Asset setup also writes dropdown-backed validation lists for asset status, condition, criticality, change type, asset state, promotion status, mapping status, and advisory relationship lists for `Asset ID` and `Project Key`.
 
 The unqualified control names are rebound to the visible cells:
 

@@ -62,6 +62,25 @@ button.primary {
   color: #fff;
 }
 
+button.optional-action {
+  align-items: center;
+  background: #fff4ce;
+  border-color: #c19c00;
+  color: #201f1e;
+  display: flex;
+  justify-content: space-between;
+}
+
+.badge {
+  background: #8a5a00;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 7px;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
@@ -87,6 +106,12 @@ pre {
     background: #1f1f1f;
     border-color: #6f6f6f;
     color: #f5f5f5;
+  }
+
+  button.optional-action {
+    background: #3b2e12;
+    border-color: #d6b656;
+    color: #fff6d6;
   }
 
   pre {

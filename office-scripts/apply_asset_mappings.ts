@@ -8,6 +8,9 @@
  * - Asset Changes / tblAssetChanges
  * - Asset State History / tblAssetStateHistory
  *
+ * Asset Register / tblAssets is the durable asset table created by the add-in.
+ * This script does not create, overwrite, or enrich tblAssets.
+ *
  * Source rows are read from the first available staging table candidate, commonly
  * tblSemanticAssets, tblAssetPromotionQueue, tblAssetMappingStaging, or tblProjectAssetMap.
  */
