@@ -526,7 +526,9 @@ def audit_docs(results: list[Result]) -> None:
     review = read_text(ROOT / "docs" / "technical_review_guide.md")
     import_map = read_text(ROOT / "docs" / "workbook_import_map.md")
     structure_map = read_text(ROOT / "docs" / "planning_worksheet_structure_map.md")
+    worktree_doc = read_text(ROOT / "docs" / "git_worktree_workflow.md")
     push_helper = read_text(ROOT / "tools" / "push_public.ps1")
+    worktree_helper = read_text(ROOT / "tools" / "new_worktree.ps1")
     addin_smoke = read_text(ROOT / "tools" / "start_addin_smoke_test.ps1")
     addin_server = read_text(ROOT / "tools" / "start_addin_dev_server.ps1")
     addin_stop = read_text(ROOT / "tools" / "stop_addin_smoke_test.ps1")
@@ -583,6 +585,14 @@ def audit_docs(results: list[Result]) -> None:
         "README documents npm smoke helper",
         r"npm run addin:smoke",
         "Tell users the npm Office.js smoke-test path.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
+        "README documents worktree workflow",
+        r"Worktree Workflow.*new_worktree\.ps1.*docs/git_worktree_workflow\.md",
+        "Surface the starter Git worktree workflow from the README.",
     )
     for check, pattern in [
         ("defines smoke script", r'"addin:smoke"\s*:\s*"powershell .*start_addin_smoke_test\.ps1"'),
@@ -925,6 +935,47 @@ def audit_docs(results: list[Result]) -> None:
         r"Expand Planning Table structure map",
         "Record the full-column structure map update.",
     )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records worktree workflow starter",
+        r"Add Git worktree workflow starter",
+        "Record the Git worktree workflow starter.",
+    )
+    for check, pattern in [
+        ("states stable main and task worktrees", r"`main` as the stable product branch.*`codex/<task>`"),
+        ("distinguishes worktrees from branches", r"not a replacement for branches"),
+        ("creates feature worktree with helper", r"new_worktree\.ps1 -Name install-docs"),
+        ("checks fast-forward divergence", r"git rev-list --left-right --count origin/main\.\.\.origin/codex/install-docs"),
+        ("removes and prunes worktrees", r"git worktree remove.*git worktree prune"),
+        ("keeps workbook binaries out of Git", r"Keep workbook binaries out of Git"),
+        ("keeps public safety explicit", r"Do not use linked worktrees to hide private data"),
+    ]:
+        check_required_regex(
+            results,
+            "docs/git_worktree_workflow.md",
+            worktree_doc,
+            f"worktree workflow {check}",
+            pattern,
+            "Keep the Git worktree workflow aligned with the public-template branch discipline.",
+        )
+    for check, pattern in [
+        ("defaults branch prefix to codex", r'\$BranchPrefix = "codex"'),
+        ("defaults base branch to main", r'\$BaseBranch = "main"'),
+        ("fetches origin before creating worktree", r"git fetch origin"),
+        ("verifies origin base ref", r'git rev-parse --verify \$baseRef'),
+        ("blocks existing target path", r"Test-Path \$targetPath.*Target path already exists"),
+        ("creates branch-backed worktree", r"git worktree add -b \$branchName \$targetPath \$baseRef"),
+    ]:
+        check_required_regex(
+            results,
+            "tools/new_worktree.ps1",
+            worktree_helper,
+            f"worktree helper {check}",
+            pattern,
+            "Keep the worktree helper conservative and based on origin/main by default.",
+        )
     check_required_regex(
         results,
         "docs/public_release_checklist.md",

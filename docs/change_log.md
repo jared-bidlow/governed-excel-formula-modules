@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-04-26 - Add Git worktree workflow starter
+
+Semantic change:
+
+- Added a small Git worktree workflow guide for managing `main` as the stable product branch and `codex/*` branches as temporary task branches.
+- Added a PowerShell helper that creates a sibling linked worktree from `origin/main`.
+
+Minimal diff summary:
+
+- Added `docs/git_worktree_workflow.md`.
+- Added `tools/new_worktree.ps1`.
+- Updated the README.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-25 - Compact installed formula names for workbook save
 
 Semantic change:

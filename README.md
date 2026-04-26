@@ -75,6 +75,16 @@ To validate, commit, rebase, and push the public repo in one local command:
 .\tools\push_public.ps1 -Message "Update public formula template"
 ```
 
+## Worktree Workflow
+
+Use `main` as the stable product branch. Use short-lived `codex/*` worktrees for feature work, review, and experiments.
+
+```powershell
+.\tools\new_worktree.ps1 -Name install-docs
+```
+
+See `docs/git_worktree_workflow.md` for the starter workflow.
+
 ## Why Excel
 
 Excel is the right runtime for this pattern when the real work is planning, review, and decision support by people who already live in workbooks.
