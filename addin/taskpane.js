@@ -6,7 +6,13 @@
       planningTable: "Planning Table",
       capSetup: "Cap Setup",
       planningReview: "Planning Review",
-      validationLists: "Validation Lists"
+      validationLists: "Validation Lists",
+      notesStaging: "Decision Staging",
+      assetSetup: "Asset Setup",
+      projectAssetMap: "Project Asset Map",
+      semanticAssets: "Semantic Assets",
+      assetChanges: "Asset Changes",
+      assetStateHistory: "Asset State History"
     },
     planningTable: {
       headerRange: "A2:BL2",
@@ -28,6 +34,155 @@
       { sheet: "Planning Table", address: "A2", path: "../samples/planning_table_starter.tsv" },
       { sheet: "Cap Setup", address: "A2", path: "../samples/cap_setup_starter.tsv" }
     ],
+    notesWorkflow: {
+      tableName: "tblDecisionStaging",
+      tableAddress: "A1",
+      noteHeaders: ["ExistingMeetingNotes", "NewPlanningNotes", "NewTimeline", "NewStatus"],
+      stagingHeaders: [
+        "GroupType",
+        "GroupValue",
+        "Category",
+        "ProjDesc",
+        "AnnualProj",
+        "ActualsYTD",
+        "ExistingMeetingNotes",
+        "NewPlanningNotes",
+        "NewTimeline",
+        "NewStatus",
+        "ApplyAction",
+        "PlanningNotes_New",
+        "Timeline_New",
+        "Comments_New",
+        "Status_New",
+        "KeyStatus",
+        "BudgetMatchCount",
+        "ApplyReady",
+        "ApplyStatus",
+        "AppliedOn",
+        "ApplyMessage",
+        "BudgetRowFound"
+      ]
+    },
+    assetWorkflow: {
+      tables: [
+        {
+          sheet: "Semantic Assets",
+          tableName: "tblSemanticAssets",
+          address: "A1",
+          headers: [
+            "ProjectKey",
+            "ProjectDescription",
+            "CandidateAssetId",
+            "AssetLabel",
+            "AssetType",
+            "ProposedChangeType",
+            "SourceAssetId",
+            "TargetAssetId",
+            "InstalledState",
+            "EvidenceId",
+            "PromotionStatus",
+            "ApplyReady",
+            "ApplyStatus",
+            "AppliedOn",
+            "ApplyMessage"
+          ]
+        },
+        {
+          sheet: "Asset Setup",
+          tableName: "tblAssetPromotionQueue",
+          address: "A1",
+          headers: [
+            "ProjectKey",
+            "CandidateAssetId",
+            "ProjectDescription",
+            "AssetLabel",
+            "AssetType",
+            "ProposedChangeType",
+            "SourceAssetId",
+            "TargetAssetId",
+            "InstalledState",
+            "EvidenceId",
+            "PromotionStatus",
+            "ApplyReady",
+            "ApplyStatus",
+            "AppliedOn",
+            "ApplyMessage"
+          ]
+        },
+        {
+          sheet: "Asset Setup",
+          tableName: "tblAssetMappingStaging",
+          address: "A6",
+          headers: [
+            "ProjectKey",
+            "ProjectDescription",
+            "ChangeType",
+            "SourceAssetId",
+            "TargetAssetId",
+            "AssetId",
+            "AssetLabel",
+            "AssetType",
+            "InstalledState",
+            "EvidenceId",
+            "MappingStatus",
+            "ApplyReady",
+            "ApplyStatus",
+            "AppliedOn",
+            "ApplyMessage"
+          ]
+        },
+        {
+          sheet: "Project Asset Map",
+          tableName: "tblProjectAssetMap",
+          address: "A1",
+          headers: [
+            "ProjectKey",
+            "ProjectDescription",
+            "AssetId",
+            "AssetLabel",
+            "AssetType",
+            "AssetState",
+            "EvidenceId",
+            "MappingStatus",
+            "ApplyStatus",
+            "AppliedOn",
+            "ApplyMessage"
+          ]
+        },
+        {
+          sheet: "Asset Changes",
+          tableName: "tblAssetChanges",
+          address: "A1",
+          headers: [
+            "ChangeId",
+            "ProjectKey",
+            "ChangeType",
+            "SourceAssetId",
+            "TargetAssetId",
+            "InstalledState",
+            "EvidenceId",
+            "ChangeStatus",
+            "AppliedOn",
+            "ApplyMessage"
+          ]
+        },
+        {
+          sheet: "Asset State History",
+          tableName: "tblAssetStateHistory",
+          address: "A1",
+          headers: [
+            "EventId",
+            "AssetId",
+            "ProjectKey",
+            "AssetState",
+            "EvidenceId",
+            "EventSource",
+            "EventOn",
+            "ApplyMessage"
+          ]
+        }
+      ]
+    },
     moduleFiles: [
       { prefix: "Controls", path: "../modules/controls.formula.txt" },
       { prefix: "get", path: "../modules/get.formula.txt" },
@@ -148,7 +303,14 @@
   const starterTables = applicationData.starterTables;
   const reviewSheet = applicationData.sheets.planningReview;
   const validationSheet = applicationData.sheets.validationLists;
-  const requiredSheets = Object.values(applicationData.sheets);
+  const requiredSheets = [
+    applicationData.sheets.planningTable,
+    applicationData.sheets.capSetup,
+    applicationData.sheets.planningReview,
+    applicationData.sheets.validationLists
+  ];
+  const notesWorkflow = applicationData.notesWorkflow;
+  const assetWorkflow = applicationData.assetWorkflow;
   const validationLists = applicationData.dropdownLists;
   const validationListColumns = applicationData.validationListColumns;
   const visibleControlNames = applicationData.visibleControls;
@@ -170,6 +332,8 @@
     bind("installModules", installModules);
     bind("validateWorkbook", validateWorkbook);
     bind("insertDemoOutputs", insertDemoOutputs);
+    bind("setupNotesWorkflow", setupNotesWorkflow);
+    bind("setupAssetWorkflow", setupAssetWorkflow);
     bind("runAll", runAll);
     writeLog("Ready.");
     setButtons(true);
@@ -196,6 +360,7 @@
     await installModules();
     await validateWorkbook();
     await insertDemoOutputs({ validateFirst: false });
+    await setupNotesWorkflow();
   }
 
   async function setupWorkbook() {
@@ -233,6 +398,50 @@
     });
 
     appendLog("Starter sheets, visible controls, dropdowns, and formats ready.");
+  }
+
+  async function setupNotesWorkflow() {
+    appendLog("Setting up notes workflow...");
+
+    await Excel.run(async (context) => {
+      await ensureSheets(context, [reviewSheet, validationSheet, applicationData.sheets.notesStaging]);
+      await context.sync();
+
+      const review = context.workbook.worksheets.getItem(reviewSheet);
+      buildValidationLists(context.workbook.worksheets.getItem(validationSheet));
+      const staging = context.workbook.worksheets.getItem(applicationData.sheets.notesStaging);
+      formatPlanningReviewNotes(review);
+      await refreshTableFromHeaders(
+        context,
+        staging,
+        notesWorkflow.tableName,
+        notesWorkflow.tableAddress,
+        notesWorkflow.stagingHeaders
+      );
+      formatWorkflowSheet(staging, notesWorkflow.stagingHeaders.length);
+      await context.sync();
+    });
+
+    appendLog("Notes workflow ready: Planning Review notes columns and Decision Staging table are configured.");
+  }
+
+  async function setupAssetWorkflow() {
+    appendLog("Setting up optional asset workflow...");
+
+    await Excel.run(async (context) => {
+      await ensureSheets(context, unique(assetWorkflow.tables.map((table) => table.sheet)));
+      await context.sync();
+
+      for (const table of assetWorkflow.tables) {
+        const sheet = context.workbook.worksheets.getItem(table.sheet);
+        await refreshTableFromHeaders(context, sheet, table.tableName, table.address, table.headers);
+        formatWorkflowSheet(sheet, table.headers.length);
+      }
+
+      await context.sync();
+    });
+
+    appendLog("Optional asset workflow ready. Asset setup is opt-in and was not added to the normal run.");
   }
 
   function starterHeadersFor(tables, sheetName) {
@@ -463,6 +672,53 @@
     listRange.format.autofitColumns();
     sheet.getRange("A1:F1").format.font.bold = true;
     sheet.getRange("A1:F1").format.fill.color = "#D9EAF7";
+  }
+
+  async function refreshTableFromHeaders(context, sheet, tableName, address, headers) {
+    const existing = context.workbook.tables.getItemOrNullObject(tableName);
+    existing.load("name");
+    await context.sync();
+
+    if (!existing.isNullObject) {
+      existing.delete();
+      await context.sync();
+    }
+
+    const values = [headers, Array(headers.length).fill("")];
+    const range = sheet.getRange(address).getResizedRange(1, headers.length - 1);
+    range.values = values;
+    const table = sheet.tables.add(range, true);
+    table.name = tableName;
+    table.style = "TableStyleMedium2";
+    table.showFilterButton = true;
+    return table;
+  }
+
+  function formatPlanningReviewNotes(sheet) {
+    sheet.getRange("O4:R4").values = [notesWorkflow.noteHeaders];
+    sheet.getRange("O4:R4").format.font.bold = true;
+    sheet.getRange("O4:R4").format.fill.color = "#D9EAF7";
+    sheet.getRange("O5:O200").clear(Excel.ClearApplyTo.all);
+    sheet.getRange("O5").formulas = [["=IFERROR(Notes.Existing,\"\")"]];
+    sheet.getRange("O5:O200").format.fill.color = "#F3F6FA";
+    sheet.getRange("P5:R200").format.fill.color = "#FFF2CC";
+    sheet.getRange("O:O").format.wrapText = false;
+    sheet.getRange("P:R").format.wrapText = true;
+    try {
+      applyListValidation(sheet.getRange("R5:R200"), validationSourceForList("statuses"));
+    } catch (error) {
+      appendLog("Skipped NewStatus dropdown because validation lists are not ready.");
+    }
+    sheet.getRange("O:R").format.autofitColumns();
+  }
+
+  function formatWorkflowSheet(sheet, headerCount) {
+    const lastColumn = columnName(headerCount);
+    sheet.freezePanes.freezeRows(1);
+    sheet.getRange(`A1:${lastColumn}1`).format.font.bold = true;
+    sheet.getRange(`A1:${lastColumn}1`).format.fill.color = "#D9EAF7";
+    sheet.getRange(`A:${lastColumn}`).format.wrapText = true;
+    sheet.getRange(`A:${lastColumn}`).format.autofitColumns();
   }
 
   function formatPlanningTable(sheet, headers) {
