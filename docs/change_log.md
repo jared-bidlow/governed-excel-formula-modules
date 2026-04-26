@@ -1,5 +1,25 @@
 # Change Log
 
+## 2026-04-26 - Add reference architecture tree
+
+Semantic change:
+
+- Added a durable public-safe architecture map that explains the repo tree, formula dependency spine, default setup path, notes/apply workflow, optional asset workflow, validation gates, public/private boundary, and deferred scope.
+- Linked the architecture map from the README for technical reviewers.
+
+Minimal diff summary:
+
+- Added `docs/reference_architecture_tree.md`.
+- Updated `README.md`.
+
+Visible impact:
+
+- Workbook behavior: no formula logic change.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-26 - Clarify optional asset setup UI
 
 Semantic change:
