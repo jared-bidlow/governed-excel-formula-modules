@@ -42,6 +42,7 @@ governed-excel-formula-modules/
 |   \-- supporting workbook modules
 +-- docs/
 |   +-- asset_setup_workflow.md
+|   +-- asset_evidence_power_query.md
 |   +-- notes_apply_workflow.md
 |   +-- operating_contract.md
 |   +-- planning_plugins.md
@@ -60,10 +61,16 @@ governed-excel-formula-modules/
 +-- samples/
 |   +-- planning_table_starter.tsv
 |   +-- cap_setup_starter.tsv
+|   +-- asset_register_starter.tsv
+|   +-- power-query/
 |   \-- workflow starter TSVs
 +-- package.json
 \-- tools/
     +-- audit_capex_module.py
+    +-- build_governance_starter_workbook.ps1
+    +-- build_asset_evidence_pq_seed.ps1
+    +-- install_asset_evidence_pq_workbook.ps1
+    +-- start_asset_evidence_pq_installer.ps1
     +-- lint_formulas.py
     +-- start_addin_smoke_test.ps1
     +-- start_addin_dev_server.ps1
@@ -124,14 +131,38 @@ This repo works as a public source-code template:
 
 This repo is not a turnkey workbook:
 
-- it does not ship an `.xlsx` file,
+- it does not track workbook binaries in Git,
+- it can generate a local governance starter `.xltx` / `.xlsx` under ignored `release_artifacts/`,
 - the Office.js add-in is a starter installer, not a production Marketplace package,
 - it does not prove runtime recalculation inside every Excel tenant,
 - a real workbook owner still needs to map their own table names, headers, caps, and review process.
 
+## Generated Governance Starter Template
+
+For a local workbook artifact, build the generated starter:
+
+```powershell
+npm run build:governance-starter
+```
+
+or:
+
+```powershell
+.\tools\build_governance_starter_workbook.ps1
+```
+
+The script creates ignored artifacts under `release_artifacts/governance-starter/`:
+
+```text
+Governance_Starter.xlsx
+Governance_Starter.xltx
+```
+
+The `.xltx` is the user-facing Excel template. The `.xlsx` is kept beside it for inspection and smoke testing. Both are generated from tracked text sources: formula modules in `modules/`, starter TSVs in `samples/`, and asset-evidence M templates in `samples/power-query/asset-evidence/`.
+
 ## Start From A Blank Workbook
 
-For a first local trial, create a blank workbook and follow `docs/starter_workbook.md`.
+For a first local trial without the generated template, create a blank workbook and follow `docs/starter_workbook.md`.
 
 The paste-ready starter table is in:
 
@@ -195,9 +226,10 @@ The v0.2.0 workflow layer adds a controlled notes/status/timeline apply path and
 - `Setup Notes Workflow` creates `Planning Review!O:R` notes columns and `Decision Staging` / `tblDecisionStaging`.
 - `office-scripts/apply_notes.ts` performs the two-pass prepare/apply writeback to `Planning Notes`, `Timeline`, `Comments`, and `Status`.
 - `Setup Asset Workflow` is optional and creates asset review/apply tables for controlled workbook writes.
+- Asset Evidence Power Query is a separate seed-workbook path. Source-controlled M templates live in `samples/power-query/asset-evidence/`; `tools/start_asset_evidence_pq_installer.ps1` provides the local button launcher, and `tools/install_asset_evidence_pq_workbook.ps1` installs the setup sheets, query definitions, and loaded output tables into a new target workbook copy.
 - `modules/assets.formula.txt` contains review queues only; Office Scripts perform controlled writes.
 
-See `docs/notes_apply_workflow.md`, `docs/asset_setup_workflow.md`, and `office-scripts/README.md`.
+See `docs/notes_apply_workflow.md`, `docs/asset_setup_workflow.md`, `docs/asset_evidence_power_query.md`, and `office-scripts/README.md`.
 
 ## Core Pattern
 

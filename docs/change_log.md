@@ -1,3 +1,59 @@
+## 2026-04-27 - Add generated governance starter template
+
+Semantic change:
+
+- Added a reproducible `Governance_Starter.xltx` build path for new workbook starts while keeping formulas, TSV starters, and M templates as the source of truth.
+- Added `tools/build_governance_starter_workbook.ps1` to create a starter `.xlsx`, install formula-module workbook names, create starter review/notes/asset workflow sheets, run the asset-evidence Power Query installer, and save a template `.xltx` under ignored `release_artifacts/governance-starter/`.
+- Added `samples/asset_register_starter.tsv` so the asset register starter rows remain source controlled and reviewable.
+- Kept workbook binaries out of tracked source. `.xltx` and `.xltm` files are ignored and audit-blocked like `.xlsx` and `.xlsm`.
+
+Minimal diff summary:
+
+- Added `tools/build_governance_starter_workbook.ps1`.
+- Added `samples/asset_register_starter.tsv`.
+- Added npm script `build:governance-starter`.
+- Updated README/starter/add-in/asset docs for the generated template path.
+- Updated ignore and static audit coverage for generated template artifacts.
+
+Visible impact:
+
+- Workbook behavior: no tracked workbook changes. Running the generator creates local ignored artifacts with starter sheets, defined names, asset workflow tables, and loaded asset-evidence Power Query sheets.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-27 - Add asset evidence Power Query seed workbook
+
+Semantic change:
+
+- Added an optional asset evidence Power Query seed-workbook path outside the task pane.
+- Source-controlled M templates live under `samples/power-query/asset-evidence/`; `tools/build_asset_evidence_pq_seed.ps1` builds public-safe source, rule, and override setup tables (`tblAssetEvidenceSource`, `tblAssetEvidenceRules`, and `tblAssetEvidenceOverrides`) plus six loaded query output sheets.
+- Added `tools/install_asset_evidence_pq_workbook.ps1` to install those seed-owned sheets, query definitions, and loaded output tables into a new target workbook copy without VBA.
+- Added `tools/start_asset_evidence_pq_installer.ps1` as a local Windows button launcher over the same build/install scripts.
+- Removed the task-pane asset evidence copy/setup/validation buttons so operators do not copy the same Power Query material through multiple paths.
+- Kept `Setup Asset Workflow` scoped to asset register, mapping, change, and state-history tables; it does not create asset-evidence Power Query setup or output tables.
+- The M templates preserve the distinction between mapped structural evidence and true classified evidence: mapped asset/project/context hints can set mapped evidence, but `PresentWithClassifiedEvidence` requires a classified category plus classifier metadata.
+- Kept source reviewable as text while using a generated workbook artifact for the parts Power Query stores inside workbook packages.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.html`, `addin/taskpane.css`, and `addin/taskpane.js`.
+- Added public-safe asset evidence M templates under `samples/power-query/asset-evidence/`.
+- Added `tools/build_asset_evidence_pq_seed.ps1`.
+- Added `tools/install_asset_evidence_pq_workbook.ps1`.
+- Added `tools/start_asset_evidence_pq_installer.ps1`.
+- Added `docs/asset_evidence_power_query.md` and updated asset/add-in/README docs.
+- Updated static audit coverage for the generated seed/copy path, absence of duplicate task-pane copy buttons, M templates, and mapped-vs-classified evidence contract.
+
+Visible impact:
+
+- Workbook behavior: no direct workbook changes unless the operator runs `tools/install_asset_evidence_pq_workbook.ps1` against a workbook copy. The script creates a new output workbook copy and installs `Asset Evidence Setup` plus six loaded query output sheets.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-26 - Add operator add-in launcher
 
 Semantic change:
