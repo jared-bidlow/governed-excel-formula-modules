@@ -134,16 +134,16 @@ Treat `Chargeable` as the canonical internal-labor chargeability flag and `Inter
 
 See `docs/planning_worksheet_structure_map.md` for the public-safe reference map of Yes/No columns and formula dependencies.
 
-Keep `Planning Review!A4:N200` clear for the main report spill. Keep `Planning Review!O4:R200` clear for the note-context example formulas. The visible control band stays above row 4 so it does not block the report spill.
+Keep `Planning Review!A4:N200` clear for the main report spill. `Setup Notes Workflow` uses `Planning Review!O1:R3` for the `ApplyNotes Control` area and `Planning Review!O4:R200` for note-context and note-input columns. The visible control bands stay above row 4 so they do not block the report spill.
 
-`Setup Notes Workflow` creates the `Planning Review!O:R` note columns:
+`Setup Notes Workflow` creates the `Planning Review!O1:R3` `ApplyNotes Control` area and the `Planning Review!O:R` note columns:
 
 - `ExistingMeetingNotes`
 - `NewPlanningNotes`
 - `NewTimeline`
 - `NewStatus`
 
-It also creates or refreshes formula-backed `Decision Staging` / `tblDecisionStaging` so `office-scripts/apply_notes.ts` can run its two-pass prepare/apply workflow without manual copy/paste. A fresh setup seeds `Planning Review!P5:R5` when blank. The seeded smoke input targets `Sample over-projected work` in the starter `Planning Table`; run `ApplyNotes` once to stage it into `tblDecisionStaging` as `Prepared` while preserving `ReviewRow`-keyed helper formulas, inspect `ApplyMessage`, and run it a second time to apply it. For multi-row tests, enter values in more than one `Planning Review!P:R` row; each staged row carries its source `ReviewRow`, and duplicate staged writes to the same `Planning Table` row are blocked. If there are no current `Planning Review!P:R` inputs, a later script run resets stale staging rows to one blank formula-backed row.
+It also creates or refreshes formula-backed `Decision Staging` / `tblDecisionStaging` so `office-scripts/apply_notes.ts` can run its two-pass prepare/apply workflow without manual copy/paste. The worksheet control area states the required sequence: type in `P:R`, run `ApplyNotes` once to prepare, inspect `Decision Staging`, then run `ApplyNotes` again to apply. `ApplyNotes` updates the control area after each normal run with the last phase, result, and next action. A fresh setup seeds `Planning Review!P5:R5` when blank. The seeded smoke input targets `Sample over-projected work` in the starter `Planning Table`; run `ApplyNotes` once to stage it into `tblDecisionStaging` as `Prepared` while preserving `ReviewRow`-keyed helper formulas, inspect `ApplyMessage`, and run it a second time to apply it. For multi-row tests, enter values in more than one `Planning Review!P:R` row; each staged row carries its source `ReviewRow`, and duplicate staged writes to the same `Planning Table` row are blocked. If there are no current `Planning Review!P:R` inputs, a later script run resets stale staging rows to one blank formula-backed row.
 
 `Setup Asset Workflow` is optional. It creates `tblAssets` plus the asset setup, mapping, change, and state-history tables used by `office-scripts/apply_asset_mappings.ts`; it is not part of the default setup path. It also applies dropdowns for asset state/status fields and advisory relationship dropdowns for asset IDs and project keys. Rerunning it recreates those workflow tables from headers, so use it as a starter/reset action before entering real asset rows or against a workbook copy.
 

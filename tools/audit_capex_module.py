@@ -717,6 +717,22 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "docs/notes_apply_workflow.md",
         notes_workflow,
+        "notes workflow documents visible ApplyNotes control area",
+        r"ApplyNotes Control.*Planning Review!O1:R3.*Planning Review!P:R.*run `ApplyNotes` once.*Decision Staging.*run `ApplyNotes` again",
+        "Document the in-workbook cue that tells operators to run ApplyNotes twice.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
+        "notes workflow documents live ApplyNotes control status",
+        r"`ApplyNotes` updates the same `Planning Review!O1:R3` control area.*current phase.*last-run timestamp.*result counts.*next action",
+        "Document that ApplyNotes updates the in-workbook control area after it runs.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
         "notes workflow documents Decision Staging table",
         r"Decision Staging.*tblDecisionStaging",
         "Document the controlled staging table for ApplyNotes.",
@@ -1356,8 +1372,8 @@ def audit_docs(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter,
         "starter guide preserves output ranges",
-        r"`Planning Review!A4:N200`.*`Planning Review!O4:R200`.*does not block the report spill",
-        "Keep spill and notes ranges reserved in the starter guide.",
+        r"`Planning Review!A4:N200`.*`Planning Review!O1:R3`.*`Planning Review!O4:R200`.*do not block the report spill",
+        "Keep spill, control, and notes ranges reserved in the starter guide.",
     )
     check_required_regex(
         results,
@@ -1412,7 +1428,7 @@ def audit_docs(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter,
         "starter guide documents notes workflow setup",
-        r"Setup Notes Workflow.*ExistingMeetingNotes.*NewPlanningNotes.*NewTimeline.*NewStatus.*tblDecisionStaging.*apply_notes\.ts",
+        r"Setup Notes Workflow.*ApplyNotes Control.*ExistingMeetingNotes.*NewPlanningNotes.*NewTimeline.*NewStatus.*tblDecisionStaging.*apply_notes\.ts",
         "Document the notes workflow setup in the starter workbook guide.",
     )
     check_required_regex(
@@ -1649,6 +1665,7 @@ def audit_docs(results: list[Result]) -> None:
             office_scripts_readme,
             [
                 ("documents apply notes script", r"apply_notes\.ts.*Planning Review!P:R.*Decision Staging.*Planning Table"),
+                ("documents live ApplyNotes control status", r"apply_notes\.ts.*Planning Review!O1:R3.*last phase/result/next action"),
                 ("documents asset mapping script", r"apply_asset_mappings\.ts.*accepted asset setup rows.*asset mapping.*state-history"),
                 ("states formulas review and scripts write", r"Formula modules create review queues.*Office Scripts perform controlled writes"),
                 ("excludes RDF export", r"RDF/export is not part of this release"),
@@ -1661,10 +1678,12 @@ def audit_docs(results: list[Result]) -> None:
                 ("uses Decision Staging table", r"Decision Staging.*tblDecisionStaging"),
                 ("documents two-pass behavior", r"Run 1 reads Planning Review P:R.*refreshes formula-backed tblDecisionStaging.*Run 2 applies"),
                 ("writes expected fields", r"Planning Notes.*Timeline.*Comments.*Status"),
-                ("stages Planning Review source inputs", r"buildReviewPrepareRows.*reviewValues.*reviewRow\[15\].*refreshFormulaBackedApplyTableRows.*phase:\s*\"prepare\""),
+                ("stages Planning Review source inputs", r"buildReviewPrepareRows.*reviewValues.*reviewRow\[15\].*refreshFormulaBackedApplyTableRows.*finish\(\s*\"prepare\""),
                 ("preserves Decision Staging formula columns", r"indexedNotesFormula.*DROP\(Notes\.FromArrayv,1\).*ReviewRow.*refreshFormulaBackedApplyTableRows.*setColumnFormulas.*BudgetMatchCount"),
                 ("blocks duplicate staged Planning Table targets", r"duplicateTargetMessage.*Planning Review rows target Planning Table row.*preparedTargetCounts"),
-                ("uses clear operator statuses and reset", r"STATUS_BLOCKED.*STATUS_SKIPPED.*resetFormulaBackedApplyTable.*phase:\s*\"reset\""),
+                ("updates Planning Review control area", r"CONTROL_RANGE_ADDRESS\s*=\s*\"O1:R3\".*writeApplyNotesControl.*ApplyNotes Control.*Last Run.*Next Action.*finish.*writeApplyNotesControl"),
+                ("caps visible comment row height after archive", r"COMMENTS_ROW_HEIGHT_POINTS\s*=\s*45.*commentsRowsToFormat.*setWrapText\(true\).*setRowHeight\(COMMENTS_ROW_HEIGHT_POINTS\)"),
+                ("uses clear operator statuses and reset", r"STATUS_BLOCKED.*STATUS_SKIPPED.*resetFormulaBackedApplyTable.*finish\(\s*\"reset\""),
                 ("records operator-readable apply messages", r"Blocked: expected exactly 1 Planning Table match.*Prepared: matched Planning Table row.*Applied: updated"),
                 ("clears Planning Review source inputs", r"REVIEW_SHEET_NAME\s*=\s*\"Planning Review\".*REVIEW_INPUT_COL0\s*=\s*15.*clearReviewInputs.*cleared Planning Review P:R"),
                 ("does not overwrite staged input columns on apply", r"flushApplyTable.*applyStatusRange\.setValues.*msgRange\.setValues(?!.*newNoteRange\.setValues)"),
@@ -1820,6 +1839,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("selects ApplyNotes text when clipboard is blocked", r"selectApplyNotesScript.*focus\(\).*select\(\)"),
         ("logs standard setup completion", r"Standard setup complete\. Asset workflow remains optional"),
         ("defines notes workflow setup", r"notesWorkflow.*tblDecisionStaging.*ReviewRow.*ExistingMeetingNotes.*NewPlanningNotes.*NewTimeline.*NewStatus"),
+        ("creates visible ApplyNotes control area", r"formatPlanningReviewNotes.*O1:R3.*ApplyNotes Control.*Run 1: Prepare.*Run 2: Apply.*Check Decision Staging"),
         ("keys Decision Staging formulas by ReviewRow", r"indexedNotesFormula.*ReviewRow.*XMATCH.*CHOOSECOLS"),
         ("seeds Planning Review notes smoke input and script-driven staging", r"smokeInputRange:\s*\"P5:R5\".*setupNotesWorkflow.*allCellsBlank\(smokeRange\.values\).*Notes workflow ready: Planning Review P:R inputs will be staged by ApplyNotes run 1"),
         ("uses one smoke row and scalar BudgetMatchCount", r"stagingRowCount:\s*1.*BudgetMatchCount.*SUMPRODUCT.*INDEX.*Planning Table.*XMATCH\(\"Project Description\""),
@@ -2091,8 +2111,16 @@ def audit_addin_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document notes setup in normal path",
-        r"Setup Notes Workflow.*normal `Setup \+ Install \+ Validate \+ Outputs` path.*Planning Review!O:R.*tblDecisionStaging",
+        r"Setup Notes Workflow.*normal `Setup \+ Install \+ Validate \+ Outputs` path.*Planning Review!O1:R3.*ApplyNotes Control.*Planning Review!O:R.*tblDecisionStaging",
         "Document that notes setup is included in the normal setup path.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document live ApplyNotes control status",
+        r"`ApplyNotes` updates that control area after each normal run.*last phase.*result.*next action",
+        "Document that ApplyNotes updates the worksheet control area after it runs.",
     )
     check_required_regex(
         results,
@@ -2197,6 +2225,30 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records optional asset setup UI",
         r"Clarify optional asset setup UI.*Color-coded.*Setup Asset Workflow.*black text",
         "Record the optional asset setup UI correction.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records live ApplyNotes control area",
+        r"Make ApplyNotes control area live.*Planning Review!O1:R3.*last phase.*result counts.*next action",
+        "Record that ApplyNotes updates the worksheet control area after it runs.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records Planning Review ApplyNotes control area",
+        r"Add Planning Review ApplyNotes control area.*Planning Review!O1:R3.*ApplyNotes Control.*run `ApplyNotes` once to prepare.*run `ApplyNotes` again to apply",
+        "Record the visible workbook control area that explains the two-pass ApplyNotes flow.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records ApplyNotes comments row-height cap",
+        r"Cap visible ApplyNotes comment row height.*45-point height.*full `Comments` text remains stored",
+        "Record the visual row-height cap for ApplyNotes comment archives.",
     )
     check_required_regex(
         results,

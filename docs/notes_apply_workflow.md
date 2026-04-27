@@ -6,6 +6,10 @@ The notes workflow keeps meeting edits visible in Excel while making writeback e
 
 `Setup Notes Workflow` adds a notes block next to the main report on `Planning Review`.
 
+It also writes an `ApplyNotes Control` area in `Planning Review!O1:R3`. That control area is intentionally close to the notes columns and states the required operator sequence: type updates in `Planning Review!P:R`, run `ApplyNotes` once to prepare rows, check `Decision Staging`, then run `ApplyNotes` again to apply prepared rows and clear `P:R`.
+
+`ApplyNotes` updates the same `Planning Review!O1:R3` control area after each normal run. It records the current phase, last-run timestamp, result counts, and next action so the worksheet shows whether the operator should review `Decision Staging`, run the script again, fix blocked rows, or inspect the updated `Planning Table`.
+
 | Column | Header | Purpose |
 |---|---|---|
 | `O` | `ExistingMeetingNotes` | Helper/read-only context from the current report note state. |
@@ -68,6 +72,8 @@ The script writes only to controlled target fields on `Planning Table`:
 - `Status`
 
 After a successful apply, the script clears the matching `Planning Review!P:R` source inputs. Column `O` then surfaces the refreshed existing-note context from `Planning Table`.
+
+When `ApplyNotes` archives prior planning-note text into `Planning Table[Comments]`, it leaves the full cell text intact but caps the affected Planning Table row height to about three visible lines. Operators can still read the complete comment text in the cell or formula bar without letting one long archive entry expand the whole table row.
 
 ## Boundary
 

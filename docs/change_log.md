@@ -1,3 +1,66 @@
+## 2026-04-26 - Make ApplyNotes control area live
+
+Semantic change:
+
+- `office-scripts/apply_notes.ts` now updates `Planning Review!O1:R3` after each normal run.
+- The control area keeps the operator cue visible and shows the last phase, timestamp, result counts, and next action.
+- Prepare, apply, reset, and idle outcomes now leave workbook-visible guidance instead of relying only on the Office Script return value.
+
+Minimal diff summary:
+
+- Updated `office-scripts/apply_notes.ts`.
+- Updated Office Scripts / notes workflow docs and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: the `ApplyNotes Control` area changes after the script runs, so operators can see whether they should review `Decision Staging`, run the script again, fix blocked rows, or review the updated `Planning Table`.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-26 - Add Planning Review ApplyNotes control area
+
+Semantic change:
+
+- Added a visible `Planning Review!O1:R3` `ApplyNotes Control` area above the notes input columns.
+- The control area tells operators to type updates in `Planning Review!P:R`, run `ApplyNotes` once to prepare rows, inspect `Decision Staging`, then run `ApplyNotes` again to apply prepared rows and clear `P:R`.
+- Kept the existing notes input block at `Planning Review!O4:R200`.
+
+Minimal diff summary:
+
+- Updated `addin/taskpane.js`.
+- Updated notes workflow / add-in / starter docs and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: the worksheet now displays the two-pass ApplyNotes operator flow without requiring a user to read the script header.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-26 - Cap visible ApplyNotes comment row height
+
+Semantic change:
+
+- After `ApplyNotes` writes archived planning-note history into `Planning Table[Comments]`, the script keeps wrap enabled on the touched `Comments` cell and resets the affected Planning Table row height to a fixed 45-point height.
+- The full `Comments` text remains stored in the workbook cell; this is a visual row-height cap only.
+- The cap is applied only to rows whose `Comments` value is touched by `ApplyNotes`.
+
+Minimal diff summary:
+
+- Updated `office-scripts/apply_notes.ts`.
+- Updated Office Scripts / notes workflow docs and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: applying notes no longer leaves a Planning Table row expanded to many wrapped comment lines.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-26 - Key ApplyNotes staging by Planning Review row
 
 Semantic change:

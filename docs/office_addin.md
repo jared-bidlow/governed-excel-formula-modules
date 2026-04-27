@@ -25,7 +25,7 @@ The add-in is an installer and validator. It does not replace the formula module
 - Prints a validation summary showing sheets present, workbook names installed, header count, configured cap rows, bound controls, dropdown lists, and row-validation rules.
 - Inserts demo output formulas into predictable review sheets so a reviewer can inspect the implemented screens without typing formula names.
 - Provides an `ApplyNotes` setup helper in the task pane that loads the script template from `../office-scripts/apply_notes.ts`, copies it when clipboard access is available, displays the script text when clipboard access is blocked, and shows the exact Excel `Automate -> New Script` import step.
-- Runs `Setup Notes Workflow` as part of the normal `Setup + Install + Validate + Outputs` path, creating `Planning Review!O:R` notes columns, seeding public-safe `Planning Review!P5:R5` smoke input when blank, and creating formula-backed `Decision Staging` / `tblDecisionStaging` for the ApplyNotes first-pass staging step keyed by `ReviewRow`.
+- Runs `Setup Notes Workflow` as part of the normal `Setup + Install + Validate + Outputs` path, creating a visible `Planning Review!O1:R3` `ApplyNotes Control` area, creating `Planning Review!O:R` notes columns, seeding public-safe `Planning Review!P5:R5` smoke input when blank, and creating formula-backed `Decision Staging` / `tblDecisionStaging` for the ApplyNotes first-pass staging step keyed by `ReviewRow`.
 - Provides a standalone `Setup Asset Workflow` button for optional asset sheets, `tblAssets`, mapping/change/history tables, and asset relationship dropdowns; asset setup is not run from the default path.
 
 ## Local Trial Shape
@@ -90,7 +90,7 @@ The normal setup path also runs:
 Setup Notes Workflow
 ```
 
-That action creates the notes helper/input columns beside the report and refreshes `Decision Staging` / `tblDecisionStaging` for the controlled ApplyNotes script. It also seeds `Planning Review!P5:R5` on a fresh workbook, so ApplyNotes run 1 can stage a test row without manual typing. Multi-row staging uses `ReviewRow` to keep each staged row tied to the exact `Planning Review` source row, and duplicate staged writes to the same `Planning Table` row are blocked. A later script run with no current `Planning Review!P:R` inputs resets stale staging rows to a blank formula-backed row. See `docs/notes_apply_workflow.md`.
+That action creates the notes helper/input columns beside the report and refreshes `Decision Staging` / `tblDecisionStaging` for the controlled ApplyNotes script. It also writes an `ApplyNotes Control` area at `Planning Review!O1:R3` so the worksheet itself states: type in `P:R`, run once to prepare, inspect `Decision Staging`, then run again to apply. `ApplyNotes` updates that control area after each normal run with the last phase, result, and next action. It seeds `Planning Review!P5:R5` on a fresh workbook, so ApplyNotes run 1 can stage a test row without manual typing. Multi-row staging uses `ReviewRow` to keep each staged row tied to the exact `Planning Review` source row, and duplicate staged writes to the same `Planning Table` row are blocked. A later script run with no current `Planning Review!P:R` inputs resets stale staging rows to a blank formula-backed row. See `docs/notes_apply_workflow.md`.
 
 The optional asset workflow is separate:
 
@@ -145,7 +145,7 @@ The setup path is intentionally small and inspectable:
 - `Chargeable` is the chargeability input used by the `Search` and `Ready` helper modules. `Internal Eligible` is the readiness eligibility input used by `Ready.InternalEligible`. `Ready.InternalJobs_Export` computes `Internal Ready Final`; there is no source-table `Internal Ready`, no `JobFlag` starter column, and no separate visible `Eligible` fallback column.
 - `Composite Cat` remains a manual pre-formula helper for operator sorting, dedupe, and Excel Data > Subtotal workflows.
 - `Cap Setup` starts at `A2`, formats `Cap` as currency, and validates caps as non-negative numbers.
-- `Planning Review` uses `B2:E2` for visible controls, `M2:N2` for month controls, leaves `A4:N200` open for the main report spill, and leaves `O4:R200` open for note examples.
+- `Planning Review` uses `B2:E2` for visible controls, `M2:N2` for month controls, leaves `A4:N200` open for the main report spill, uses `O1:R3` for `ApplyNotes Control`, and leaves `O4:R200` open for note examples.
 - `Planning Review!O:R` is used by the notes workflow: `ExistingMeetingNotes`, `NewPlanningNotes`, `NewTimeline`, and `NewStatus`.
 - `Decision Staging` stores formula-backed `tblDecisionStaging`, the controlled staging table consumed by `office-scripts/apply_notes.ts`; ApplyNotes run 1 resizes it from `Planning Review!P:R` while preserving `ReviewRow`-keyed review/context/helper formulas.
 - `Validation Lists` stores the dropdown values used by the starter workbook.

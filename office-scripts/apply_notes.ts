@@ -7,6 +7,7 @@
  * Run 2 applies only rows already marked Prepared.
  * A later run with no Planning Review P:R inputs resets stale staging rows to one blank formula-backed row.
  * After a successful apply, clears the matching Planning Review P:R source inputs.
+ * Updates Planning Review O1:R3 with the latest operator status after each normal run.
  */
 function main(workbook: ExcelScript.Workbook): {
     phase: string;
@@ -31,12 +32,14 @@ function main(workbook: ExcelScript.Workbook): {
     const REVIEW_RANGE_ADDRESS = "A4:R200";
     const REVIEW_RANGE_ROW0 = 3; // A4:R200 starts on row 4
     const REVIEW_INPUT_COL0 = 15; // P:R source inputs
+    const CONTROL_RANGE_ADDRESS = "O1:R3";
 
     const HDR_KEY = "Project Description";
     const HDR_PLANNING_NOTES = "Planning Notes";
     const HDR_TIMELINE = "Timeline";
     const HDR_COMMENTS = "Comments";
     const HDR_STATUS = "Status";
+    const COMMENTS_ROW_HEIGHT_POINTS = 45;
     const STATUS_PREPARED = "Prepared";
     const STATUS_APPLIED = "Applied";
     const STATUS_BLOCKED = "Blocked";
@@ -59,6 +62,57 @@ function main(workbook: ExcelScript.Workbook): {
 
     const nowIso = (): string => new Date().toISOString(); // UTC timestamp
 
+    type RunSummary = {
+        phase: string;
+        prepared: number;
+        applied: number;
+        skipped: number;
+        errors: number;
+        timestampUtc: string;
+    };
+
+    const writeApplyNotesControl = (
+        phaseLabel: string,
+        result: string,
+        nextAction: string,
+        timestampUtc: string
+    ): void => {
+        const controlSheet = workbook.getWorksheet(REVIEW_SHEET_NAME);
+        if (!controlSheet) return;
+
+        const displayTimestamp = timestampUtc.substring(0, 19).replace("T", " ") + " UTC";
+        const controlRange = controlSheet.getRange(CONTROL_RANGE_ADDRESS);
+        controlRange.setValues([
+            ["ApplyNotes Control", "Last Run", "Result", "Next Action"],
+            [phaseLabel, displayTimestamp, result, nextAction],
+            ["Source: Planning Review P:R", "Staging: Decision Staging", "Writeback: Planning Table", "Column O refreshes after apply"]
+        ]);
+        controlRange.getFormat().setWrapText(true);
+        controlRange.getFormat().getFill().setColor("#EAF4E2");
+        controlSheet.getRange("O1:R1").getFormat().getFont().setBold(true);
+    };
+
+    const finish = (
+        phase: string,
+        prepared: number,
+        applied: number,
+        skipped: number,
+        errors: number,
+        timestampUtc: string,
+        result: string,
+        nextAction: string
+    ): RunSummary => {
+        writeApplyNotesControl(phase, result, nextAction, timestampUtc);
+        return {
+            phase,
+            prepared,
+            applied,
+            skipped,
+            errors,
+            timestampUtc
+        };
+    };
+
     // ---- Get Apply table ----
     const applySheet = workbook.getWorksheet(APPLY_SHEET_NAME);
     if (!applySheet) throw new Error(`Worksheet not found: ${APPLY_SHEET_NAME}`);
@@ -70,14 +124,16 @@ function main(workbook: ExcelScript.Workbook): {
     const applyValues = applyRange.getValues() as TableCell[][];
 
     if (applyValues.length < 2) {
-        return {
-            phase: "idle",
-            prepared: 0,
-            applied: 0,
-            skipped: 0,
-            errors: 0,
-            timestampUtc: nowIso()
-        };
+        return finish(
+            "idle",
+            0,
+            0,
+            0,
+            0,
+            nowIso(),
+            "No staging rows are available.",
+            "Run Setup Notes Workflow, then type updates in Planning Review P:R."
+        );
     }
 
     const applyHeaders = applyValues[0].map(h => norm(h));
@@ -505,27 +561,33 @@ function main(workbook: ExcelScript.Workbook): {
             app.calculate(ExcelScript.CalculationType.fullRebuild);
             const preparedCount = reviewPrepareRows.filter(row => row.applyStatus === STATUS_PREPARED).length;
             const blockedCount = reviewPrepareRows.length - preparedCount;
-            return {
-                phase: "prepare",
-                prepared: preparedCount,
-                applied: 0,
-                skipped: blockedCount,
-                errors: 0,
-                timestampUtc: timestamp
-            };
+            return finish(
+                "prepare",
+                preparedCount,
+                0,
+                blockedCount,
+                0,
+                timestamp,
+                `${preparedCount} row(s) prepared; ${blockedCount} blocked.`,
+                preparedCount > 0
+                    ? "Review Decision Staging, then run ApplyNotes again."
+                    : "Fix blocked rows or enter valid Planning Review P:R updates."
+            );
         }
 
         if (needsStagingReset()) {
             resetFormulaBackedApplyTable();
             app.calculate(ExcelScript.CalculationType.fullRebuild);
-            return {
-                phase: "reset",
-                prepared: 0,
-                applied: 0,
-                skipped: 0,
-                errors: 0,
-                timestampUtc: timestamp
-            };
+            return finish(
+                "reset",
+                0,
+                0,
+                0,
+                0,
+                timestamp,
+                "No current P:R inputs. Decision Staging reset.",
+                "Type updates in Planning Review P:R, then run ApplyNotes."
+            );
         }
     }
 
@@ -535,6 +597,14 @@ function main(workbook: ExcelScript.Workbook): {
     let skippedCount = 0;
     let errorCount = 0;
     let stagedCount = 0;
+    const commentsRowsToFormat: number[] = [];
+
+    const markCommentsRowForFormat = (budgetRow0: number): void => {
+        for (const row0 of commentsRowsToFormat) {
+            if (row0 === budgetRow0) return;
+        }
+        commentsRowsToFormat.push(budgetRow0);
+    };
 
     const preparedTargetCounts: { [row: string]: number } = {};
     for (let r = 0; r < data.length; r++) {
@@ -608,6 +678,7 @@ function main(workbook: ExcelScript.Workbook): {
         const budgetRow0 = budgetRow1 - 1; // 0-based
         const bufRow = budgetRow0 - budgetDataStartRow0;
         const messages: string[] = [];
+        let commentsTouched = false;
 
         try {
             const pmOld = norm(pmVals[bufRow][0]);
@@ -618,6 +689,7 @@ function main(workbook: ExcelScript.Workbook): {
                 if (pmOld !== "") {
                     const archiveLine = timestamp.substring(0, 10) + " | " + pmOld;
                     cmVals[bufRow][0] = archiveLine + (cmOld !== "" ? ("\n" + cmOld) : "");
+                    commentsTouched = true;
                 }
 
                 // 2. Write new Planning Notes clean (no timestamp)
@@ -633,6 +705,7 @@ function main(workbook: ExcelScript.Workbook): {
             if (cmNew !== "") {
                 cmVals[bufRow][0] = cmNew;
                 messages.push("Comments");
+                commentsTouched = true;
             }
 
             if (writeStatus && statusNew !== "") {
@@ -655,6 +728,9 @@ function main(workbook: ExcelScript.Workbook): {
             msgVals[r][0] = "Applied: updated " + messages.join(" + ");
 
             appliedCount++;
+            if (commentsTouched) {
+                markCommentsRowForFormat(budgetRow0);
+            }
 
             const reviewRowOffset = findReviewInputRowOffset(reviewRow1, projDesc, rawNote, rawTL, rawStatus);
             if (reviewRowOffset !== undefined) {
@@ -674,14 +750,16 @@ function main(workbook: ExcelScript.Workbook): {
     }
 
     if (stagedCount === 0) {
-        return {
-            phase: "idle",
-            prepared: 0,
-            applied: 0,
-            skipped: 0,
-            errors: 0,
-            timestampUtc: timestamp
-        };
+        return finish(
+            "idle",
+            0,
+            0,
+            0,
+            0,
+            timestamp,
+            "No prepared staging rows were available to apply.",
+            "Type updates in P:R or run once to prepare rows."
+        );
     }
 
     // ---- Write back to Budget ----
@@ -696,12 +774,22 @@ function main(workbook: ExcelScript.Workbook): {
     // Force a visible settle pass after source review inputs are cleared.
     app.calculate(ExcelScript.CalculationType.fullRebuild);
 
-    return {
-        phase: "apply",
-        prepared: preparedRemaining,
-        applied: appliedCount,
-        skipped: skippedCount,
-        errors: errorCount,
-        timestampUtc: timestamp
-    };
+    // Keep archived comments readable without letting row height grow indefinitely.
+    for (const row0 of commentsRowsToFormat) {
+        budgetSheet.getRangeByIndexes(row0, cCM, 1, 1).getFormat().setWrapText(true);
+        budgetSheet.getRangeByIndexes(row0, usedCol0, 1, used.getColumnCount()).getFormat().setRowHeight(COMMENTS_ROW_HEIGHT_POINTS);
+    }
+
+    return finish(
+        "apply",
+        preparedRemaining,
+        appliedCount,
+        skippedCount,
+        errorCount,
+        timestamp,
+        `${appliedCount} row(s) applied; ${skippedCount} skipped or blocked; ${errorCount} error(s).`,
+        errorCount > 0 || skippedCount > 0
+            ? "Review Decision Staging ApplyMessage before running again."
+            : "Review Planning Table. Matching P:R inputs were cleared."
+    );
 }

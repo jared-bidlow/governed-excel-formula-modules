@@ -869,6 +869,14 @@
   }
 
   function formatPlanningReviewNotes(sheet) {
+    sheet.getRange("O1:R3").values = [
+      ["ApplyNotes Control", "Run 1: Prepare", "Run 2: Apply", "After Apply"],
+      ["Type updates in P:R", "Run ApplyNotes once", "Run ApplyNotes again", "P:R clears"],
+      ["Check Decision Staging", "Rows should say Prepared", "Prepared rows write back", "Column O refreshes"]
+    ];
+    sheet.getRange("O1:R3").format.fill.color = "#EAF4E2";
+    sheet.getRange("O1:R3").format.wrapText = true;
+    sheet.getRange("O1:R1").format.font.bold = true;
     sheet.getRange("O4:R4").values = [notesWorkflow.noteHeaders];
     sheet.getRange("O4:R4").format.font.bold = true;
     sheet.getRange("O4:R4").format.fill.color = "#D9EAF7";
