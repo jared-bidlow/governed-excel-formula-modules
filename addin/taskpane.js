@@ -43,6 +43,7 @@
       smokeInputValues: [["Review forecast against latest meeting note", "Apr", "Review"]],
       noteHeaders: ["ExistingMeetingNotes", "NewPlanningNotes", "NewTimeline", "NewStatus"],
       stagingHeaders: [
+        "ReviewRow",
         "GroupType",
         "GroupValue",
         "Category",
@@ -494,6 +495,7 @@
       appendLog("Clipboard was blocked. The ApplyNotes script text is displayed in the task pane.");
     }
     appendLog("In Excel: Automate > New Script, replace the default code, then save as ApplyNotes.");
+    appendLog("Use ApplyNotes in two passes: run once to prepare Decision Staging from Planning Review P:R, inspect ApplyMessage, then run again to apply.");
   }
 
   async function setupWorkbook() {
@@ -563,7 +565,7 @@
       await context.sync();
     });
 
-    appendLog("Notes workflow ready: Planning Review P:R inputs will be staged by ApplyNotes run 1.");
+    appendLog("Notes workflow ready: Planning Review P:R inputs will be staged by ApplyNotes run 1. Run ApplyNotes again to apply prepared rows.");
   }
 
   async function setupAssetWorkflow() {
@@ -886,19 +888,19 @@
 
   function configureDecisionStagingFormulas(table, rowCount) {
     const stagingColumns = [
-      ["GroupType", 1],
-      ["GroupValue", 2],
-      ["Category", 3],
-      ["ProjDesc", 4],
-      ["AnnualProj", 5],
-      ["ActualsYTD", 6],
-      ["ExistingMeetingNotes", 7],
-      ["NewPlanningNotes", 8],
-      ["NewTimeline", 9],
-      ["NewStatus", 10]
+      ["GroupType", 2],
+      ["GroupValue", 3],
+      ["Category", 4],
+      ["ProjDesc", 5],
+      ["AnnualProj", 6],
+      ["ActualsYTD", 7],
+      ["ExistingMeetingNotes", 8],
+      ["NewPlanningNotes", 9],
+      ["NewTimeline", 10],
+      ["NewStatus", 11]
     ];
     for (const [header, sourceIndex] of stagingColumns) {
-      setTableColumnFormulas(table, header, indexedNotesFormulas(rowCount, sourceIndex));
+      setTableColumnFormulas(table, header, repeatedFormulas(rowCount, indexedNotesFormula(sourceIndex)));
     }
 
     setTableColumnFormulas(
@@ -919,12 +921,9 @@
     setTableColumnFormulas(table, "ApplyReady", repeatedFormulas(rowCount, '=AND([@ProjDesc]<>"",[@BudgetMatchCount]=1,OR([@NewPlanningNotes]<>"",[@NewTimeline]<>"",[@NewStatus]<>""))'));
   }
 
-  function indexedNotesFormulas(rowCount, sourceIndex) {
-    const formulas = [];
-    for (let row = 1; row <= rowCount; row += 1) {
-      formulas.push(`=IFERROR(INDEX(DROP(Notes.FromArrayv,1),${row},${sourceIndex}),"")`);
-    }
-    return formulas;
+  function indexedNotesFormula(sourceIndex) {
+    const sourceRows = "DROP(Notes.FromArrayv,1)";
+    return `=IF([@ReviewRow]="","",IFERROR(INDEX(${sourceRows},XMATCH([@ReviewRow],CHOOSECOLS(${sourceRows},1),0),${sourceIndex}),""))`;
   }
 
   function repeatedFormulas(rowCount, formula) {

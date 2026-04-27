@@ -733,6 +733,14 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "docs/notes_apply_workflow.md",
         notes_workflow,
+        "notes workflow documents ApplyNotes statuses and reset",
+        r"Status meanings:.*Prepared.*Applied.*Blocked.*Skipped.*Error.*resets stale non-prepared staging rows",
+        "Document operator-visible ApplyNotes statuses and reset behavior.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
         "notes workflow documents writeback targets",
         r"Planning Notes.*Timeline.*Comments.*Status",
         "Document the controlled Planning Table writeback targets.",
@@ -749,6 +757,14 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "docs/notes_apply_workflow.md",
         notes_workflow,
+        "notes workflow documents ReviewRow staging identity",
+        r"records the source worksheet row in `ReviewRow`.*formulas keyed by `ReviewRow`.*blocks duplicate staged rows",
+        "Document that multi-row staging is keyed by source Planning Review row and duplicate targets are blocked.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
         "notes workflow documents Planning Review to script staging",
         r"Planning Review!P5:R5.*ApplyNotes.*tblDecisionStaging",
         "Document that ApplyNotes smoke input originates on Planning Review and is staged by the script.",
@@ -758,8 +774,8 @@ def audit_docs(results: list[Result]) -> None:
         "modules/notes.formula.txt",
         notes_formula,
         "Notes.FromArrayv carries Planning Review O:R into staging source",
-        r"meetHdrs, 'Planning Review'!\$o\$4:\$r\$4.*allHdrs, SUBSTITUTE\(meetHdrs, \" \", \"\"\).*allData, TAKE\(IF\(meetData = \"\", \"\", meetData\), n\).*HSTACK\(baseHdrs, allHdrs\).*FILTER\(HSTACK\(baseData, allData\), keep",
-        "Keep the staging source formula connected to Planning Review O:R, including ExistingMeetingNotes.",
+        r"reviewRows, SEQUENCE\(n, 1, 5, 1\).*\"ReviewRow\".*meetHdrs, 'Planning Review'!\$o\$4:\$r\$4.*allHdrs, SUBSTITUTE\(meetHdrs, \" \", \"\"\).*allData, TAKE\(IF\(meetData = \"\", \"\", meetData\), n\).*HSTACK\(baseHdrs, allHdrs\).*FILTER\(HSTACK\(baseData, allData\), keep",
+        "Keep the staging source formula connected to Planning Review O:R and carrying ReviewRow identity.",
     )
     check_required_regex(
         results,
@@ -1594,7 +1610,7 @@ def audit_docs(results: list[Result]) -> None:
         "Keep cap starter data fake and generic.",
     )
     workflow_starters = [
-        ("samples/decision_staging_starter.tsv", decision_starter, 22, r"GroupType\tGroupValue\tCategory\tProjDesc.*BudgetRowFound"),
+        ("samples/decision_staging_starter.tsv", decision_starter, 23, r"ReviewRow\tGroupType\tGroupValue\tCategory\tProjDesc.*BudgetRowFound"),
         ("samples/asset_setup_starter.tsv", asset_setup_starter, 15, r"ProjectKey\tCandidateAssetId\tProjectDescription.*ApplyMessage.*ProjectKey\tProjectDescription\tChangeType.*ApplyMessage"),
         ("samples/project_asset_map_starter.tsv", project_asset_map_starter, 11, r"ProjectKey\tProjectDescription\tAssetId\tAssetLabel\tAssetType\tAssetState\tEvidenceId\tMappingStatus\tApplyStatus\tAppliedOn\tApplyMessage"),
         ("samples/semantic_assets_starter.tsv", semantic_assets_starter, 15, r"ProjectKey\tProjectDescription\tCandidateAssetId\tAssetLabel\tAssetType\tProposedChangeType.*ApplyMessage"),
@@ -1645,8 +1661,11 @@ def audit_docs(results: list[Result]) -> None:
                 ("uses Decision Staging table", r"Decision Staging.*tblDecisionStaging"),
                 ("documents two-pass behavior", r"Run 1 reads Planning Review P:R.*refreshes formula-backed tblDecisionStaging.*Run 2 applies"),
                 ("writes expected fields", r"Planning Notes.*Timeline.*Comments.*Status"),
-                ("stages Planning Review source inputs", r"buildReviewPrepareRows.*reviewValues.*reviewRow\[15\].*prepareFormulaBackedApplyTableRows.*phase:\s*\"prepare\""),
-                ("preserves Decision Staging formula columns", r"indexedNotesFormulas.*DROP\(Notes\.FromArrayv,1\).*prepareFormulaBackedApplyTableRows.*setColumnFormulas.*BudgetMatchCount"),
+                ("stages Planning Review source inputs", r"buildReviewPrepareRows.*reviewValues.*reviewRow\[15\].*refreshFormulaBackedApplyTableRows.*phase:\s*\"prepare\""),
+                ("preserves Decision Staging formula columns", r"indexedNotesFormula.*DROP\(Notes\.FromArrayv,1\).*ReviewRow.*refreshFormulaBackedApplyTableRows.*setColumnFormulas.*BudgetMatchCount"),
+                ("blocks duplicate staged Planning Table targets", r"duplicateTargetMessage.*Planning Review rows target Planning Table row.*preparedTargetCounts"),
+                ("uses clear operator statuses and reset", r"STATUS_BLOCKED.*STATUS_SKIPPED.*resetFormulaBackedApplyTable.*phase:\s*\"reset\""),
+                ("records operator-readable apply messages", r"Blocked: expected exactly 1 Planning Table match.*Prepared: matched Planning Table row.*Applied: updated"),
                 ("clears Planning Review source inputs", r"REVIEW_SHEET_NAME\s*=\s*\"Planning Review\".*REVIEW_INPUT_COL0\s*=\s*15.*clearReviewInputs.*cleared Planning Review P:R"),
                 ("does not overwrite staged input columns on apply", r"flushApplyTable.*applyStatusRange\.setValues.*msgRange\.setValues(?!.*newNoteRange\.setValues)"),
             ],
@@ -1795,11 +1814,13 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("binds ApplyNotes copy action", r'bind\("copyApplyNotesScript",\s*copyApplyNotesScript\)'),
         ("loads and displays ApplyNotes script text", r"copyApplyNotesScript.*fetchText\(applyNotesScriptPath\).*showApplyNotesScript\(applyNotesText\)"),
         ("copies ApplyNotes script text", r"copyApplyNotesScript.*copyTextToClipboard\(applyNotesText\)"),
+        ("explains two-pass ApplyNotes use", r"Use ApplyNotes in two passes.*run once to prepare Decision Staging.*run again to apply"),
         ("logs ApplyNotes script import step", r"Automate > New Script"),
         ("uses clipboard fallback", r"copyTextToClipboard.*navigator\.clipboard.*catch.*legacyCopyText"),
         ("selects ApplyNotes text when clipboard is blocked", r"selectApplyNotesScript.*focus\(\).*select\(\)"),
         ("logs standard setup completion", r"Standard setup complete\. Asset workflow remains optional"),
-        ("defines notes workflow setup", r"notesWorkflow.*tblDecisionStaging.*ExistingMeetingNotes.*NewPlanningNotes.*NewTimeline.*NewStatus"),
+        ("defines notes workflow setup", r"notesWorkflow.*tblDecisionStaging.*ReviewRow.*ExistingMeetingNotes.*NewPlanningNotes.*NewTimeline.*NewStatus"),
+        ("keys Decision Staging formulas by ReviewRow", r"indexedNotesFormula.*ReviewRow.*XMATCH.*CHOOSECOLS"),
         ("seeds Planning Review notes smoke input and script-driven staging", r"smokeInputRange:\s*\"P5:R5\".*setupNotesWorkflow.*allCellsBlank\(smokeRange\.values\).*Notes workflow ready: Planning Review P:R inputs will be staged by ApplyNotes run 1"),
         ("uses one smoke row and scalar BudgetMatchCount", r"stagingRowCount:\s*1.*BudgetMatchCount.*SUMPRODUCT.*INDEX.*Planning Table.*XMATCH\(\"Project Description\""),
         ("defines asset workflow setup", r"assetWorkflow.*tblAssets.*tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory"),
@@ -1912,6 +1933,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "task pane has ApplyNotes import instruction",
         r"Automate</code> -> <code>New Script</code>.*save as <code>ApplyNotes</code>",
         "Show the exact script import step in the task pane.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.html",
+        taskpane_html,
+        "task pane explains ApplyNotes two-pass workflow",
+        r"Planning Review!P:R.*Run <code>ApplyNotes</code> once to prepare.*run it again to apply",
+        "Keep the two-pass ApplyNotes operator flow visible in the task pane.",
     )
     check_required_regex(
         results,
@@ -2168,6 +2197,22 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records optional asset setup UI",
         r"Clarify optional asset setup UI.*Color-coded.*Setup Asset Workflow.*black text",
         "Record the optional asset setup UI correction.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records ReviewRow ApplyNotes staging fix",
+        r"Key ApplyNotes staging by Planning Review row.*ReviewRow.*duplicating the first staged source row.*duplicate staged writes",
+        "Record the ApplyNotes multi-row staging identity fix.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records ApplyNotes message and reset tightening",
+        r"Tighten ApplyNotes messages and staging reset.*Blocked.*Skipped.*reset path.*two-pass operator flow",
+        "Record ApplyNotes message and reset behavior changes.",
     )
     check_required_regex(
         results,

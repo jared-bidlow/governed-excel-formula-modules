@@ -3,8 +3,9 @@
  * Budget headers are on row 2. Key header is 'Project Description'.
  * Updates: 'Planning Notes', 'Timeline', 'Comments', 'Status'
  * Writes back status fields to tblDecisionStaging: ApplyStatus, AppliedOn, ApplyMessage, BudgetRowFound
- * Run 1 reads Planning Review P:R and refreshes formula-backed tblDecisionStaging rows.
+ * Run 1 reads Planning Review P:R, records ReviewRow, and refreshes formula-backed tblDecisionStaging rows.
  * Run 2 applies only rows already marked Prepared.
+ * A later run with no Planning Review P:R inputs resets stale staging rows to one blank formula-backed row.
  * After a successful apply, clears the matching Planning Review P:R source inputs.
  */
 function main(workbook: ExcelScript.Workbook): {
@@ -38,6 +39,8 @@ function main(workbook: ExcelScript.Workbook): {
     const HDR_STATUS = "Status";
     const STATUS_PREPARED = "Prepared";
     const STATUS_APPLIED = "Applied";
+    const STATUS_BLOCKED = "Blocked";
+    const STATUS_SKIPPED = "Skipped";
     const STATUS_ERROR = "Error";
 
     // ---- Helpers ----
@@ -88,6 +91,7 @@ function main(workbook: ExcelScript.Workbook): {
     };
 
     // Required input columns
+    const iReviewRow = colIndex("ReviewRow");
     const iProjDesc = colIndex("ProjDesc");
     const iApplyReady = colIndex("ApplyReady");
     const iKeyStatus = colIndex("KeyStatus");
@@ -176,12 +180,28 @@ function main(workbook: ExcelScript.Workbook): {
     const reviewProjDescIndex = reviewHeaders.indexOf(HDR_KEY);
 
     const findReviewInputRowOffset = (
+        reviewRow1: number | undefined,
         projDesc: string,
         rawNote: string,
         rawTimeline: string,
         rawStatus: string
     ): number | undefined => {
         if (!reviewSheet || reviewProjDescIndex < 0 || reviewValues.length < 2) return undefined;
+
+        if (reviewRow1 !== undefined && reviewRow1 > REVIEW_RANGE_ROW0 + 1) {
+            const offset = reviewRow1 - REVIEW_RANGE_ROW0 - 1;
+            if (offset > 0 && offset < reviewValues.length) {
+                const reviewRow = reviewValues[offset];
+                if (
+                    norm(reviewRow[reviewProjDescIndex]) === projDesc &&
+                    norm(reviewRow[15]) === rawNote &&
+                    norm(reviewRow[16]) === rawTimeline &&
+                    norm(reviewRow[17]) === rawStatus
+                ) {
+                    return offset;
+                }
+            }
+        }
 
         for (let r = 1; r < reviewValues.length; r++) {
             if (norm(reviewValues[r][reviewProjDescIndex]) !== projDesc) continue;
@@ -242,27 +262,52 @@ function main(workbook: ExcelScript.Workbook): {
         msgRange.setValues(msgVals);
     };
 
+    const blockMessage = (
+        projDesc: string,
+        applyReady: boolean,
+        keyStatus: string,
+        matchCount: number,
+        budgetRow1: number | undefined
+    ): string => {
+        if (!projDesc) return "Blocked: Project Description is blank. Enter notes beside a populated Planning Review report row.";
+        if (matchCount !== 1) return `Blocked: expected exactly 1 Planning Table match for '${projDesc}', found ${isNaN(matchCount) ? "blank" : String(matchCount)}.`;
+        if (dupKey[projDesc]) return `Blocked: Planning Table has duplicate rows for '${projDesc}'.`;
+        if (budgetRow1 === undefined) return `Blocked: Planning Table row for '${projDesc}' could not be resolved.`;
+        if (keyStatus !== "OK") return `Blocked: KeyStatus is '${keyStatus || "blank"}'.`;
+        if (!applyReady) return "Blocked: ApplyReady is not TRUE.";
+        return "Blocked: row is not eligible to apply.";
+    };
+
+    const duplicateTargetMessage = (budgetRow1: number, count: number): string => {
+        return `Blocked: ${count} Planning Review rows target Planning Table row ${budgetRow1}. Leave one update per target row, then run ApplyNotes again.`;
+    };
+
+    const isApplyEligible = (
+        projDesc: string,
+        applyReady: boolean,
+        keyStatus: string,
+        matchCount: number,
+        budgetRow1: number | undefined
+    ): boolean => {
+        return projDesc !== ""
+            && applyReady
+            && keyStatus === "OK"
+            && matchCount === 1
+            && !dupKey[projDesc]
+            && budgetRow1 !== undefined;
+    };
+
     const prepMessage = (
         projDesc: string,
         applyReady: boolean,
         keyStatus: string,
-        matchCount: number
+        matchCount: number,
+        budgetRow1: number | undefined
     ): string => {
-        const waits: string[] = [];
-        if (!projDesc) waits.push("ProjDesc");
-        if (dupKey[projDesc]) {
-            waits.push("unique Budget key");
-        } else if (projDesc && keyToRow[projDesc] === undefined) {
-            waits.push("Budget match");
+        if (!isApplyEligible(projDesc, applyReady, keyStatus, matchCount, budgetRow1)) {
+            return blockMessage(projDesc, applyReady, keyStatus, matchCount, budgetRow1);
         }
-        if (!applyReady) waits.push("ApplyReady");
-        if (keyStatus !== "OK") waits.push("KeyStatus");
-        if (matchCount !== 1) waits.push("BudgetMatchCount");
-
-        if (waits.length > 0) {
-            return "Prepared; waiting on " + waits.join(", ") + ". Run ApplyNotes again after they settle.";
-        }
-        return "Prepared; run ApplyNotes again to commit staged rows.";
+        return `Prepared: matched Planning Table row ${budgetRow1}. Review Decision Staging, then run ApplyNotes again to apply.`;
     };
 
     const hasPreparedStagingRows = (): boolean => {
@@ -285,15 +330,26 @@ function main(workbook: ExcelScript.Workbook): {
     };
 
     type PrepareRow = {
+        reviewRow: TableCell;
+        applyStatus: string;
         budgetRowFound: TableCell;
         applyMessage: string;
+    };
+
+    type ReviewCandidate = {
+        reviewRow: number;
+        projDesc: string;
+        matchCount: number;
+        budgetRow1: number | undefined;
+        keyStatus: string;
+        applyReady: boolean;
     };
 
     const buildReviewPrepareRows = (): PrepareRow[] => {
         if (!reviewSheet || reviewValues.length < 2) return [];
 
         const iDesc = reviewHeaderIndex(HDR_KEY);
-        const rows: PrepareRow[] = [];
+        const candidates: ReviewCandidate[] = [];
 
         for (let r = 1; r < reviewValues.length; r++) {
             const reviewRow = reviewValues[r];
@@ -309,9 +365,39 @@ function main(workbook: ExcelScript.Workbook): {
             const keyStatus = projDesc === "" ? "" : (matchCount === 1 ? "OK" : "BLOCKED");
             const applyReady = projDesc !== "" && matchCount === 1;
 
+            candidates.push({
+                reviewRow: REVIEW_RANGE_ROW0 + r + 1,
+                projDesc,
+                matchCount,
+                budgetRow1,
+                keyStatus,
+                applyReady
+            });
+        }
+
+        const targetCounts: { [row: string]: number } = {};
+        for (const candidate of candidates) {
+            if (candidate.budgetRow1 === undefined) continue;
+            const rowKey = String(candidate.budgetRow1);
+            targetCounts[rowKey] = (targetCounts[rowKey] || 0) + 1;
+        }
+
+        const rows: PrepareRow[] = [];
+        for (const candidate of candidates) {
+            const duplicateTargetCount = candidate.budgetRow1 === undefined
+                ? 0
+                : (targetCounts[String(candidate.budgetRow1)] || 0);
+            const hasDuplicateTarget = candidate.budgetRow1 !== undefined && duplicateTargetCount > 1;
+            const eligible = !hasDuplicateTarget
+                && isApplyEligible(candidate.projDesc, candidate.applyReady, candidate.keyStatus, candidate.matchCount, candidate.budgetRow1);
+
             rows.push({
-                budgetRowFound: budgetRow1 === undefined ? "" : budgetRow1,
-                applyMessage: prepMessage(projDesc, applyReady, keyStatus, matchCount)
+                reviewRow: candidate.reviewRow,
+                applyStatus: eligible ? STATUS_PREPARED : STATUS_BLOCKED,
+                budgetRowFound: candidate.budgetRow1 === undefined ? "" : candidate.budgetRow1,
+                applyMessage: hasDuplicateTarget && candidate.budgetRow1 !== undefined
+                    ? duplicateTargetMessage(candidate.budgetRow1, duplicateTargetCount)
+                    : prepMessage(candidate.projDesc, candidate.applyReady, candidate.keyStatus, candidate.matchCount, candidate.budgetRow1)
             });
         }
 
@@ -336,15 +422,12 @@ function main(workbook: ExcelScript.Workbook): {
         return formulas;
     };
 
-    const indexedNotesFormulas = (rowCount: number, sourceIndex: number): string[] => {
-        const formulas: string[] = [];
-        for (let row = 1; row <= rowCount; row++) {
-            formulas.push(`=IFERROR(INDEX(DROP(Notes.FromArrayv,1),${row},${sourceIndex}),"")`);
-        }
-        return formulas;
+    const indexedNotesFormula = (sourceIndex: number): string => {
+        const sourceRows = "DROP(Notes.FromArrayv,1)";
+        return `=IF([@ReviewRow]="","",IFERROR(INDEX(${sourceRows},XMATCH([@ReviewRow],CHOOSECOLS(${sourceRows},1),0),${sourceIndex}),""))`;
     };
 
-    const prepareFormulaBackedApplyTableRows = (rows: PrepareRow[]): void => {
+    const refreshFormulaBackedApplyTableRows = (rows: PrepareRow[]): void => {
         const rowCount = rows.length;
         const currentRowCount = applyTable.getRangeBetweenHeaderAndTotal().getRowCount();
 
@@ -361,19 +444,19 @@ function main(workbook: ExcelScript.Workbook): {
         applyTable.getRangeBetweenHeaderAndTotal().clear(ExcelScript.ClearApplyTo.contents);
 
         const stagingColumns: [string, number][] = [
-            ["GroupType", 1],
-            ["GroupValue", 2],
-            ["Category", 3],
-            ["ProjDesc", 4],
-            ["AnnualProj", 5],
-            ["ActualsYTD", 6],
-            ["ExistingMeetingNotes", 7],
-            ["NewPlanningNotes", 8],
-            ["NewTimeline", 9],
-            ["NewStatus", 10]
+            ["GroupType", 2],
+            ["GroupValue", 3],
+            ["Category", 4],
+            ["ProjDesc", 5],
+            ["AnnualProj", 6],
+            ["ActualsYTD", 7],
+            ["ExistingMeetingNotes", 8],
+            ["NewPlanningNotes", 9],
+            ["NewTimeline", 10],
+            ["NewStatus", 11]
         ];
         for (const [columnName, sourceIndex] of stagingColumns) {
-            setColumnFormulas(columnName, indexedNotesFormulas(rowCount, sourceIndex));
+            setColumnFormulas(columnName, repeatedFormulas(rowCount, indexedNotesFormula(sourceIndex)));
         }
 
         setColumnFormulas("ApplyAction", repeatedFormulas(rowCount, '=IF(OR([@NewPlanningNotes]<>"",[@NewTimeline]<>"",[@NewStatus]<>""),"NOTE_TIMELINE_STATUS","")'));
@@ -385,20 +468,59 @@ function main(workbook: ExcelScript.Workbook): {
         setColumnFormulas("KeyStatus", repeatedFormulas(rowCount, '=IF([@ProjDesc]="","",IF([@BudgetMatchCount]=1,"OK","BLOCKED"))'));
         setColumnFormulas("ApplyReady", repeatedFormulas(rowCount, '=AND([@ProjDesc]<>"",[@BudgetMatchCount]=1,OR([@NewPlanningNotes]<>"",[@NewTimeline]<>"",[@NewStatus]<>""))'));
 
-        setColumnValues("ApplyStatus", rows.map(() => STATUS_PREPARED));
+        setColumnValues("ReviewRow", rows.map(row => row.reviewRow));
+        setColumnValues("ApplyStatus", rows.map(row => row.applyStatus));
         setColumnValues("AppliedOn", rows.map(() => ""));
         setColumnValues("ApplyMessage", rows.map(row => row.applyMessage));
         setColumnValues("BudgetRowFound", rows.map(row => row.budgetRowFound));
     };
 
-    if (!hasPreparedStagingRows()) {
+    const resetFormulaBackedApplyTable = (): void => {
+        refreshFormulaBackedApplyTableRows([{
+            reviewRow: "",
+            applyStatus: "",
+            budgetRowFound: "",
+            applyMessage: ""
+        }]);
+    };
+
+    const needsStagingReset = (): boolean => {
+        if (data.length !== 1) return true;
+        for (let r = 0; r < data.length; r++) {
+            if (norm(data[r]?.[iReviewRow]) !== "") return true;
+            if (norm(applyStatusVals[r]?.[0]) !== "") return true;
+            if (norm(appliedOnVals[r]?.[0]) !== "") return true;
+            if (norm(foundVals[r]?.[0]) !== "") return true;
+            if (norm(msgVals[r]?.[0]) !== "") return true;
+        }
+        return false;
+    };
+
+    const preparedRowsPending = hasPreparedStagingRows();
+
+    if (!preparedRowsPending) {
         const reviewPrepareRows = buildReviewPrepareRows();
         if (reviewPrepareRows.length > 0) {
-            prepareFormulaBackedApplyTableRows(reviewPrepareRows);
+            refreshFormulaBackedApplyTableRows(reviewPrepareRows);
             app.calculate(ExcelScript.CalculationType.fullRebuild);
+            const preparedCount = reviewPrepareRows.filter(row => row.applyStatus === STATUS_PREPARED).length;
+            const blockedCount = reviewPrepareRows.length - preparedCount;
             return {
                 phase: "prepare",
-                prepared: reviewPrepareRows.length,
+                prepared: preparedCount,
+                applied: 0,
+                skipped: blockedCount,
+                errors: 0,
+                timestampUtc: timestamp
+            };
+        }
+
+        if (needsStagingReset()) {
+            resetFormulaBackedApplyTable();
+            app.calculate(ExcelScript.CalculationType.fullRebuild);
+            return {
+                phase: "reset",
+                prepared: 0,
                 applied: 0,
                 skipped: 0,
                 errors: 0,
@@ -407,64 +529,28 @@ function main(workbook: ExcelScript.Workbook): {
         }
     }
 
-    let needsPrepare = false;
-    for (let r = 0; r < data.length; r++) {
-        const rawNote = norm(newNoteVals[r][0]);
-        const rawTL = norm(newTLVals[r][0]);
-        const rawStatus = norm(newStatusVals[r][0]);
-        const hasRawInput = rawNote !== "" || rawTL !== "" || rawStatus !== "";
-        const applyStatus = norm(applyStatusVals[r][0]);
-
-        if (hasRawInput && applyStatus !== STATUS_PREPARED) {
-            needsPrepare = true;
-            break;
-        }
-    }
-
-    if (needsPrepare) {
-        let preparedCount = 0;
-
-        for (let r = 0; r < data.length; r++) {
-            const row = data[r];
-            const rawNote = norm(newNoteVals[r][0]);
-            const rawTL = norm(newTLVals[r][0]);
-            const rawStatus = norm(newStatusVals[r][0]);
-            const hasRawInput = rawNote !== "" || rawTL !== "" || rawStatus !== "";
-
-            if (!hasRawInput) continue;
-
-            const projDesc = norm(row[iProjDesc]);
-            const applyReady = isTrue(row[iApplyReady]);
-            const keyStatus = norm(row[iKeyStatus]);
-            const matchCountRaw = norm(row[iMatchCount]);
-            const matchCount = matchCountRaw === "" ? NaN : Number(matchCountRaw);
-            const budgetRow1 = projDesc && !dupKey[projDesc] ? keyToRow[projDesc] : undefined;
-
-            applyStatusVals[r][0] = STATUS_PREPARED;
-            appliedOnVals[r][0] = "";
-            foundVals[r][0] = budgetRow1 === undefined ? "" : budgetRow1;
-            msgVals[r][0] = prepMessage(projDesc, applyReady, keyStatus, matchCount);
-            preparedCount++;
-        }
-
-        flushApplyTable();
-
-        return {
-            phase: "prepare",
-            prepared: preparedCount,
-            applied: 0,
-            skipped: 0,
-            errors: 0,
-            timestampUtc: timestamp
-        };
-    }
-
     // ---- Apply updates ----
     let preparedRemaining = 0;
     let appliedCount = 0;
     let skippedCount = 0;
     let errorCount = 0;
     let stagedCount = 0;
+
+    const preparedTargetCounts: { [row: string]: number } = {};
+    for (let r = 0; r < data.length; r++) {
+        const rawNote = norm(newNoteVals[r]?.[0]);
+        const rawTL = norm(newTLVals[r]?.[0]);
+        const rawStatus = norm(newStatusVals[r]?.[0]);
+        const hasRawInput = rawNote !== "" || rawTL !== "" || rawStatus !== "";
+        if (!hasRawInput || norm(applyStatusVals[r]?.[0]) !== STATUS_PREPARED) continue;
+
+        const projDesc = norm(data[r][iProjDesc]);
+        const budgetRow1 = projDesc && !dupKey[projDesc] ? keyToRow[projDesc] : undefined;
+        if (budgetRow1 === undefined) continue;
+
+        const rowKey = String(budgetRow1);
+        preparedTargetCounts[rowKey] = (preparedTargetCounts[rowKey] || 0) + 1;
+    }
 
     for (let r = 0; r < data.length; r++) {
         const row = data[r];
@@ -485,13 +571,26 @@ function main(workbook: ExcelScript.Workbook): {
         const matchCount = matchCountRaw === "" ? NaN : Number(matchCountRaw);
         const action = norm(row[iApplyAction]).toUpperCase();
         const budgetRow1 = projDesc && !dupKey[projDesc] ? keyToRow[projDesc] : undefined;
+        const reviewRowRaw = Number(norm(row[iReviewRow]));
+        const reviewRow1 = isNaN(reviewRowRaw) ? undefined : reviewRowRaw;
+        const duplicatePreparedTargetCount = budgetRow1 === undefined
+            ? 0
+            : (preparedTargetCounts[String(budgetRow1)] || 0);
 
-        if (!projDesc || !applyReady || keyStatus !== "OK" || matchCount !== 1 || dupKey[projDesc] || budgetRow1 === undefined) {
-            applyStatusVals[r][0] = STATUS_PREPARED;
+        if (budgetRow1 !== undefined && duplicatePreparedTargetCount > 1) {
+            applyStatusVals[r][0] = STATUS_BLOCKED;
+            appliedOnVals[r][0] = "";
+            foundVals[r][0] = budgetRow1;
+            msgVals[r][0] = duplicateTargetMessage(budgetRow1, duplicatePreparedTargetCount);
+            skippedCount++;
+            continue;
+        }
+
+        if (!isApplyEligible(projDesc, applyReady, keyStatus, matchCount, budgetRow1)) {
+            applyStatusVals[r][0] = STATUS_BLOCKED;
             appliedOnVals[r][0] = "";
             foundVals[r][0] = budgetRow1 === undefined ? "" : budgetRow1;
-            msgVals[r][0] = prepMessage(projDesc, applyReady, keyStatus, matchCount);
-            preparedRemaining++;
+            msgVals[r][0] = blockMessage(projDesc, applyReady, keyStatus, matchCount, budgetRow1);
             skippedCount++;
             continue;
         }
@@ -523,7 +622,7 @@ function main(workbook: ExcelScript.Workbook): {
 
                 // 2. Write new Planning Notes clean (no timestamp)
                 pmVals[bufRow][0] = pmNew.replace(/^\d{4}-\d{2}-\d{2}\s*\|\s*/, "");
-                messages.push("Planning Notes (archived)");
+                messages.push(pmOld !== "" ? "Planning Notes (prior note archived)" : "Planning Notes");
             }
 
             if (writeTL && tlNew !== "") {
@@ -541,19 +640,28 @@ function main(workbook: ExcelScript.Workbook): {
                 messages.push("Status");
             }
 
+            if (messages.length === 0) {
+                applyStatusVals[r][0] = STATUS_SKIPPED;
+                appliedOnVals[r][0] = "";
+                foundVals[r][0] = budgetRow1;
+                msgVals[r][0] = "Skipped: no non-empty target values were available to write.";
+                skippedCount++;
+                continue;
+            }
+
             applyStatusVals[r][0] = STATUS_APPLIED;
             appliedOnVals[r][0] = timestamp;
             foundVals[r][0] = budgetRow1;
-            msgVals[r][0] = messages.length > 0
-                ? ("Updated: " + messages.join(" + "))
-                : "No changes written";
+            msgVals[r][0] = "Applied: updated " + messages.join(" + ");
 
             appliedCount++;
 
-            const reviewRowOffset = findReviewInputRowOffset(projDesc, rawNote, rawTL, rawStatus);
+            const reviewRowOffset = findReviewInputRowOffset(reviewRow1, projDesc, rawNote, rawTL, rawStatus);
             if (reviewRowOffset !== undefined) {
                 clearReviewInputs(reviewRowOffset);
                 msgVals[r][0] = norm(msgVals[r][0]) + "; cleared Planning Review P:R";
+            } else {
+                msgVals[r][0] = norm(msgVals[r][0]) + "; Planning Review P:R was not cleared because the source row no longer matched";
             }
         } catch (e: unknown) {
             const msg = (e instanceof Error) ? e.message : String(e);

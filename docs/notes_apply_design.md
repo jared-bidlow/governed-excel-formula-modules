@@ -18,7 +18,7 @@ Planning Review O:R inputs -> tblDecisionStaging -> office-scripts/apply_notes.t
 
 `Planning Review` is the operator-facing review surface. Columns `O:R` hold proposed edits until they are staged.
 
-`tblDecisionStaging` is the review and safety boundary. It must contain the row key, proposed values, match status, apply status, and operator-ready fields needed by the script.
+`tblDecisionStaging` is the review and safety boundary. It must contain the source `ReviewRow`, row key, proposed values, match status, apply status, and operator-ready fields needed by the script.
 
 `office-scripts/apply_notes.ts` is the controlled apply step. It reads only staged rows, validates row matching and readiness, and writes approved updates to `Planning Table`.
 
@@ -40,7 +40,8 @@ The apply script is intentionally staged.
 Run 1 prepares rows:
 
 - Refresh or recalculate upstream formulas.
-- Inspect each staged row with proposed updates.
+- Inspect each `Planning Review!P:R` row with proposed updates.
+- Record `ReviewRow` so formula-backed staging columns resolve from the exact source row instead of table row position.
 - Write `ApplyStatus = Prepared` for rows with staged input.
 - Write `BudgetRowFound` and `ApplyMessage` so the operator can inspect match state before commit.
 - Do not write live `Planning Table` values on the prepare pass.
@@ -58,6 +59,7 @@ Run 2 applies prepared rows:
 | Blank / Pending | `ApplyReady` true, valid target, new values exist | Mark `Prepared`; write intended values into `*_New`; do not update `Planning Table` |
 | Prepared | Target still uniquely matches | Write to `Planning Table`; mark `Applied`; set timestamp and message |
 | Prepared | Target no longer uniquely matches | Mark `Blocked`; do not write |
+| Any | More than one staged row targets the same `Planning Table` row | Mark `Blocked`; do not write |
 | Any | `BudgetMatchCount` is not `1` | Mark `Blocked`; do not write |
 | Any | Blank key field | Mark `Blocked`; do not write |
 | Any | No new note, status, or timeline values | Mark `Skipped`; do not write |
@@ -67,6 +69,7 @@ Run 2 applies prepared rows:
 
 `tblDecisionStaging` must expose these fields for the notes-apply contract:
 
+- `ReviewRow`: records the exact `Planning Review` worksheet row that produced the staged update.
 - `ApplyAction`: declares which write targets are intended for the row.
 - `ApplyReady`: confirms the row has settled and is ready for the script.
 - `ApplyStatus`: records staged state such as `Prepared`, `Applied`, or `Error`.
@@ -94,6 +97,7 @@ The script must refuse to apply a staged row when any of these conditions is tru
 - The key or project field is blank.
 - The row contains no proposed update for the selected `ApplyAction`.
 - The live row has not been matched explicitly.
+- More than one staged row would write to the same live `Planning Table` row in one apply batch.
 
 The script must not blindly overwrite live values. Every write to `Planning Table` must be tied to a validated staged row and a single matched live row.
 

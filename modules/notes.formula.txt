@@ -5,11 +5,13 @@ FromArrayv = LET(
     n, ROWS(rows),
     grpType, INDEX(hdr, 1, 1),
     grpVals, CHOOSECOLS(rows, 1),
+    reviewRows, SEQUENCE(n, 1, 5, 1),
     iCat, XMATCH("Category", hdr),
     iDesc, XMATCH("Project Description", hdr),
     iProj, XMATCH("Annual Projected", hdr),
     iYTD, XMATCH("YTD Actuals*", hdr, 2),
     baseHdrs, {
+        "ReviewRow",
         "GroupType",
         "GroupValue",
         "Category",
@@ -18,6 +20,7 @@ FromArrayv = LET(
         "ActualsYTD"
     },
     baseData, HSTACK(
+        reviewRows,
         MAKEARRAY(n, 1, LAMBDA(r, c, grpType)),
         grpVals,
         CHOOSECOLS(rows, iCat),

@@ -6,7 +6,7 @@ The formula modules and Office.js add-in prepare review queues, staging tables, 
 
 Scripts:
 
-- `apply_notes.ts` stages note edits from `Planning Review!P:R` into formula-backed `Decision Staging`, then applies prepared rows into `Planning Table`.
+- `apply_notes.ts` stages note edits from `Planning Review!P:R` into formula-backed `Decision Staging`, records source `ReviewRow`, blocks duplicate staged writes to the same `Planning Table` row, records `Prepared`, `Blocked`, `Skipped`, `Applied`, or `Error` messages, resets stale staging when there are no current review inputs, then applies prepared rows into `Planning Table`.
 - `apply_asset_mappings.ts` applies accepted asset setup rows into asset mapping, change, and state-history tables.
 - Formula modules create review queues; Office Scripts perform controlled writes.
 - RDF/export is not part of this release.

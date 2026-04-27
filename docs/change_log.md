@@ -1,3 +1,48 @@
+## 2026-04-26 - Key ApplyNotes staging by Planning Review row
+
+Semantic change:
+
+- Added `ReviewRow` to `tblDecisionStaging` so each prepared row is tied to the exact `Planning Review` row that supplied `P:R` inputs.
+- Changed formula-backed Decision Staging helper columns to resolve through `ReviewRow` instead of row-position-specific formulas, which prevents Excel table autofill from duplicating the first staged source row across multiple rows.
+- Blocked duplicate staged rows that would write to the same `Planning Table` row in one apply batch.
+- Kept the two-pass flow: run once to prepare from `Planning Review!P:R`, inspect `ApplyMessage`, run again to apply.
+
+Minimal diff summary:
+
+- Updated `modules/notes.formula.txt`, `addin/taskpane.js`, and `office-scripts/apply_notes.ts`.
+- Updated the decision staging starter header, notes/add-in/starter docs, Office Scripts README, and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: multiple distinct Planning Review input rows can stage independently; duplicate staged writes to the same Planning Table row are blocked with an operator-readable message.
+- Formula logic: `Notes.FromArrayv` now carries `ReviewRow` for staging identity.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-26 - Tighten ApplyNotes messages and staging reset
+
+Semantic change:
+
+- Updated `ApplyNotes` messages so eligible rows say `Prepared`, successful rows say exactly what was applied, and unsafe rows use `Blocked` instead of looking prepared.
+- Added `Skipped` handling for prepared rows that no longer have non-empty target values.
+- Added a safe reset path: when there are no current `Planning Review!P:R` inputs and no prepared rows waiting to apply, `ApplyNotes` resets stale staging rows to one blank formula-backed row.
+- Updated task-pane and docs guidance to state the two-pass operator flow: type in `Planning Review!P:R`, run once to prepare, inspect `ApplyMessage`, run again to apply.
+
+Minimal diff summary:
+
+- Updated `office-scripts/apply_notes.ts`.
+- Updated add-in instructions in `addin/taskpane.html` and `addin/taskpane.js`.
+- Updated notes/add-in/starter docs and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: blocked or unsafe rows now show clearer statuses and messages, and stale staging rows can be reset without losing the formula-backed staging design.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-26 - Seed Planning Review ApplyNotes smoke input
 
 Semantic change:
