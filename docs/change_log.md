@@ -1,3 +1,26 @@
+## 2026-04-26 - Add operator add-in launcher
+
+Semantic change:
+
+- Added root-level `Start-AddIn.ps1` as the safer operator entry point for downloaded repo ZIPs.
+- Added `README_FIRST.md` with the minimum workbook-copy setup steps.
+- Added npm aliases `start:addin`, `excel:addin`, and `test:smoke` while keeping `addin:smoke` as the existing developer smoke path.
+- The launcher warns that setup/apply buttons should only be used in a workbook copy, confirms before launch by default, installs npm dependencies when `node_modules` is missing, then delegates to the existing add-in sideload helper.
+
+Minimal diff summary:
+
+- Added `Start-AddIn.ps1`.
+- Added `README_FIRST.md`.
+- Updated `README.md`, `docs/office_addin.md`, `package.json`, and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: no direct workbook changes. The launcher opens Excel with the sideloaded add-in; workbook changes still require the operator to open a workbook copy and click add-in or Office Script actions.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-26 - Make ApplyNotes control area live
 
 Semantic change:

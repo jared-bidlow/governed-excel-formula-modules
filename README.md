@@ -26,6 +26,8 @@ For the durable architecture map, see `docs/reference_architecture_tree.md`.
 governed-excel-formula-modules/
 +-- AGENTS.md
 +-- README.md
++-- README_FIRST.md
++-- Start-AddIn.ps1
 +-- addin/
 |   +-- manifest.xml
 |   +-- taskpane.html
@@ -146,6 +148,23 @@ The `addin/` folder contains a minimal Excel task-pane add-in. It creates starte
 
 Use it as a packaging starter, not as a replacement calculation engine. The add-in installs native Excel formulas; the planning logic still lives in workbook named formulas after installation.
 
+For operator-style local use after downloading the repo ZIP, start with:
+
+```powershell
+.\Start-AddIn.ps1
+```
+
+That launcher confirms you are using a workbook copy, installs npm dependencies when `node_modules` is missing, then starts the local add-in and launches Excel. It does not edit a workbook by itself; workbook changes happen only after you open a workbook copy and click setup or apply buttons.
+
+The same operator launcher is available through npm:
+
+```powershell
+npm run start:addin
+npm run excel:addin
+```
+
+For the shortest operator checklist, see `README_FIRST.md`.
+
 To run the local smoke test on Windows:
 
 ```powershell
@@ -158,6 +177,7 @@ With Node/npm installed, the same smoke path is also available as:
 
 ```powershell
 npm run addin:smoke
+npm run test:smoke
 ```
 
 When the test session is done:

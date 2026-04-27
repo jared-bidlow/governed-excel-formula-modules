@@ -4,6 +4,9 @@
   "private": true,
   "description": "Public template for governed Excel formula modules and Office.js setup tooling.",
   "scripts": {
+    "start:addin": "powershell -NoProfile -ExecutionPolicy Bypass -File Start-AddIn.ps1",
+    "excel:addin": "powershell -NoProfile -ExecutionPolicy Bypass -File Start-AddIn.ps1",
+    "test:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_addin_smoke_test.ps1",
     "addin:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_addin_smoke_test.ps1",
     "addin:server": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_addin_dev_server.ps1",
     "addin:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/stop_addin_smoke_test.ps1",

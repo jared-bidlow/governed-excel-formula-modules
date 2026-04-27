@@ -30,7 +30,15 @@ The add-in is an installer and validator. It does not replace the formula module
 
 ## Local Trial Shape
 
-Run the smoke-test helper from the repo root:
+For operator-style local use after downloading the repo ZIP, run the safer launcher from the repo root:
+
+```powershell
+.\Start-AddIn.ps1
+```
+
+That launcher confirms you are using a workbook copy, installs npm dependencies when needed, then delegates to the smoke-test helper that starts the add-in and launches Excel. It does not edit a workbook by itself.
+
+For developer smoke testing, run the smoke-test helper directly:
 
 ```powershell
 .\tools\start_addin_smoke_test.ps1
@@ -40,6 +48,7 @@ With Node/npm installed, this equivalent npm script is also available:
 
 ```powershell
 npm run addin:smoke
+npm run test:smoke
 ```
 
 The helper:

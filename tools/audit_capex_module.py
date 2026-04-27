@@ -528,6 +528,7 @@ def audit_formula_files(results: list[Result]) -> None:
 
 def audit_docs(results: list[Result]) -> None:
     readme = read_text(ROOT / "README.md")
+    readme_first = read_text(ROOT / "README_FIRST.md")
     operating = read_text(ROOT / "docs" / "operating_contract.md")
     planning = read_text(ROOT / "docs" / "planning_plugins.md")
     scenarios = read_text(ROOT / "docs" / "scenario_matrix.md")
@@ -549,6 +550,7 @@ def audit_docs(results: list[Result]) -> None:
     apply_assets_script = read_text(ROOT / "office-scripts" / "apply_asset_mappings.ts")
     push_helper = read_text(ROOT / "tools" / "push_public.ps1")
     worktree_helper = read_text(ROOT / "tools" / "new_worktree.ps1")
+    start_addin = read_text(ROOT / "Start-AddIn.ps1")
     addin_smoke = read_text(ROOT / "tools" / "start_addin_smoke_test.ps1")
     addin_server = read_text(ROOT / "tools" / "start_addin_dev_server.ps1")
     addin_stop = read_text(ROOT / "tools" / "stop_addin_smoke_test.ps1")
@@ -600,6 +602,30 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "README.md",
         readme,
+        "README documents operator launcher",
+        r"Start-AddIn\.ps1.*workbook copy.*npm dependencies.*launches Excel.*README_FIRST\.md",
+        "Surface the safer operator launcher before the developer smoke command.",
+    )
+    check_required_regex(
+        results,
+        "README_FIRST.md",
+        readme_first,
+        "README first gives minimum operator path",
+        r"Right-click `Start-AddIn\.ps1`.*Run with PowerShell.*workbook copy.*Setup \+ Install \+ Validate \+ Outputs.*Copy ApplyNotes Script.*Automate -> New Script",
+        "Keep the first-read operator path short and concrete.",
+    )
+    check_required_regex(
+        results,
+        "README_FIRST.md",
+        readme_first,
+        "README first states production workbook safety rule",
+        r"Do not click setup or apply buttons in a production workbook.*Use a workbook copy",
+        "Keep the launcher safety boundary visible to non-developer users.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
         "README documents add-in smoke helper",
         r"start_addin_smoke_test\.ps1",
         "Tell users the one-command Office.js smoke-test path.",
@@ -629,6 +655,9 @@ def audit_docs(results: list[Result]) -> None:
         "Surface the controlled notes apply and optional asset setup workflows from the README.",
     )
     for check, pattern in [
+        ("defines operator start script", r'"start:addin"\s*:\s*"powershell .*Start-AddIn\.ps1"'),
+        ("defines operator Excel alias", r'"excel:addin"\s*:\s*"powershell .*Start-AddIn\.ps1"'),
+        ("defines test smoke alias", r'"test:smoke"\s*:\s*"powershell .*start_addin_smoke_test\.ps1"'),
         ("defines smoke script", r'"addin:smoke"\s*:\s*"powershell .*start_addin_smoke_test\.ps1"'),
         ("defines dev-server script", r'"dev-server"\s*:\s*"powershell .*start_addin_dev_server\.ps1"'),
         ("declares Office debugging tool", r'"office-addin-debugging"\s*:'),
@@ -1283,6 +1312,19 @@ def audit_docs(results: list[Result]) -> None:
             "Keep the public push helper guarded by validation and remote sync.",
         )
     for file_name, text, checks in [
+        (
+            "Start-AddIn.ps1",
+            start_addin,
+            [
+                ("requires workbook-copy confirmation", r"Use a workbook copy.*Read-Host.*Confirm you will use a workbook copy"),
+                ("supports noninteractive confirmation", r"\[switch\]\$Yes.*-not \$Yes"),
+                ("recovers installed Node path", r"Use-InstalledNodePath.*ProgramFiles.*nodejs"),
+                ("installs dependencies when missing", r"node_modules.*npm install"),
+                ("delegates to smoke helper", r"start_addin_smoke_test\.ps1.*-Port \$Port.*-SkipStaticChecks:\$SkipStaticChecks"),
+                ("warns when npm is missing", r"npm was not found.*Install Node\.js LTS"),
+                ("describes workbook-safe behavior", r"It does not edit a workbook by itself"),
+            ],
+        ),
         (
             "tools/start_addin_smoke_test.ps1",
             addin_smoke,
@@ -1998,6 +2040,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         results,
         "docs/office_addin.md",
         addin_doc,
+        "add-in docs document operator launcher",
+        r"operator-style local use.*Start-AddIn\.ps1.*workbook copy.*npm dependencies.*does not edit a workbook by itself",
+        "Show the safer launcher before the developer smoke helper.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
         "add-in docs state installer boundary",
         r"installer and validator.*does not replace the formula modules",
         "Document that JavaScript is not the calculation engine.",
@@ -2225,6 +2275,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records optional asset setup UI",
         r"Clarify optional asset setup UI.*Color-coded.*Setup Asset Workflow.*black text",
         "Record the optional asset setup UI correction.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records operator add-in launcher",
+        r"Add operator add-in launcher.*Start-AddIn\.ps1.*README_FIRST\.md.*start:addin.*workbook copy",
+        "Record the safer non-developer add-in launch path.",
     )
     check_required_regex(
         results,
