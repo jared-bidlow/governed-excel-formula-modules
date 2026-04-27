@@ -19,7 +19,13 @@ The notes workflow keeps meeting edits visible in Excel while making writeback e
 
 The add-in creates `Decision Staging` and refreshes `tblDecisionStaging` with the staging columns expected by the Office Script.
 
-The table carries report context, proposed updates, readiness fields, and apply status fields. The workflow is usable without manually copying values from `Planning Review`; the setup creates the staging table shape and the notes formulas create the review queue.
+The table carries report context, proposed updates, readiness fields, and apply status fields. The workflow is usable without manually copying values from `Planning Review`; the setup creates the staging table shape, and `ApplyNotes` run 1 resizes the table from the current `Planning Review!P:R` inputs while preserving formula-backed context columns.
+
+`ApplyNotes` reads the report rows and `Planning Review!O:R`, filters to rows with `NewPlanningNotes`, `NewTimeline`, or `NewStatus`, then prepares matching `tblDecisionStaging` rows. The review/context/helper columns remain formulas so the table continues to show the current existing notes and resolved target values.
+
+Fresh setup seeds `Planning Review!P5:R5` when those cells are blank. That public-safe smoke input targets `Sample over-projected work`, which exists in `Planning Table`. Run `ApplyNotes` once to mark the staged row `Prepared`, then run it again to update `Planning Notes`, `Timeline`, `Comments`, and `Status`.
+
+For the smoke path, `Planning Review!P5:R5` is read by `ApplyNotes` run 1 and written into `tblDecisionStaging`.
 
 ## ApplyNotes Two-Pass Behavior
 
@@ -29,7 +35,10 @@ Run 1 is prepare:
 
 - refreshes workbook data connections,
 - recalculates the workbook,
-- marks rows with raw note inputs as `Prepared`,
+- scans `Planning Review!P5:R200` for raw note/timeline/status inputs,
+- resizes `tblDecisionStaging` to the matching rows,
+- restores formulas for review/context/helper columns,
+- marks matching rows `Prepared`,
 - records match status in `ApplyStatus`, `AppliedOn`, `ApplyMessage`, and `BudgetRowFound`.
 
 Run 2 is apply:
@@ -46,8 +55,8 @@ The script writes only to controlled target fields on `Planning Table`:
 - `Comments`
 - `Status`
 
-After a successful apply, the script clears or marks the raw new-note inputs so the applied state is inspectable.
+After a successful apply, the script clears the matching `Planning Review!P:R` source inputs. Column `O` then surfaces the refreshed existing-note context from `Planning Table`.
 
 ## Boundary
 
-Formula modules produce the review and staging data. The Office Script performs the controlled writeback. This release does not add RDF export, SHACL validation, or an external data bridge.
+Formula modules produce the review data. The Office Script stages the current review inputs and performs the controlled writeback. This release does not add RDF export, SHACL validation, or an external data bridge.

@@ -1,3 +1,32 @@
+## 2026-04-26 - Seed Planning Review ApplyNotes smoke input
+
+Semantic change:
+
+- Changed the public-safe notes smoke path so test values originate in `Planning Review!P:R`, not by bypassing the review surface.
+- Updated `Notes.FromArrayv` to carry `ExistingMeetingNotes`, `NewPlanningNotes`, `NewTimeline`, and `NewStatus` from `Planning Review!O:R`.
+- Updated `Setup Notes Workflow` to seed `Planning Review!P5:R5` when blank and wire a single smoke row in `tblDecisionStaging` to `Notes.FromArrayv` formulas, so a fresh workbook can test ApplyNotes without manual row entry.
+- Kept `BudgetMatchCount` scalar inside the table by using `SUMPRODUCT` over the matched `Planning Table` project-description column.
+- Changed `ApplyNotes` run 1 to actively scan `Planning Review!P5:R200`, resize `tblDecisionStaging`, restore formula-backed review/context/helper columns, and mark rows `Prepared`.
+- Updated `ApplyNotes` so successful applies clear the matching `Planning Review!P:R` source inputs instead of overwriting formula-backed staging input columns.
+- Kept `samples/decision_staging_starter.tsv` as a public-safe expected staging-shape fixture.
+
+Minimal diff summary:
+
+- Updated `modules/notes.formula.txt`.
+- Updated `office-scripts/apply_notes.ts`.
+- Updated `samples/decision_staging_starter.tsv`.
+- Updated `addin/taskpane.js`.
+- Updated `office-scripts/README.md`.
+- Updated notes/add-in/starter docs and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: fresh setup now includes one ready Planning Review smoke input; `ApplyNotes` run 1 stages current `P:R` inputs into formula-backed `tblDecisionStaging`, and run 2 applies prepared rows.
+- Formula logic: `Notes.FromArrayv` now includes `ExistingMeetingNotes` alongside the new note/timeline/status inputs.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 2026-04-26 - Clarify optional asset setup UI
 
 Semantic change:

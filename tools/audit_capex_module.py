@@ -536,6 +536,7 @@ def audit_docs(results: list[Result]) -> None:
     starter = read_text(ROOT / "docs" / "starter_workbook.md")
     review = read_text(ROOT / "docs" / "technical_review_guide.md")
     notes_workflow = read_text(ROOT / "docs" / "notes_apply_workflow.md")
+    notes_formula = read_text(ROOT / "modules" / "notes.formula.txt")
     asset_workflow = read_text(ROOT / "docs" / "asset_setup_workflow.md")
     asset_next_steps = read_text(ROOT / "docs" / "asset_tracker_next_steps.md")
     v020_release = read_text(ROOT / "docs" / "v0.2.0_release_notes.md")
@@ -743,6 +744,22 @@ def audit_docs(results: list[Result]) -> None:
         "notes workflow states no manual copy paste",
         r"without manually copying values|without manual copy/paste",
         "Keep the notes setup described as workbook-usable from the add-in setup.",
+    )
+    check_required_regex(
+        results,
+        "docs/notes_apply_workflow.md",
+        notes_workflow,
+        "notes workflow documents Planning Review to script staging",
+        r"Planning Review!P5:R5.*ApplyNotes.*tblDecisionStaging",
+        "Document that ApplyNotes smoke input originates on Planning Review and is staged by the script.",
+    )
+    check_required_regex(
+        results,
+        "modules/notes.formula.txt",
+        notes_formula,
+        "Notes.FromArrayv carries Planning Review O:R into staging source",
+        r"meetHdrs, 'Planning Review'!\$o\$4:\$r\$4.*allHdrs, SUBSTITUTE\(meetHdrs, \" \", \"\"\).*allData, TAKE\(IF\(meetData = \"\", \"\", meetData\), n\).*HSTACK\(baseHdrs, allHdrs\).*FILTER\(HSTACK\(baseData, allData\), keep",
+        "Keep the staging source formula connected to Planning Review O:R, including ExistingMeetingNotes.",
     )
     check_required_regex(
         results,
@@ -1602,12 +1619,20 @@ def audit_docs(results: list[Result]) -> None:
             header_pattern,
             "Keep starter TSV headers aligned to the add-in-created table headers.",
         )
+    check_required_regex(
+        results,
+        "samples/decision_staging_starter.tsv",
+        decision_starter,
+        "decision staging starter includes runnable ApplyNotes smoke row",
+        r"Sample over-projected work.*NOTE_TIMELINE_STATUS.*Review forecast against latest meeting note.*OK\t1\tTRUE\t\t\tStarter row; run ApplyNotes once to prepare and again to apply",
+        "Keep the starter decision row ready to prepare and apply against the starter Planning Table.",
+    )
     for file_name, text, checks in [
         (
             "office-scripts/README.md",
             office_scripts_readme,
             [
-                ("documents apply notes script", r"apply_notes\.ts.*note edits.*Decision Staging.*Planning Table"),
+                ("documents apply notes script", r"apply_notes\.ts.*Planning Review!P:R.*Decision Staging.*Planning Table"),
                 ("documents asset mapping script", r"apply_asset_mappings\.ts.*accepted asset setup rows.*asset mapping.*state-history"),
                 ("states formulas review and scripts write", r"Formula modules create review queues.*Office Scripts perform controlled writes"),
                 ("excludes RDF export", r"RDF/export is not part of this release"),
@@ -1618,8 +1643,12 @@ def audit_docs(results: list[Result]) -> None:
             apply_notes_script,
             [
                 ("uses Decision Staging table", r"Decision Staging.*tblDecisionStaging"),
-                ("documents two-pass behavior", r"Run 1 prepares.*Run 2 applies"),
+                ("documents two-pass behavior", r"Run 1 reads Planning Review P:R.*refreshes formula-backed tblDecisionStaging.*Run 2 applies"),
                 ("writes expected fields", r"Planning Notes.*Timeline.*Comments.*Status"),
+                ("stages Planning Review source inputs", r"buildReviewPrepareRows.*reviewValues.*reviewRow\[15\].*prepareFormulaBackedApplyTableRows.*phase:\s*\"prepare\""),
+                ("preserves Decision Staging formula columns", r"indexedNotesFormulas.*DROP\(Notes\.FromArrayv,1\).*prepareFormulaBackedApplyTableRows.*setColumnFormulas.*BudgetMatchCount"),
+                ("clears Planning Review source inputs", r"REVIEW_SHEET_NAME\s*=\s*\"Planning Review\".*REVIEW_INPUT_COL0\s*=\s*15.*clearReviewInputs.*cleared Planning Review P:R"),
+                ("does not overwrite staged input columns on apply", r"flushApplyTable.*applyStatusRange\.setValues.*msgRange\.setValues(?!.*newNoteRange\.setValues)"),
             ],
         ),
         (
@@ -1771,6 +1800,8 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("selects ApplyNotes text when clipboard is blocked", r"selectApplyNotesScript.*focus\(\).*select\(\)"),
         ("logs standard setup completion", r"Standard setup complete\. Asset workflow remains optional"),
         ("defines notes workflow setup", r"notesWorkflow.*tblDecisionStaging.*ExistingMeetingNotes.*NewPlanningNotes.*NewTimeline.*NewStatus"),
+        ("seeds Planning Review notes smoke input and script-driven staging", r"smokeInputRange:\s*\"P5:R5\".*setupNotesWorkflow.*allCellsBlank\(smokeRange\.values\).*Notes workflow ready: Planning Review P:R inputs will be staged by ApplyNotes run 1"),
+        ("uses one smoke row and scalar BudgetMatchCount", r"stagingRowCount:\s*1.*BudgetMatchCount.*SUMPRODUCT.*INDEX.*Planning Table.*XMATCH\(\"Project Description\""),
         ("defines asset workflow setup", r"assetWorkflow.*tblAssets.*tblSemanticAssets.*tblAssetPromotionQueue.*tblAssetMappingStaging.*tblProjectAssetMap.*tblAssetChanges.*tblAssetStateHistory"),
         ("defines asset relationship lists", r"relationshipLists.*assetIds.*tblAssets\[AssetID\].*projectKeys.*tblAssets\[LinkedProjectID\]"),
         ("defines asset table validation rules", r"tableValidationRules.*tblAssets.*assetStatuses.*relationshipListKey:\s*\"projectKeys\".*tblProjectAssetMap.*relationshipListKey:\s*\"assetIds\""),
@@ -2137,6 +2168,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records optional asset setup UI",
         r"Clarify optional asset setup UI.*Color-coded.*Setup Asset Workflow.*black text",
         "Record the optional asset setup UI correction.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records Planning Review ApplyNotes smoke input",
+        r"Seed Planning Review ApplyNotes smoke input.*Planning Review!P:R.*Setup Notes Workflow.*fresh workbook can test ApplyNotes.*ApplyNotes` run 1.*formula-backed `tblDecisionStaging`",
+        "Record the seeded ApplyNotes smoke input behavior.",
     )
 
 

@@ -27,17 +27,15 @@ FromArrayv = LET(
     ),
     meetHdrs, 'Planning Review'!$o$4:$r$4,
     meetData, 'Planning Review'!$o$5:$r$200,
+    allHdrs, SUBSTITUTE(meetHdrs, " ", ""),
+    allData, TAKE(IF(meetData = "", "", meetData), n),
     isNew, LEFT(meetHdrs, 3) = "New",
     newIdx, FILTER(SEQUENCE(, COLUMNS(meetHdrs)), isNew),
-    newHdrs, SUBSTITUTE(FILTER(meetHdrs, isNew), " ", ""),
-    newData, TAKE(
-        IF(CHOOSECOLS(meetData, newIdx) = "", "", CHOOSECOLS(meetData, newIdx)),
-        n
-    ),
+    newData, CHOOSECOLS(allData, newIdx),
     keep, BYROW(newData, LAMBDA(r, SUM(--(IFERROR(TRIM(r), "") <> "")) > 0)),
     stack, VSTACK(
-        HSTACK(baseHdrs, newHdrs),
-        FILTER(HSTACK(baseData, newData), keep, "")
+        HSTACK(baseHdrs, allHdrs),
+        FILTER(HSTACK(baseData, allData), keep, "")
     ),
     stack
 );

@@ -38,6 +38,9 @@
     notesWorkflow: {
       tableName: "tblDecisionStaging",
       tableAddress: "A1",
+      stagingRowCount: 1,
+      smokeInputRange: "P5:R5",
+      smokeInputValues: [["Review forecast against latest meeting note", "Apr", "Review"]],
       noteHeaders: ["ExistingMeetingNotes", "NewPlanningNotes", "NewTimeline", "NewStatus"],
       stagingHeaders: [
         "GroupType",
@@ -541,18 +544,26 @@
       buildValidationLists(context.workbook.worksheets.getItem(validationSheet));
       const staging = context.workbook.worksheets.getItem(applicationData.sheets.notesStaging);
       formatPlanningReviewNotes(review);
-      await refreshTableFromHeaders(
+      const smokeRange = review.getRange(notesWorkflow.smokeInputRange);
+      smokeRange.load("values");
+      await context.sync();
+      if (allCellsBlank(smokeRange.values)) {
+        smokeRange.values = notesWorkflow.smokeInputValues;
+      }
+      const stagingTable = await refreshTableFromHeaders(
         context,
         staging,
         notesWorkflow.tableName,
         notesWorkflow.tableAddress,
-        notesWorkflow.stagingHeaders
+        notesWorkflow.stagingHeaders,
+        emptyRows(notesWorkflow.stagingRowCount, notesWorkflow.stagingHeaders.length)
       );
+      configureDecisionStagingFormulas(stagingTable, notesWorkflow.stagingRowCount);
       formatWorkflowSheet(staging, notesWorkflow.stagingHeaders.length);
       await context.sync();
     });
 
-    appendLog("Notes workflow ready: Planning Review notes columns and Decision Staging table are configured.");
+    appendLog("Notes workflow ready: Planning Review P:R inputs will be staged by ApplyNotes run 1.");
   }
 
   async function setupAssetWorkflow() {
@@ -830,7 +841,7 @@
     sheet.getRange(`${columnName(startColumnIndex)}:${lastColumn}`).format.autofitColumns();
   }
 
-  async function refreshTableFromHeaders(context, sheet, tableName, address, headers) {
+  async function refreshTableFromHeaders(context, sheet, tableName, address, headers, dataRows) {
     const existing = context.workbook.tables.getItemOrNullObject(tableName);
     existing.load("name");
     await context.sync();
@@ -840,8 +851,9 @@
       await context.sync();
     }
 
-    const values = [headers, Array(headers.length).fill("")];
-    const range = sheet.getRange(address).getResizedRange(1, headers.length - 1);
+    const bodyRows = dataRows && dataRows.length > 0 ? dataRows : [Array(headers.length).fill("")];
+    const values = [headers, ...bodyRows];
+    const range = sheet.getRange(address).getResizedRange(values.length - 1, headers.length - 1);
     range.values = values;
     const table = sheet.tables.add(range, true);
     table.name = tableName;
@@ -870,6 +882,70 @@
       appendLog("Skipped NewStatus dropdown because validation lists are not ready.");
     }
     sheet.getRange("O:R").format.autofitColumns();
+  }
+
+  function configureDecisionStagingFormulas(table, rowCount) {
+    const stagingColumns = [
+      ["GroupType", 1],
+      ["GroupValue", 2],
+      ["Category", 3],
+      ["ProjDesc", 4],
+      ["AnnualProj", 5],
+      ["ActualsYTD", 6],
+      ["ExistingMeetingNotes", 7],
+      ["NewPlanningNotes", 8],
+      ["NewTimeline", 9],
+      ["NewStatus", 10]
+    ];
+    for (const [header, sourceIndex] of stagingColumns) {
+      setTableColumnFormulas(table, header, indexedNotesFormulas(rowCount, sourceIndex));
+    }
+
+    setTableColumnFormulas(
+      table,
+      "ApplyAction",
+      repeatedFormulas(rowCount, '=IF(OR([@NewPlanningNotes]<>"",[@NewTimeline]<>"",[@NewStatus]<>""),"NOTE_TIMELINE_STATUS","")')
+    );
+    setTableColumnFormulas(table, "PlanningNotes_New", repeatedFormulas(rowCount, '=IF([@NewPlanningNotes]<>"",[@NewPlanningNotes],"")'));
+    setTableColumnFormulas(table, "Timeline_New", repeatedFormulas(rowCount, '=IF([@NewTimeline]<>"",[@NewTimeline],"")'));
+    setTableColumnFormulas(table, "Comments_New", repeatedFormulas(rowCount, '=""'));
+    setTableColumnFormulas(table, "Status_New", repeatedFormulas(rowCount, '=IF([@NewStatus]<>"",[@NewStatus],"")'));
+    setTableColumnFormulas(
+      table,
+      "BudgetMatchCount",
+      repeatedFormulas(rowCount, '=IF([@ProjDesc]="","",SUMPRODUCT(--(INDEX(\'Planning Table\'!$A$3:$BM$200,,XMATCH("Project Description",\'Planning Table\'!$A$2:$BM$2,0))=[@ProjDesc])))')
+    );
+    setTableColumnFormulas(table, "KeyStatus", repeatedFormulas(rowCount, '=IF([@ProjDesc]="","",IF([@BudgetMatchCount]=1,"OK","BLOCKED"))'));
+    setTableColumnFormulas(table, "ApplyReady", repeatedFormulas(rowCount, '=AND([@ProjDesc]<>"",[@BudgetMatchCount]=1,OR([@NewPlanningNotes]<>"",[@NewTimeline]<>"",[@NewStatus]<>""))'));
+  }
+
+  function indexedNotesFormulas(rowCount, sourceIndex) {
+    const formulas = [];
+    for (let row = 1; row <= rowCount; row += 1) {
+      formulas.push(`=IFERROR(INDEX(DROP(Notes.FromArrayv,1),${row},${sourceIndex}),"")`);
+    }
+    return formulas;
+  }
+
+  function repeatedFormulas(rowCount, formula) {
+    return Array(rowCount).fill(formula);
+  }
+
+  function setTableColumnFormulas(table, header, formulas) {
+    table.columns.getItem(header).getDataBodyRange().formulas = formulas.map((formula) => [formula]);
+  }
+
+  function emptyRows(rowCount, columnCount) {
+    return Array.from({ length: rowCount }, () => Array(columnCount).fill(""));
+  }
+
+  function allCellsBlank(values) {
+    for (const row of values) {
+      for (const value of row) {
+        if (String(value || "").trim() !== "") return false;
+      }
+    }
+    return true;
   }
 
   function formatWorkflowSheet(sheet, headerCount) {
