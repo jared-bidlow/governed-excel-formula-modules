@@ -8,6 +8,7 @@ This branch is the reference implementation for turning the governed formula sta
 - `Setup Notes Workflow` remains part of the default setup path and creates `Decision Staging` / `tblDecisionStaging`.
 - `Setup Asset Workflow` is opt-in and creates the asset register, setup, mapping, change, and state-history sheets.
 - `tools/build_governance_starter_workbook.ps1` generates `Governance_Starter.xltx` with those asset workflow sheets plus asset-evidence Power Query output sheets already present.
+- The v0.4 branch `codex/asset-finance-model-modules` starts by adding an `Automation Setup` sheet, then moves toward depreciation, funding requirements, totals, and chart-ready feeds.
 - `tblAssets` is the durable asset register starter table.
 - `tblProjectAssetMap`, `tblAssetChanges`, and `tblAssetStateHistory` are the controlled-write targets for `office-scripts/apply_asset_mappings.ts`.
 - `modules/assets.formula.txt` provides review queues only; formulas do not mutate workbook tables.

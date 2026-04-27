@@ -154,9 +154,9 @@ function Format-TableHeader {
     param([object]$Table)
 
     try {
-        $Table.HeaderRowRange.Font.Bold = $true
-        $Table.HeaderRowRange.Font.Color = 0
-        $Table.HeaderRowRange.Interior.Color = 16247773
+        [void]($Table.HeaderRowRange.Font.Bold = $true)
+        [void]($Table.HeaderRowRange.Font.Color = 0)
+        [void]($Table.HeaderRowRange.Interior.Color = 16247773)
     } catch {
         Write-Warning "Skipped table header formatting for $($Table.Name): $($_.Exception.Message)"
     }

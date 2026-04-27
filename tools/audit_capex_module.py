@@ -2630,6 +2630,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     readme = read_text(ROOT / "README.md")
     starter_doc = read_text(ROOT / "docs" / "starter_workbook.md")
     addin_doc = read_text(ROOT / "docs" / "office_addin.md")
+    finance_doc = read_text(ROOT / "docs" / "asset_finance_model_modules.md")
     changelog = read_text(ROOT / "docs" / "change_log.md")
     package = read_text(ROOT / "package.json")
     gitignore = read_text(ROOT / ".gitignore")
@@ -2660,6 +2661,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder creates Automation Setup sheet",
+        r"(?=.*Build-AutomationSetup)(?=.*Automation Setup)(?=.*tblAutomationSetup)(?=.*ApplyNotes\.ts)(?=.*Automate > New Script)(?=.*Add-Worksheet.*Automation Setup)",
+        "Keep the generated template explicit about optional Office Script import.",
+    )
+    check_required_regex(
+        results,
         "package.json",
         package,
         "npm exposes governance starter build",
@@ -2684,11 +2693,27 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "README.md",
+        readme,
+        "README documents Automation Setup sheet",
+        r"Automation Setup.*ApplyNotes\.ts.*Automate -> New Script.*does not embed or auto-install Office Scripts",
+        "Surface the Office Script release-asset boundary in the README.",
+    )
+    check_required_regex(
+        results,
         "docs/starter_workbook.md",
         starter_doc,
         "starter docs document generated template contents",
-        r"Generated Template.*Governance_Starter\.xltx.*formula-module workbook names.*optional asset workflow starter tables.*asset evidence Power Query setup",
+        r"Generated Template.*Governance_Starter\.xltx.*Automation Setup.*formula-module workbook names.*optional asset workflow starter tables.*asset evidence Power Query setup",
         "Document what the generated starter template contains.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter_doc,
+        "starter docs document Automation Setup sheet",
+        r"(?=.*Automation Setup Sheet)(?=.*ApplyNotes\.ts)(?=.*Automate > New Script)(?=.*does not embed)(?=.*operator chooses whether to import and run)",
+        "Document that Office Scripts are optional release assets, not embedded workbook automation.",
     )
     check_required_regex(
         results,
@@ -2697,6 +2722,22 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "add-in docs point new workbook starts to generated template",
         r"preferred path is now the generated starter template.*build_governance_starter_workbook\.ps1.*\.xltx.*asset-evidence Power Query output sheets",
         "Keep the add-in boundary aligned with the generated starter path.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document Automation Setup sheet",
+        r"Automation Setup.*ApplyNotes\.ts.*optional Office Script release asset.*Automate -> New Script",
+        "Keep the generated starter and add-in docs aligned on Office Script import.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_finance_model_modules.md",
+        finance_doc,
+        "asset finance v0.4 docs start module slice",
+        r"v0\.4.*codex/asset-finance-model-modules.*Automation Setup.*depreciation.*funding requirements.*totals.*chart-ready.*qAssetEvidence_ModelInputs",
+        "Keep the v0.4 model-module branch scoped and documented.",
     )
     check_required_regex(
         results,
@@ -2713,6 +2754,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "change log records generated table header normalization",
         r"Normalize generated starter table headers.*tblPlanningTable.*tblCapSetup.*black text",
         "Record generated starter table header readability fixes.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records v0.4 Automation Setup start",
+        r"Start v0\.4 asset finance model branch with Automation Setup.*codex/asset-finance-model-modules.*ApplyNotes\.ts.*Automate -> New Script.*depreciation.*funding requirements.*totals.*chart-ready feeds",
+        "Record the v0.4 branch start and Automation Setup worksheet.",
     )
 
 

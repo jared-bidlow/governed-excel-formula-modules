@@ -6,6 +6,8 @@ The add-in is an installer and validator. It does not replace the formula module
 
 For a new workbook artifact, the preferred path is now the generated starter template from `tools/build_governance_starter_workbook.ps1`. The add-in remains useful for blank-workbook setup, validation, and formula-module installation, while the generated `.xltx` already includes the starter sheets, asset workflow tables, and asset-evidence Power Query output sheets.
 
+The generated template also includes an `Automation Setup` worksheet. That sheet explains that `ApplyNotes.ts` is an optional Office Script release asset and must be imported through Excel `Automate -> New Script` before the notes writeback automation can run.
+
 ## What It Does
 
 - Creates the starter sheets: `Planning Table`, `Cap Setup`, and `Planning Review`.
@@ -160,6 +162,7 @@ The setup path is intentionally small and inspectable:
 - `Composite Cat` remains a manual pre-formula helper for operator sorting, dedupe, and Excel Data > Subtotal workflows.
 - `Cap Setup` starts at `A2`, formats `Cap` as currency, and validates caps as non-negative numbers.
 - `Planning Review` uses `B2:E2` for visible controls, `M2:N2` for month controls, leaves `A4:N200` open for the main report spill, uses `O1:R3` for `ApplyNotes Control`, and leaves `O4:R200` open for note examples.
+- `Automation Setup` explains the public release boundary for Office Scripts: download `ApplyNotes.ts`, open `Automate -> New Script`, paste the script, save it as `ApplyNotes`, then run the two-pass workflow when writeback is wanted.
 - `Planning Review!O:R` is used by the notes workflow: `ExistingMeetingNotes`, `NewPlanningNotes`, `NewTimeline`, and `NewStatus`.
 - `Decision Staging` stores formula-backed `tblDecisionStaging`, the controlled staging table consumed by `office-scripts/apply_notes.ts`; ApplyNotes run 1 resizes it from `Planning Review!P:R` while preserving `ReviewRow`-keyed review/context/helper formulas.
 - `Validation Lists` stores the dropdown values used by the starter workbook.

@@ -160,6 +160,8 @@ Governance_Starter.xltx
 
 The `.xltx` is the user-facing Excel template. The `.xlsx` is kept beside it for inspection and smoke testing. Both are generated from tracked text sources: formula modules in `modules/`, starter TSVs in `samples/`, and asset-evidence M templates in `samples/power-query/asset-evidence/`.
 
+The generated starter also includes an `Automation Setup` worksheet. It explains how to import the optional `ApplyNotes.ts` release asset through Excel `Automate -> New Script`; the public template does not embed or auto-install Office Scripts.
+
 ## Start From A Blank Workbook
 
 For a first local trial without the generated template, create a blank workbook and follow `docs/starter_workbook.md`.
