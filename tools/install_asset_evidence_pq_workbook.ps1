@@ -146,7 +146,20 @@ function Add-Table {
     $table = $Worksheet.ListObjects.Add(1, $range, $null, 1)
     $table.Name = $Name
     $table.TableStyle = "TableStyleMedium2"
+    Format-TableHeader -Table $table
     return $table
+}
+
+function Format-TableHeader {
+    param([object]$Table)
+
+    try {
+        $Table.HeaderRowRange.Font.Bold = $true
+        $Table.HeaderRowRange.Font.Color = 0
+        $Table.HeaderRowRange.Interior.Color = 16247773
+    } catch {
+        Write-Warning "Skipped table header formatting for $($Table.Name): $($_.Exception.Message)"
+    }
 }
 
 function Add-LoadedQueryTable {
@@ -162,6 +175,7 @@ function Add-LoadedQueryTable {
     $table.QueryTable.CommandType = 2
     $table.QueryTable.CommandText = "SELECT * FROM [$QueryName]"
     [void]$table.QueryTable.Refresh($false)
+    Format-TableHeader -Table $table
     [void]$Worksheet.Columns.AutoFit()
     return $table
 }

@@ -130,7 +130,20 @@ function Add-TableFromMatrix {
     $table = $Worksheet.ListObjects.Add(1, $range, $null, 1)
     $table.Name = $TableName
     $table.TableStyle = $Style
+    Format-TableHeader -Table $table
     return $table
+}
+
+function Format-TableHeader {
+    param([object]$Table)
+
+    try {
+        $Table.HeaderRowRange.Font.Bold = $true
+        $Table.HeaderRowRange.Font.Color = 0
+        $Table.HeaderRowRange.Interior.Color = 16247773
+    } catch {
+        Write-Warning "Skipped table header formatting for $($Table.Name): $($_.Exception.Message)"
+    }
 }
 
 function Column-Name {
@@ -677,6 +690,7 @@ try {
     $planningSheet.Name = "Planning Table"
     [void](Add-TableFromMatrix -Worksheet $planningSheet -TableName "tblPlanningTable" -TopLeft "A2" -Rows (Read-TsvMatrix "samples\planning_table_starter.tsv"))
     $planningSheet.Range("A2:BL2").Font.Bold = $true
+    $planningSheet.Range("A2:BL2").Font.Color = 0
     $planningSheet.Range("A2:BL2").Interior.Color = 16247773
     foreach ($address in @("F2", "G2", "O2", "P2", "BE2")) {
         $planningSheet.Range($address).Interior.Color = 13431551
@@ -689,6 +703,7 @@ try {
     $capSheet = Add-Worksheet -Workbook $workbook -Name "Cap Setup"
     [void](Add-TableFromMatrix -Worksheet $capSheet -TableName "tblCapSetup" -TopLeft "A2" -Rows (Read-TsvMatrix "samples\cap_setup_starter.tsv"))
     $capSheet.Range("A2:B2").Font.Bold = $true
+    $capSheet.Range("A2:B2").Font.Color = 0
     $capSheet.Range("A2:B2").Interior.Color = 16247773
     [void](Set-NumberFormat -Range $capSheet.Range("B3:B100") -Format "$#,##0")
     [void](Add-NonNegativeValidation -Range $capSheet.Range("B3:B100"))

@@ -2652,6 +2652,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder normalizes table header text",
+        r"Format-TableHeader.*HeaderRowRange\.Font\.Color\s*=\s*0.*tblPlanningTable.*A2:BL2.*Font\.Color\s*=\s*0.*tblCapSetup.*A2:B2.*Font\.Color\s*=\s*0",
+        "Keep generated table headers readable after Excel table styles are applied.",
+    )
+    check_required_regex(
+        results,
         "package.json",
         package,
         "npm exposes governance starter build",
@@ -2697,6 +2705,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "change log records governance starter template",
         r"Add generated governance starter template.*Governance_Starter\.xltx.*build_governance_starter_workbook\.ps1.*asset_register_starter\.tsv.*workbook binaries out of tracked source",
         "Record the generated starter template change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records generated table header normalization",
+        r"Normalize generated starter table headers.*tblPlanningTable.*tblCapSetup.*black text",
+        "Record generated starter table header readability fixes.",
     )
 
 

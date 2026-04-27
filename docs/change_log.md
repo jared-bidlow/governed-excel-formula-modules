@@ -1,3 +1,23 @@
+## 2026-04-27 - Normalize generated starter table headers
+
+Semantic change:
+
+- Updated the generated workbook builders so Excel table headers are explicitly formatted with black text after table styles are applied.
+- This fixes the generated `tblPlanningTable` and `tblCapSetup` header readability issue and applies the same rule to generated asset-evidence setup/output tables.
+
+Minimal diff summary:
+
+- Updated the PowerShell workbook builders/installers to call a shared table-header formatting helper.
+- Updated static audit coverage for generated starter table header formatting.
+
+Visible impact:
+
+- Workbook behavior: generated starter tables keep the same data, formulas, queries, and table names, but headers render with black text.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-27 - Add generated governance starter template
 
 Semantic change:
