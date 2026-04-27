@@ -72,10 +72,12 @@ FORBIDDEN_PATTERNS = [
 
 SCAN_TEXT_SUFFIXES = {
     ".css",
+    ".bas",
     ".csv",
     ".html",
     ".js",
     ".json",
+    ".m",
     ".md",
     ".ps1",
     ".py",
@@ -103,6 +105,8 @@ FORBIDDEN_EXTENSIONS = {
     ".xlsm",
     ".xlsb",
     ".xls",
+    ".xltx",
+    ".xltm",
     ".zip",
 }
 
@@ -539,6 +543,7 @@ def audit_docs(results: list[Result]) -> None:
     notes_workflow = read_text(ROOT / "docs" / "notes_apply_workflow.md")
     notes_formula = read_text(ROOT / "modules" / "notes.formula.txt")
     asset_workflow = read_text(ROOT / "docs" / "asset_setup_workflow.md")
+    asset_evidence_pq = read_text(ROOT / "docs" / "asset_evidence_power_query.md")
     asset_next_steps = read_text(ROOT / "docs" / "asset_tracker_next_steps.md")
     v020_release = read_text(ROOT / "docs" / "v0.2.0_release_notes.md")
     durable_contract = read_text(ROOT / "docs" / "codex_chatgpt_durable_contract.md")
@@ -548,6 +553,9 @@ def audit_docs(results: list[Result]) -> None:
     office_scripts_readme = read_text(ROOT / "office-scripts" / "README.md")
     apply_notes_script = read_text(ROOT / "office-scripts" / "apply_notes.ts")
     apply_assets_script = read_text(ROOT / "office-scripts" / "apply_asset_mappings.ts")
+    asset_evidence_seed_builder = read_text(ROOT / "tools" / "build_asset_evidence_pq_seed.ps1")
+    asset_evidence_workbook_installer = read_text(ROOT / "tools" / "install_asset_evidence_pq_workbook.ps1")
+    asset_evidence_button_launcher = read_text(ROOT / "tools" / "start_asset_evidence_pq_installer.ps1")
     push_helper = read_text(ROOT / "tools" / "push_public.ps1")
     worktree_helper = read_text(ROOT / "tools" / "new_worktree.ps1")
     start_addin = read_text(ROOT / "Start-AddIn.ps1")
@@ -660,6 +668,9 @@ def audit_docs(results: list[Result]) -> None:
         ("defines test smoke alias", r'"test:smoke"\s*:\s*"powershell .*start_addin_smoke_test\.ps1"'),
         ("defines smoke script", r'"addin:smoke"\s*:\s*"powershell .*start_addin_smoke_test\.ps1"'),
         ("defines dev-server script", r'"dev-server"\s*:\s*"powershell .*start_addin_dev_server\.ps1"'),
+        ("defines asset evidence PQ seed builder", r'"build:asset-evidence-pq-seed"\s*:\s*"powershell .*build_asset_evidence_pq_seed\.ps1"'),
+        ("defines asset evidence PQ workbook installer", r'"install:asset-evidence-pq"\s*:\s*"powershell .*install_asset_evidence_pq_workbook\.ps1"'),
+        ("defines asset evidence PQ button launcher", r'"asset-evidence:pq"\s*:\s*"powershell .*start_asset_evidence_pq_installer\.ps1"'),
         ("declares Office debugging tool", r'"office-addin-debugging"\s*:'),
     ]:
         check_required_regex(
@@ -693,6 +704,14 @@ def audit_docs(results: list[Result]) -> None:
         "gitignore excludes local add-in cert files",
         r"\.office-addin-dev-certs/",
         "Keep generated local certificates out of source control.",
+    )
+    check_required_regex(
+        results,
+        ".gitignore",
+        gitignore,
+        "gitignore excludes generated release artifacts",
+        r"release_artifacts/",
+        "Keep generated seed workbooks out of source control.",
     )
     check_required_regex(
         results,
@@ -882,9 +901,89 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "docs/asset_setup_workflow.md",
         asset_workflow,
-        "asset workflow defers RDF export",
-        r"does not include RDF export.*SHACL validation.*Power Query bridge",
-        "Keep RDF/export out of the v0.2.0 asset setup release.",
+        "asset workflow documents asset evidence Power Query assistant",
+        r"Asset Evidence Power Query.*seed-workbook.*tblAssetEvidenceSource.*tblAssetEvidenceRules.*tblAssetEvidenceOverrides.*qAssetEvidence_Normalized.*qQA_AssetEvidence_MappingQueue.*PresentWithClassifiedEvidence.*classifier metadata",
+        "Document the optional asset evidence Power Query assistant and evidence distinction.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow does not own asset evidence PQ tables",
+        r"`Setup Asset Workflow` does not create `tblAssetEvidenceSource`.*`tblAssetEvidenceRules`.*`tblAssetEvidenceOverrides`.*asset register, mapping, change, and state-history workflow tables only",
+        "Keep the task-pane asset workflow separate from the Power Query evidence surface.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_setup_workflow.md",
+        asset_workflow,
+        "asset workflow still defers export and finished reports",
+        r"does not include RDF export.*SHACL validation.*finished asset reports.*Power Query seed provides setup tables",
+        "Keep RDF/export and finished reports out of this asset setup slice.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_evidence_power_query.md",
+        asset_evidence_pq,
+        "asset evidence Power Query doc lists operator flow",
+        r"Operator Flow.*build_asset_evidence_pq_seed\.ps1.*install_asset_evidence_pq_workbook\.ps1.*\.asset-evidence-pq\.xlsx.*Refresh Power Query",
+        "Document the generated seed workbook workflow.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_evidence_power_query.md",
+        asset_evidence_pq,
+        "asset evidence Power Query doc lists button launcher",
+        r"start_asset_evidence_pq_installer\.ps1.*browse for a workbook copy.*Install Asset Evidence PQ",
+        "Document the local button-driven installer.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_evidence_power_query.md",
+        asset_evidence_pq,
+        "asset evidence Power Query doc lists setup tables and outputs",
+        r"tblAssetEvidenceSource.*tblAssetEvidenceRules.*tblAssetEvidenceOverrides.*qAssetEvidence_Normalized.*qAssetEvidence_Classified.*qAssetEvidence_Linked.*qAssetEvidence_Status.*qAssetEvidence_ModelInputs.*qQA_AssetEvidence_MappingQueue",
+        "Document setup tables and expected query outputs.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_evidence_power_query.md",
+        asset_evidence_pq,
+        "asset evidence Power Query doc preserves mapped/classified distinction",
+        r"PresentWithMappedEvidence.*ContextCategoryId.*ContextCategoryName.*AssetId.*ProjectKey.*PresentWithClassifiedEvidence.*classified category.*classifier metadata.*Structural hints by themselves are not true classified evidence",
+        "Keep structural mapping separate from true classified evidence.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_evidence_power_query.md",
+        asset_evidence_pq,
+        "asset evidence Power Query doc states asset workflow boundary",
+        r"`Setup Asset Workflow` is not a prerequisite.*Power Query should not load into those add-in-created workflow tables",
+        "Keep the Power Query evidence bridge from depending on add-in-created asset workflow tables.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_asset_evidence_pq_seed.ps1",
+        asset_evidence_seed_builder,
+        "asset evidence seed builder creates loaded query sheets",
+        r"(?=.*Asset_Evidence_PQ_Seed\.xlsx)(?=.*samples\\power-query\\asset-evidence)(?=.*tblAssetEvidenceSource)(?=.*qAssetEvidence_Normalized)(?=.*qQA_AssetEvidence_MappingQueue)(?=.*Add-LoadedQueryTable)(?=.*Queries\.Add)",
+        "Keep the seed workbook reproducible from source-controlled M templates.",
+    )
+    check_required_regex(
+        results,
+        "tools/install_asset_evidence_pq_workbook.ps1",
+        asset_evidence_workbook_installer,
+        "asset evidence workbook installer writes output copy",
+        r"(?=.*TargetWorkbookPath)(?=.*OutputPath)(?=.*OutputPath must be a workbook copy)(?=.*Copy-Item)(?=.*ReplaceExisting)(?=.*Add-LoadedQueryTable)(?=.*Queries\.Add)",
+        "Keep the PowerShell installer focused on installing seed-owned sheets into a target workbook copy.",
+    )
+    check_required_regex(
+        results,
+        "tools/start_asset_evidence_pq_installer.ps1",
+        asset_evidence_button_launcher,
+        "asset evidence button launcher wraps build and install scripts",
+        r"(?=.*System\.Windows\.Forms)(?=.*Browse)(?=.*Build Seed)(?=.*Install Asset Evidence PQ)(?=.*build_asset_evidence_pq_seed\.ps1)(?=.*install_asset_evidence_pq_workbook\.ps1)",
+        "Keep a local button-driven path for users who should not run raw PowerShell commands.",
     )
     check_required_regex(
         results,
@@ -1922,6 +2021,31 @@ def audit_addin_contract(results: list[Result]) -> None:
         "setupAssetWorkflow absent from runAll" if "setupAssetWorkflow" not in run_all_body else "setupAssetWorkflow is in runAll",
         "Do not run optional asset setup from the default combined setup path.",
     )
+    add(
+        results,
+        "setupAssetEvidencePowerQuery" not in run_all_body,
+        "addin/taskpane.js",
+        "task pane keeps asset evidence Power Query setup opt-in",
+        "setupAssetEvidencePowerQuery absent from runAll" if "setupAssetEvidencePowerQuery" not in run_all_body else "setupAssetEvidencePowerQuery is in runAll",
+        "Do not run optional asset evidence Power Query setup from the default combined setup path.",
+    )
+    for forbidden_symbol in [
+        "setupAssetEvidencePowerQuery",
+        "copyAssetEvidencePowerQueryTemplates",
+        "copyAssetEvidencePowerQueryVbaInstaller",
+        "validateAssetEvidencePowerQuery",
+        "tblAssetEvidenceSource",
+        "tblAssetEvidenceRules",
+        "tblAssetEvidenceOverrides",
+    ]:
+        add(
+            results,
+            forbidden_symbol not in taskpane,
+            "addin/taskpane.js",
+            f"task pane omits duplicate asset evidence action {forbidden_symbol}",
+            "duplicate action absent",
+            "Keep asset evidence Power Query install in the generated seed workbook and PowerShell installer.",
+        )
 
     add(
         results,
@@ -1988,6 +2112,21 @@ def audit_addin_contract(results: list[Result]) -> None:
         r'id="setupNotesWorkflow".*Setup Notes Workflow.*id="setupAssetWorkflow".*Setup Asset Workflow',
         "Expose notes workflow setup and optional asset workflow setup.",
     )
+    for forbidden_markup in [
+        "setupAssetEvidencePowerQuery",
+        "copyAssetEvidencePowerQueryTemplates",
+        "copyAssetEvidencePowerQueryVbaInstaller",
+        "validateAssetEvidencePowerQuery",
+        "assetEvidencePowerQueryText",
+    ]:
+        add(
+            results,
+            forbidden_markup not in taskpane_html,
+            "addin/taskpane.html",
+            f"task pane markup omits duplicate asset evidence control {forbidden_markup}",
+            "duplicate control absent",
+            "Keep asset evidence Power Query install in the generated seed workbook and PowerShell installer.",
+        )
     check_required_regex(
         results,
         "addin/taskpane.html",
@@ -2192,6 +2331,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         results,
         "docs/office_addin.md",
         addin_doc,
+        "add-in docs document asset evidence Power Query helper",
+        r"outside the Office\.js task pane.*start_asset_evidence_pq_installer\.ps1.*install_asset_evidence_pq_workbook\.ps1.*tblAssetEvidenceSource.*qAssetEvidence_Normalized.*qQA_AssetEvidence_MappingQueue",
+        "Document the generated asset evidence Power Query seed workflow.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
         "add-in docs document asset relationship dropdowns",
         r"asset relationship dropdowns.*Rerunning it recreates.*relationship lists for `Asset ID` and `Project Key`",
         "Document the optional asset setup dropdown and reset behavior.",
@@ -2211,6 +2358,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "README mentions Office.js starter",
         r"Office\.js Add-In Starter",
         "Surface the add-in packaging path in the README.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
+        "README documents asset evidence Power Query assistant",
+        r"Asset Evidence Power Query.*seed-workbook.*samples/power-query/asset-evidence/.*start_asset_evidence_pq_installer\.ps1.*install_asset_evidence_pq_workbook\.ps1.*docs/asset_evidence_power_query\.md",
+        "Surface the optional asset evidence Power Query seed path from the README.",
     )
     check_required_regex(
         results,
@@ -2267,6 +2422,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "change log records asset tracker starter",
         r"Promote asset workflow to tracker starter.*tblAssets.*relationship dropdowns.*starter/reset",
         "Record the asset tracker starter setup change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records asset evidence Power Query assistant",
+        r"(?=.*Add asset evidence Power Query seed workbook)(?=.*tblAssetEvidenceSource)(?=.*tblAssetEvidenceRules)(?=.*tblAssetEvidenceOverrides)(?=.*start_asset_evidence_pq_installer\.ps1)(?=.*install_asset_evidence_pq_workbook\.ps1)(?=.*Setup Asset Workflow.*does not create asset-evidence Power Query setup or output tables)(?=.*PresentWithClassifiedEvidence.*classifier metadata)",
+        "Record the optional asset evidence Power Query seed path.",
     )
     check_required_regex(
         results,
@@ -2357,6 +2520,186 @@ def audit_reforecast_contract(results: list[Result]) -> None:
         )
 
 
+def audit_asset_evidence_power_query_contract(results: list[Result]) -> None:
+    query_dir = ROOT / "samples" / "power-query" / "asset-evidence"
+    seed_builder = read_text(ROOT / "tools" / "build_asset_evidence_pq_seed.ps1")
+    workbook_installer = read_text(ROOT / "tools" / "install_asset_evidence_pq_workbook.ps1")
+    expected_templates = {
+        "qAssetEvidence_Normalized.m": [
+            r"tblAssetEvidenceSource",
+            r"EvidenceId.*SourceSystem.*ProjectKey.*AssetId.*FundingSource.*DepreciationClass",
+        ],
+        "qAssetEvidence_Classified.m": [
+            r"tblAssetEvidenceRules.*tblAssetEvidenceOverrides",
+            r"ClassifiedCategoryId.*ClassifiedCategoryName.*ClassifierSourceType.*ClassifierSourceLabel.*ClassifierRuleId",
+        ],
+        "qAssetEvidence_Linked.m": [
+            r"qAssetEvidence_Classified",
+            r"ContextCategoryId.*ContextCategoryName.*HasMappedEvidence.*MappedCategoryId.*MappedCategoryName.*AssetId.*ProjectKey",
+        ],
+        "qAssetEvidence_Status.m": [
+            r"qAssetEvidence_Linked",
+            r"HasClassifiedEvidence.*ClassifiedCategoryId.*ClassifiedCategoryName.*ClassifierSourceType.*ClassifierSourceLabel.*ClassifierRuleId",
+            r"PresentWithSourceEvidence.*PresentWithMappedEvidence.*PresentWithClassifiedEvidence",
+            r"Mapped context requires classifier review",
+        ],
+        "qAssetEvidence_ModelInputs.m": [
+            r"qAssetEvidence_Status",
+            r"FundingSource.*DepreciationClass.*PresentWithClassifiedEvidence",
+        ],
+        "qQA_AssetEvidence_MappingQueue.m": [
+            r"qAssetEvidence_Status",
+            r"PresentWithMappedEvidence.*PresentWithClassifiedEvidence.*ReviewIssue",
+        ],
+    }
+
+    for file_name, patterns in expected_templates.items():
+        path = query_dir / file_name
+        label = rel(path)
+        text = read_text(path)
+        add(
+            results,
+            bool(text),
+            label,
+            "asset evidence Power Query template exists",
+            "template present",
+            "Keep every expected asset evidence M template in samples/power-query/asset-evidence/.",
+        )
+        for pattern in patterns:
+            check_required_regex(
+                results,
+                label,
+                text,
+                "asset evidence Power Query contract",
+                pattern,
+                "Keep the public asset evidence query contract intact.",
+            )
+
+    check_required_regex(
+        results,
+        "tools/build_asset_evidence_pq_seed.ps1",
+        seed_builder,
+        "asset evidence seed builder creates loaded workbook artifact",
+        r"(?=.*Asset_Evidence_PQ_Seed\.xlsx)(?=.*tblAssetEvidenceSource)(?=.*tblAssetEvidenceRules)(?=.*tblAssetEvidenceOverrides)(?=.*Add-LoadedQueryTable)(?=.*SaveAs\(\$resolvedOutputPath,\s*51\))",
+        "Keep the seed workbook build reproducible from text sources.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_asset_evidence_pq_seed.ps1",
+        seed_builder,
+        "asset evidence seed builder names all expected queries",
+        r"qAssetEvidence_Normalized.*qAssetEvidence_Classified.*qAssetEvidence_Linked.*qAssetEvidence_Status.*qAssetEvidence_ModelInputs.*qQA_AssetEvidence_MappingQueue",
+        "Keep the seed workbook aligned with the M template set.",
+    )
+    check_required_regex(
+        results,
+        "tools/install_asset_evidence_pq_workbook.ps1",
+        workbook_installer,
+        "asset evidence workbook installer protects original target",
+        r"(?=.*TargetWorkbookPath)(?=.*OutputPath)(?=.*OutputPath must be a workbook copy)(?=.*Copy-Item)(?=.*ReplaceExisting)(?=.*Add-AssetEvidenceSetup)",
+        "Keep the install path non-destructive by writing a separate output workbook.",
+    )
+    check_required_regex(
+        results,
+        "tools/start_asset_evidence_pq_installer.ps1",
+        read_text(ROOT / "tools" / "start_asset_evidence_pq_installer.ps1"),
+        "asset evidence button launcher exposes install button",
+        r"(?=.*System\.Windows\.Forms)(?=.*OpenFileDialog)(?=.*Build Seed)(?=.*Install Asset Evidence PQ)(?=.*install_asset_evidence_pq_workbook\.ps1)",
+        "Keep a local button path for the workbook installer.",
+    )
+    check_required_regex(
+        results,
+        "tools/install_asset_evidence_pq_workbook.ps1",
+        workbook_installer,
+        "asset evidence workbook installer names all expected sheets",
+        r"Asset Evidence Setup.*PQ Asset Evidence Normalized.*PQ Asset Evidence Classified.*PQ Asset Evidence Linked.*PQ Asset Evidence Status.*PQ Asset Evidence Model Inputs.*PQ Asset Evidence Mapping Queue",
+        "Keep the install script aligned with the seed workbook sheet set.",
+    )
+    check_required_regex(
+        results,
+        "tools/install_asset_evidence_pq_workbook.ps1",
+        workbook_installer,
+        "asset evidence workbook installer names all expected queries",
+        r"qAssetEvidence_Normalized.*qAssetEvidence_Classified.*qAssetEvidence_Linked.*qAssetEvidence_Status.*qAssetEvidence_ModelInputs.*qQA_AssetEvidence_MappingQueue",
+        "Keep the install script aligned with the M template set.",
+    )
+
+
+def audit_governance_starter_template_contract(results: list[Result]) -> None:
+    builder = read_text(ROOT / "tools" / "build_governance_starter_workbook.ps1")
+    readme = read_text(ROOT / "README.md")
+    starter_doc = read_text(ROOT / "docs" / "starter_workbook.md")
+    addin_doc = read_text(ROOT / "docs" / "office_addin.md")
+    changelog = read_text(ROOT / "docs" / "change_log.md")
+    package = read_text(ROOT / "package.json")
+    gitignore = read_text(ROOT / ".gitignore")
+
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder creates xlsx and xltx artifacts",
+        r"(?=.*Governance_Starter\.xlsx)(?=.*Governance_Starter\.xltx)(?=.*SaveAs\(\$templateWorkbookPath,\s*54\))",
+        "Keep the generated starter template build reproducible.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder uses source-controlled inputs",
+        r"(?=.*modules\\controls\.formula\.txt)(?=.*modules\\analysis\.formula\.txt)(?=.*samples\\planning_table_starter\.tsv)(?=.*samples\\asset_register_starter\.tsv)(?=.*install_asset_evidence_pq_workbook\.ps1)",
+        "Keep the workbook artifact generated from tracked text sources.",
+    )
+    check_required_regex(
+        results,
+        "package.json",
+        package,
+        "npm exposes governance starter build",
+        r"build:governance-starter.*build_governance_starter_workbook\.ps1",
+        "Expose the generated starter build from npm scripts.",
+    )
+    check_required_regex(
+        results,
+        ".gitignore",
+        gitignore,
+        "workbook templates remain ignored",
+        r"\*\.xltx.*\*\.xltm",
+        "Keep generated Excel templates out of source control.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
+        "README documents generated governance starter template",
+        r"Generated Governance Starter Template.*build_governance_starter_workbook\.ps1.*Governance_Starter\.xltx.*formula modules.*starter TSVs.*M templates",
+        "Surface the generated template path in the README.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter_doc,
+        "starter docs document generated template contents",
+        r"Generated Template.*Governance_Starter\.xltx.*formula-module workbook names.*optional asset workflow starter tables.*asset evidence Power Query setup",
+        "Document what the generated starter template contains.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs point new workbook starts to generated template",
+        r"preferred path is now the generated starter template.*build_governance_starter_workbook\.ps1.*\.xltx.*asset-evidence Power Query output sheets",
+        "Keep the add-in boundary aligned with the generated starter path.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records governance starter template",
+        r"Add generated governance starter template.*Governance_Starter\.xltx.*build_governance_starter_workbook\.ps1.*asset_register_starter\.tsv.*workbook binaries out of tracked source",
+        "Record the generated starter template change.",
+    )
+
+
 def main() -> int:
     results: list[Result] = []
     files = tracked_files()
@@ -2366,6 +2709,8 @@ def main() -> int:
     audit_docs(results)
     audit_cap_setup_contract(results)
     audit_addin_contract(results)
+    audit_governance_starter_template_contract(results)
+    audit_asset_evidence_power_query_contract(results)
     audit_reforecast_contract(results)
 
     for result in results:

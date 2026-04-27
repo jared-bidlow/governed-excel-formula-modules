@@ -4,6 +4,8 @@ This repo includes a minimal Excel Office.js task-pane add-in under `addin/`.
 
 The add-in is an installer and validator. It does not replace the formula modules with JavaScript business logic.
 
+For a new workbook artifact, the preferred path is now the generated starter template from `tools/build_governance_starter_workbook.ps1`. The add-in remains useful for blank-workbook setup, validation, and formula-module installation, while the generated `.xltx` already includes the starter sheets, asset workflow tables, and asset-evidence Power Query output sheets.
+
 ## What It Does
 
 - Creates the starter sheets: `Planning Table`, `Cap Setup`, and `Planning Review`.
@@ -27,6 +29,7 @@ The add-in is an installer and validator. It does not replace the formula module
 - Provides an `ApplyNotes` setup helper in the task pane that loads the script template from `../office-scripts/apply_notes.ts`, copies it when clipboard access is available, displays the script text when clipboard access is blocked, and shows the exact Excel `Automate -> New Script` import step.
 - Runs `Setup Notes Workflow` as part of the normal `Setup + Install + Validate + Outputs` path, creating a visible `Planning Review!O1:R3` `ApplyNotes Control` area, creating `Planning Review!O:R` notes columns, seeding public-safe `Planning Review!P5:R5` smoke input when blank, and creating formula-backed `Decision Staging` / `tblDecisionStaging` for the ApplyNotes first-pass staging step keyed by `ReviewRow`.
 - Provides a standalone `Setup Asset Workflow` button for optional asset sheets, `tblAssets`, mapping/change/history tables, and asset relationship dropdowns; asset setup is not run from the default path.
+- Leaves asset evidence Power Query import to the generated seed workbook plus PowerShell installer on this branch; the task pane does not expose duplicate M-template copy buttons.
 
 ## Local Trial Shape
 
@@ -109,6 +112,8 @@ Setup Asset Workflow
 
 That action creates the asset setup sheets and tables only when selected. It is intentionally optional and not run from the default path. The task pane color-codes the asset setup button as optional, and the standard setup completion message states that asset workflow setup is still separate. It creates `Asset Register` / `tblAssets`, `Asset Setup`, `Project Asset Map`, `Semantic Assets`, `Asset Changes`, and `Asset State History`. Rerunning it recreates the asset workflow tables from headers, so treat it as a starter/reset action on a workbook copy or before entering live asset rows. See `docs/asset_setup_workflow.md`.
 
+Asset Evidence Power Query is intentionally outside the Office.js task pane on this branch. For new workbook starts, run `tools/build_governance_starter_workbook.ps1` and use `release_artifacts/governance-starter/Governance_Starter.xltx`. For a button-driven local install into an existing workbook copy, run `tools/start_asset_evidence_pq_installer.ps1`; for automation, run `tools/install_asset_evidence_pq_workbook.ps1` against a workbook copy. The installed sheets include `Asset Evidence Setup` with `tblAssetEvidenceSource`, `tblAssetEvidenceRules`, and `tblAssetEvidenceOverrides`, plus loaded output tables for `qAssetEvidence_Normalized`, `qAssetEvidence_Classified`, `qAssetEvidence_Linked`, `qAssetEvidence_Status`, `qAssetEvidence_ModelInputs`, and `qQA_AssetEvidence_MappingQueue`. See `docs/asset_evidence_power_query.md`.
+
 | Sheet | Cell | Formula |
 |---|---|---|
 | `Planning Review` | `A4` | `=CapitalPlanning.CAPITAL_PLANNING_REPORT()` |
@@ -161,6 +166,7 @@ The setup path is intentionally small and inspectable:
 - Demo output sheets are created by the combined `Setup + Install + Validate + Outputs` action, or by the standalone `Insert Demo Outputs` rerun action.
 - Optional asset setup creates `Asset Register`, `Asset Setup`, `Project Asset Map`, `Semantic Assets`, `Asset Changes`, and `Asset State History` with `tblAssets`, asset staging, mapping, change, and state-history tables.
 - Asset setup also writes dropdown-backed validation lists for asset status, condition, criticality, change type, asset state, promotion status, mapping status, and advisory relationship lists for `Asset ID` and `Project Key`.
+- Optional asset evidence setup is handled by the generated governance starter template, the generated seed workbook, and the PowerShell installer, not by task-pane copy buttons.
 
 The unqualified control names are rebound to the visible cells:
 
@@ -173,7 +179,7 @@ Burndown_Cut_Target -> 'Planning Review'!$E$2
 
 ## Boundary
 
-The add-in is not a workbook binary, not VBA, and not a calculation engine.
+The add-in is not a workbook binary, not VBA, and not a calculation engine. The optional asset evidence Power Query seed is generated separately from source-controlled M templates for workbook-copy installs.
 
 The calculation logic still lives in native Excel named formulas after installation. This keeps the public story aligned with governed formula modules rather than a hidden JavaScript planning engine.
 

@@ -1,0 +1,2 @@
+AssetID	AssetName	AssetType	Site	Location	Department	Owner	Status	InServiceDate	Condition	Criticality	ReplacementCost	UsefulLifeYears	LastInspectionDate	NextReviewDate	LinkedProjectID	Notes
+ASSET-001	Sample asset one	Asset	Site 1	Location A	BU-A	Example Owner	planned	2026-01-15	good	medium	12500	10		2026-12-31	SRC-001-JOB-001	Starter asset row

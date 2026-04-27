@@ -6,6 +6,8 @@ Use `Setup Asset Workflow` when a workbook needs asset-mapping review surfaces a
 
 Rerunning this setup recreates the asset workflow tables from their headers. Use it as a starter/reset action on a copy or before live asset data is entered, not as a migration over populated production tables.
 
+For a new workbook, `tools/build_governance_starter_workbook.ps1` can generate `release_artifacts/governance-starter/Governance_Starter.xltx` with these asset workflow tables already present. The add-in button remains useful for blank-workbook setup and controlled resets.
+
 ## Created Sheets
 
 The add-in creates these sheets:
@@ -84,6 +86,16 @@ The script can write apply status fields when the target columns exist:
 
 The script is defensive when expected tables are missing and reports the issue instead of silently applying partial changes.
 
+## Asset Evidence Power Query
+
+Asset Evidence Power Query is a separate optional seed-workbook path for asset evidence imports. It is not part of the normal `Setup + Install + Validate + Outputs` path and is not exposed as task-pane copy buttons.
+
+`Setup Asset Workflow` does not create `tblAssetEvidenceSource`, `tblAssetEvidenceRules`, `tblAssetEvidenceOverrides`, or any `PQ Asset Evidence ...` output sheets. It owns the asset register, mapping, change, and state-history workflow tables only.
+
+Build `release_artifacts/asset-evidence-pq/Asset_Evidence_PQ_Seed.xlsx`, then use `tools/install_asset_evidence_pq_workbook.ps1` to install the seed-owned sheets into a new target workbook copy. The installed setup sheet carries `tblAssetEvidenceSource`, `tblAssetEvidenceRules`, and `tblAssetEvidenceOverrides`; the installed output sheets carry loaded tables for `qAssetEvidence_Normalized`, `qAssetEvidence_Classified`, `qAssetEvidence_Linked`, `qAssetEvidence_Status`, `qAssetEvidence_ModelInputs`, and `qQA_AssetEvidence_MappingQueue` from source-controlled M templates.
+
+The evidence bridge keeps mapped context and classified evidence separate. Asset, project, or context fields can create mapped evidence, but `PresentWithClassifiedEvidence` requires a classified category plus classifier metadata from a rule or override.
+
 ## Boundary
 
-This release does not include RDF export, SHACL validation, ontology files, reports, or a Power Query bridge. Asset formulas review workbook state; Office Scripts perform controlled workbook writes.
+This release does not include RDF export, SHACL validation, ontology files, or finished asset reports. Asset formulas review workbook state; Office Scripts perform controlled workbook writes; the asset evidence Power Query seed provides setup tables and public-safe M templates only.

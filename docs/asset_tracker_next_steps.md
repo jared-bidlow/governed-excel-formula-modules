@@ -7,9 +7,11 @@ This branch is the reference implementation for turning the governed formula sta
 - The default `Setup + Install + Validate + Outputs` path remains capital-planning focused.
 - `Setup Notes Workflow` remains part of the default setup path and creates `Decision Staging` / `tblDecisionStaging`.
 - `Setup Asset Workflow` is opt-in and creates the asset register, setup, mapping, change, and state-history sheets.
+- `tools/build_governance_starter_workbook.ps1` generates `Governance_Starter.xltx` with those asset workflow sheets plus asset-evidence Power Query output sheets already present.
 - `tblAssets` is the durable asset register starter table.
 - `tblProjectAssetMap`, `tblAssetChanges`, and `tblAssetStateHistory` are the controlled-write targets for `office-scripts/apply_asset_mappings.ts`.
 - `modules/assets.formula.txt` provides review queues only; formulas do not mutate workbook tables.
+- Asset Evidence Power Query is a separate opt-in seed-workbook path that creates source, rule, and override tables plus six loaded query output sheets from source-controlled M templates.
 
 ## Table Ownership
 
@@ -31,10 +33,13 @@ This branch is the reference implementation for turning the governed formula sta
 4. Confirm `Asset Register` / `tblAssets` exists before entering real assets.
 5. Confirm project key and asset ID columns show advisory dropdowns from `Validation Lists`.
 6. Run `office-scripts/apply_asset_mappings.ts` only after staging rows are marked ready.
+7. Build the seed workbook with `tools/build_asset_evidence_pq_seed.ps1` when the M templates change.
+8. Run `tools/start_asset_evidence_pq_installer.ps1` for the button-driven local installer, or run `tools/install_asset_evidence_pq_workbook.ps1 -TargetWorkbookPath <workbook-copy.xlsx>` directly when evidence import sheets and loaded query tables are wanted.
+9. Open the generated `.asset-evidence-pq.xlsx` output workbook and inspect Power Query load settings before treating it as the working copy.
 
 ## Follow-Up Decisions
 
 - Decide whether `tblAssets` should be manually maintained, imported from a source system, or updated by a separate controlled apply script.
-- Decide whether asset evidence should remain as `EvidenceId` text or get a dedicated evidence table.
+- Decide whether `qAssetEvidence_ModelInputs` should feed depreciation, funding requirements, totals, or chart modules first.
 - Decide whether project keys should come from the planning table, a project master table, or only the asset workflow tables.
 - Decide whether advisory relationship dropdowns should later become strict enough to reject unknown asset/project IDs.

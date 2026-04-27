@@ -10,7 +10,11 @@
     "addin:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_addin_smoke_test.ps1",
     "addin:server": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_addin_dev_server.ps1",
     "addin:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/stop_addin_smoke_test.ps1",
-    "dev-server": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_addin_dev_server.ps1"
+    "dev-server": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_addin_dev_server.ps1",
+    "build:governance-starter": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_governance_starter_workbook.ps1",
+    "build:asset-evidence-pq-seed": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_asset_evidence_pq_seed.ps1",
+    "install:asset-evidence-pq": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/install_asset_evidence_pq_workbook.ps1",
+    "asset-evidence:pq": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_asset_evidence_pq_installer.ps1"
   },
   "devDependencies": {
     "office-addin-debugging": "^6.0.3"

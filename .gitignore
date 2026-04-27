@@ -15,6 +15,8 @@ package-lock.json
 *.xlsm
 *.xlsb
 *.xls
+*.xltx
+*.xltm
 ~$*
 
 # Generated release attachments stay outside source control

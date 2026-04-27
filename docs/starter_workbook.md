@@ -1,6 +1,41 @@
 # Starter Workbook
 
-This repo does not ship a workbook. The fastest way to try the formulas is to create a blank workbook with the minimum sheet names and starter table shape.
+The repo keeps workbook logic and setup sources as text, then can generate a local starter workbook/template artifact when Excel is available.
+
+## Generated Template
+
+Build the generated governance starter:
+
+```powershell
+.\tools\build_governance_starter_workbook.ps1
+```
+
+or:
+
+```powershell
+npm run build:governance-starter
+```
+
+The build writes ignored artifacts under `release_artifacts/governance-starter/`:
+
+```text
+Governance_Starter.xlsx
+Governance_Starter.xltx
+```
+
+Use `Governance_Starter.xltx` as the Excel template. Use `Governance_Starter.xlsx` for inspection and smoke testing. The generator pulls from source-controlled formula modules, starter TSVs, and M templates, so the workbook artifact can be rebuilt instead of reviewed as source.
+
+The generated starter includes:
+
+- planning source/cap setup sheets,
+- validation lists and visible controls,
+- formula-module workbook names,
+- demo planning output sheets,
+- notes staging,
+- optional asset workflow starter tables,
+- asset evidence Power Query setup and loaded output sheets.
+
+The fastest no-build path is still a blank workbook with the minimum sheet names and starter table shape.
 
 ## Minimum Sheets
 
