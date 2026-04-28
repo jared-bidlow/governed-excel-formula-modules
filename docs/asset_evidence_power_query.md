@@ -115,4 +115,4 @@ The workbook artifact supports operator install, but source control remains text
 - Install the seed shape into target workbook copies with `tools/install_asset_evidence_pq_workbook.ps1`.
 - Keep generated workbook artifacts under `release_artifacts/`.
 
-This slice does not implement depreciation calculations, funding requirement modules, total rollups, or charting outputs. It creates the governed import bridge those modules can consume later.
+The Power Query evidence slice prepares classified model-input rows; it does not calculate depreciation, funding requirements, finance totals, or chart-ready feeds itself. In v0.4, the `AssetFinance` formula bridge consumes `tblAssetEvidence_ModelInputs` for those outputs. Only rows with `PresentWithClassifiedEvidence = TRUE` feed `AssetFinance` outputs; mapped-only evidence remains reviewable in the Power Query status and mapping queue until a rule or override classifies it.
