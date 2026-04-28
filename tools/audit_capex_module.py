@@ -137,6 +137,14 @@ ASSET_PUBLIC_FORMULAS = [
     "REPLACEMENT_SOURCE_TARGET_ISSUES",
 ]
 
+ASSET_FINANCE_PUBLIC_FORMULAS = [
+    "CLASSIFIED_MODEL_INPUTS",
+    "DEPRECIATION_SCHEDULE",
+    "FUNDING_REQUIREMENTS",
+    "FINANCE_TOTALS",
+    "CHART_FEEDS",
+]
+
 REQUIRED_FORMULAS = {
     "modules/controls.formula.txt": [
         "PM_Filter_Dropdowns",
@@ -165,6 +173,7 @@ REQUIRED_FORMULAS = {
     ],
     "modules/analysis.formula.txt": ANALYSIS_PUBLIC_FORMULAS,
     "modules/assets.formula.txt": ASSET_PUBLIC_FORMULAS,
+    "modules/asset_finance.formula.txt": ASSET_FINANCE_PUBLIC_FORMULAS,
     "modules/ready.formula.txt": [
         "ColumnOrBlank",
         "InternalEligible",
@@ -180,6 +189,8 @@ NAMED_FORMULA_BUDGETS = [
     ("modules/capital_planning_report.formula.txt", "CAPITAL_PLANNING_REPORT"),
 ] + [("modules/analysis.formula.txt", name) for name in ANALYSIS_PUBLIC_FORMULAS] + [
     ("modules/assets.formula.txt", name) for name in ASSET_PUBLIC_FORMULAS
+] + [
+    ("modules/asset_finance.formula.txt", name) for name in ASSET_FINANCE_PUBLIC_FORMULAS
 ]
 
 
@@ -468,6 +479,45 @@ def audit_formula_files(results: list[Result]) -> None:
         r"InternalReady3\s*=\s*LAMBDA\(eligible,\s*maturity,\s*stage,\s*chargeableFlag",
         "Use Chargeable wording for the fourth InternalReady3 input.",
     )
+
+    asset_finance = read_text(ROOT / "modules" / "asset_finance.formula.txt")
+    check_required_regex(
+        results,
+        "modules/asset_finance.formula.txt",
+        asset_finance,
+        "AssetFinance reads loaded model input bridge",
+        r"tblAssetEvidence_ModelInputs.*PresentWithClassifiedEvidence.*AssetFinance\.CLASSIFIED_MODEL_INPUTS",
+        "Keep AssetFinance pointed at the loaded qAssetEvidence_ModelInputs table.",
+    )
+    check_required_regex(
+        results,
+        "modules/asset_finance.formula.txt",
+        asset_finance,
+        "AssetFinance exposes finance outputs",
+        r"DEPRECIATION_SCHEDULE.*FUNDING_REQUIREMENTS.*FINANCE_TOTALS.*CHART_FEEDS",
+        "Keep the v0.4 depreciation, funding, totals, and chart-ready outputs importable.",
+    )
+    check_required_regex(
+        results,
+        "modules/asset_finance.formula.txt",
+        asset_finance,
+        "AssetFinance uses finance assumptions",
+        r"tblAssetFinanceAssumptions.*UsefulLifeYears.*FundingRequirementRule.*ChartGroup",
+        "Keep asset finance assumptions source-controlled and operator editable.",
+    )
+    for forbidden_source in [
+        "tblAssetEvidenceSource",
+        "tblAssetEvidenceRules",
+        "tblAssetEvidenceOverrides",
+    ]:
+        add(
+            results,
+            forbidden_source not in asset_finance,
+            "modules/asset_finance.formula.txt",
+            f"AssetFinance does not read raw setup table {forbidden_source}",
+            "raw setup table absent",
+            "AssetFinance outputs must read tblAssetEvidence_ModelInputs, not raw setup tables.",
+        )
     check_required_regex(
         results,
         "modules/ready.formula.txt",
@@ -2648,7 +2698,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "tools/build_governance_starter_workbook.ps1",
         builder,
         "governance starter builder uses source-controlled inputs",
-        r"(?=.*modules\\controls\.formula\.txt)(?=.*modules\\analysis\.formula\.txt)(?=.*samples\\planning_table_starter\.tsv)(?=.*samples\\asset_register_starter\.tsv)(?=.*install_asset_evidence_pq_workbook\.ps1)",
+        r"(?=.*modules\\controls\.formula\.txt)(?=.*modules\\analysis\.formula\.txt)(?=.*modules\\asset_finance\.formula\.txt)(?=.*samples\\planning_table_starter\.tsv)(?=.*samples\\asset_register_starter\.tsv)(?=.*samples\\asset_finance_assumptions_starter\.tsv)(?=.*install_asset_evidence_pq_workbook\.ps1)",
         "Keep the workbook artifact generated from tracked text sources.",
     )
     check_required_regex(
@@ -2666,6 +2716,22 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "governance starter builder creates Automation Setup sheet",
         r"(?=.*Build-AutomationSetup)(?=.*Automation Setup)(?=.*tblAutomationSetup)(?=.*ApplyNotes\.ts)(?=.*Automate > New Script)(?=.*Add-Worksheet.*Automation Setup)",
         "Keep the generated template explicit about optional Office Script import.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder creates Asset Finance bridge",
+        r"(?=.*Build-AssetFinanceSetup)(?=.*Asset Finance Setup)(?=.*tblAssetFinanceAssumptions)(?=.*AssetFinance)(?=.*Asset Depreciation)(?=.*Asset Funding Requirements)(?=.*Asset Finance Totals)(?=.*Asset Finance Charts)(?=.*tblAssetEvidence_ModelInputs)",
+        "Keep generated asset finance setup and output sheets aligned with the v0.4 bridge.",
+    )
+    check_required_regex(
+        results,
+        "samples/asset_finance_assumptions_starter.tsv",
+        read_text(ROOT / "samples" / "asset_finance_assumptions_starter.tsv"),
+        "asset finance assumptions starter has minimum columns",
+        r"DepreciationClass\tUsefulLifeYears\tDepreciationMethod\tFundingSource\tFundingRequirementRule\tChartGroup",
+        "Keep the generated assumption table shape stable.",
     )
     check_required_regex(
         results,
@@ -2701,6 +2767,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "README.md",
+        readme,
+        "README documents v0.4 asset finance bridge",
+        r"Asset Finance Setup.*tblAssetFinanceAssumptions.*AssetFinance.*Asset Depreciation.*Asset Funding Requirements.*Asset Finance Totals.*Asset Finance Charts.*tblAssetEvidence_ModelInputs.*PresentWithClassifiedEvidence = TRUE",
+        "Surface the asset finance bridge in the README.",
+    )
+    check_required_regex(
+        results,
         "docs/starter_workbook.md",
         starter_doc,
         "starter docs document generated template contents",
@@ -2714,6 +2788,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "starter docs document Automation Setup sheet",
         r"(?=.*Automation Setup Sheet)(?=.*ApplyNotes\.ts)(?=.*Automate > New Script)(?=.*does not embed)(?=.*operator chooses whether to import and run)",
         "Document that Office Scripts are optional release assets, not embedded workbook automation.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter_doc,
+        "starter docs document asset finance bridge",
+        r"Asset Finance Bridge.*tblAssetFinanceAssumptions.*DepreciationClass.*UsefulLifeYears.*AssetFinance\.DEPRECIATION_SCHEDULE.*AssetFinance\.FUNDING_REQUIREMENTS.*AssetFinance\.FINANCE_TOTALS.*AssetFinance\.CHART_FEEDS.*PresentWithClassifiedEvidence = TRUE",
+        "Document the generated asset finance setup and output sheets.",
     )
     check_required_regex(
         results,
@@ -2733,11 +2815,27 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document generated asset finance bridge",
+        r"Asset Finance Setup.*tblAssetFinanceAssumptions.*AssetFinance.*Asset Depreciation.*Asset Funding Requirements.*Asset Finance Totals.*Asset Finance Charts.*tblAssetEvidence_ModelInputs",
+        "Keep add-in docs clear that the generated starter owns the asset finance bridge.",
+    )
+    check_required_regex(
+        results,
         "docs/asset_finance_model_modules.md",
         finance_doc,
         "asset finance v0.4 docs start module slice",
         r"v0\.4.*codex/asset-finance-model-modules.*Automation Setup.*depreciation.*funding requirements.*totals.*chart-ready.*qAssetEvidence_ModelInputs",
         "Keep the v0.4 model-module branch scoped and documented.",
+    )
+    check_required_regex(
+        results,
+        "docs/asset_finance_model_modules.md",
+        finance_doc,
+        "asset finance docs document implemented bridge",
+        r"Governance_Starter\.xltx -> Asset Evidence Setup -> qAssetEvidence_ModelInputs -> PQ Asset Evidence Model Inputs / tblAssetEvidence_ModelInputs -> AssetFinance outputs.*AssetFinance\.DEPRECIATION_SCHEDULE.*AssetFinance\.FUNDING_REQUIREMENTS.*AssetFinance\.FINANCE_TOTALS.*AssetFinance\.CHART_FEEDS.*PresentWithClassifiedEvidence = TRUE",
+        "Document the exact workbook bridge and classified-only finance rule.",
     )
     check_required_regex(
         results,
@@ -2762,6 +2860,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "change log records v0.4 Automation Setup start",
         r"Start v0\.4 asset finance model branch with Automation Setup.*codex/asset-finance-model-modules.*ApplyNotes\.ts.*Automate -> New Script.*depreciation.*funding requirements.*totals.*chart-ready feeds",
         "Record the v0.4 branch start and Automation Setup worksheet.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records v0.4 asset finance bridge",
+        r"Add v0\.4 asset finance bridge outputs.*modules/asset_finance\.formula\.txt.*tblAssetFinanceAssumptions.*Asset Depreciation.*Asset Funding Requirements.*Asset Finance Totals.*Asset Finance Charts.*PresentWithClassifiedEvidence = TRUE",
+        "Record the v0.4 asset finance bridge implementation.",
     )
 
 

@@ -1,3 +1,28 @@
+## 2026-04-27 - Add v0.4 asset finance bridge outputs
+
+Semantic change:
+
+- Added `modules/asset_finance.formula.txt` with `AssetFinance` formulas for classified model inputs, depreciation, funding requirements, totals, and chart-ready feeds.
+- Added `samples/asset_finance_assumptions_starter.tsv` and generated `Asset Finance Setup` / `tblAssetFinanceAssumptions`.
+- Updated the generated starter build so formula names and output sheets are installed after asset-evidence Power Query tables exist.
+- Added generated output sheets: `Asset Depreciation`, `Asset Funding Requirements`, `Asset Finance Totals`, and `Asset Finance Charts`.
+- Preserved the evidence distinction: formulas read `tblAssetEvidence_ModelInputs` and filter final finance outputs to `PresentWithClassifiedEvidence = TRUE`; mapped-only rows remain reviewable but do not drive depreciation, funding, totals, or chart feeds.
+
+Minimal diff summary:
+
+- Added `modules/asset_finance.formula.txt`.
+- Added `samples/asset_finance_assumptions_starter.tsv`.
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Updated README, starter/add-in/asset finance docs, asset next steps, changelog, and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: generated starter workbooks gain `Asset Finance Setup`, `tblAssetFinanceAssumptions`, four asset finance output sheets, and `AssetFinance` defined names.
+- Formula logic: new asset finance formulas consume the loaded `tblAssetEvidence_ModelInputs` bridge table.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-27 - Start v0.4 asset finance model branch with Automation Setup
 
 Semantic change:

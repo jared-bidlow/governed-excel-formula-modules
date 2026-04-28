@@ -1,0 +1,3 @@
+DepreciationClass	UsefulLifeYears	DepreciationMethod	FundingSource	FundingRequirementRule	ChartGroup
+Standard life	10	Straight-line	Sample funding	Fund full classified amount	Core assets
+Short life	5	Straight-line	Sample funding	Fund full classified amount	Short-life assets

@@ -116,6 +116,8 @@ That action creates the asset setup sheets and tables only when selected. It is 
 
 Asset Evidence Power Query is intentionally outside the Office.js task pane on this branch. For new workbook starts, run `tools/build_governance_starter_workbook.ps1` and use `release_artifacts/governance-starter/Governance_Starter.xltx`. For a button-driven local install into an existing workbook copy, run `tools/start_asset_evidence_pq_installer.ps1`; for automation, run `tools/install_asset_evidence_pq_workbook.ps1` against a workbook copy. The installed sheets include `Asset Evidence Setup` with `tblAssetEvidenceSource`, `tblAssetEvidenceRules`, and `tblAssetEvidenceOverrides`, plus loaded output tables for `qAssetEvidence_Normalized`, `qAssetEvidence_Classified`, `qAssetEvidence_Linked`, `qAssetEvidence_Status`, `qAssetEvidence_ModelInputs`, and `qQA_AssetEvidence_MappingQueue`. See `docs/asset_evidence_power_query.md`.
 
+The generated starter also installs the v0.4 asset finance bridge outside the Office.js task pane. It creates `Asset Finance Setup` / `tblAssetFinanceAssumptions`, installs `AssetFinance` names from `modules/asset_finance.formula.txt`, and creates `Asset Depreciation`, `Asset Funding Requirements`, `Asset Finance Totals`, and `Asset Finance Charts`. Those formulas consume `tblAssetEvidence_ModelInputs` only, and mapped-only evidence does not drive final finance outputs.
+
 | Sheet | Cell | Formula |
 |---|---|---|
 | `Planning Review` | `A4` | `=CapitalPlanning.CAPITAL_PLANNING_REPORT()` |

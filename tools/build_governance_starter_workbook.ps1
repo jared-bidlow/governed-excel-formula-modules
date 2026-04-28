@@ -333,7 +333,8 @@ function Install-FormulaModules {
         @{ Prefix = "Phasing"; Path = "modules\phasing.formula.txt" },
         @{ Prefix = "Ready"; Path = "modules\ready.formula.txt" },
         @{ Prefix = "Search"; Path = "modules\search.formula.txt" },
-        @{ Prefix = "Assets"; Path = "modules\assets.formula.txt" }
+        @{ Prefix = "Assets"; Path = "modules\assets.formula.txt" },
+        @{ Prefix = "AssetFinance"; Path = "modules\asset_finance.formula.txt" }
     )
 
     $aliases = @{}
@@ -600,6 +601,28 @@ function Build-AutomationSetup {
     $Worksheet.Columns.Item(3).ColumnWidth = 58
 }
 
+function Build-AssetFinanceSetup {
+    param([object]$Worksheet)
+
+    $Worksheet.Range("A1:F40").Clear()
+    $Worksheet.Range("A1").Value2 = "Asset Finance Setup"
+    $Worksheet.Range("A2").Value2 = "Assumptions for AssetFinance formulas. Finance outputs read tblAssetEvidence_ModelInputs and keep mapped-only evidence out of final model outputs."
+    $Worksheet.Range("A1").Font.Bold = $true
+    $Worksheet.Range("A1").Font.Size = 16
+    $Worksheet.Range("A2").WrapText = $true
+
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblAssetFinanceAssumptions" `
+        -TopLeft "A4" `
+        -Rows (Read-TsvMatrix "samples\asset_finance_assumptions_starter.tsv"))
+
+    [void](Set-NumberFormat -Range $Worksheet.Range("B5:B100") -Format "0")
+    [void](Add-NonNegativeValidation -Range $Worksheet.Range("B5:B100"))
+    $Worksheet.Range("A:F").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+}
+
 function Configure-DecisionStagingFormulas {
     param([object]$Table)
 
@@ -692,7 +715,11 @@ function Build-DemoOutputs {
         @{ Sheet = "Working Budget"; Title = "Working Budget Screen"; Note = "Current-job screening before budget drafting."; Formula = "=Analysis.WORKING_BUDGET_SCREEN()" },
         @{ Sheet = "Burndown"; Title = "Burndown Screen"; Note = "Meeting view of remaining burn and drivers."; Formula = "=Analysis.BURNDOWN_SCREEN()" },
         @{ Sheet = "Internal Jobs"; Title = "Internal Jobs Export"; Note = "Header-driven internal work export for readiness smoke testing."; Formula = "=Ready.InternalJobs_Export()" },
-        @{ Sheet = "Asset Review"; Title = "Asset Review"; Note = "Asset workflow issue queues from source-controlled formula modules."; Formula = "=Assets.ASSET_MAPPING_ISSUES" }
+        @{ Sheet = "Asset Review"; Title = "Asset Review"; Note = "Asset workflow issue queues from source-controlled formula modules."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
+        @{ Sheet = "Asset Depreciation"; Title = "Asset Depreciation"; Note = "Classified asset evidence converted to depreciation-ready rows."; Formula = "=AssetFinance.DEPRECIATION_SCHEDULE" },
+        @{ Sheet = "Asset Funding Requirements"; Title = "Asset Funding Requirements"; Note = "Classified asset evidence grouped into funding requirements."; Formula = "=AssetFinance.FUNDING_REQUIREMENTS" },
+        @{ Sheet = "Asset Finance Totals"; Title = "Asset Finance Totals"; Note = "Asset finance summary totals from classified model inputs."; Formula = "=AssetFinance.FINANCE_TOTALS" },
+        @{ Sheet = "Asset Finance Charts"; Title = "Asset Finance Charts"; Note = "Chart-ready asset finance feeds; no native chart objects yet."; Formula = "=AssetFinance.CHART_FEEDS" }
     )
 
     foreach ($output in $outputs) {
@@ -760,6 +787,10 @@ try {
     [void](Build-AutomationSetup -Worksheet $automationSheet)
     [void](Set-FreezeRows -Excel $excel -Worksheet $automationSheet -Rows 4)
 
+    $assetFinanceSheet = Add-Worksheet -Workbook $workbook -Name "Asset Finance Setup"
+    [void](Build-AssetFinanceSetup -Worksheet $assetFinanceSheet)
+    [void](Set-FreezeRows -Excel $excel -Worksheet $assetFinanceSheet -Rows 4)
+
     $stagingSheet = Add-Worksheet -Workbook $workbook -Name "Decision Staging"
     $stagingRows = Read-TsvMatrix "samples\decision_staging_starter.tsv"
     $blankStagingBody = @($stagingRows[0], @(1..$stagingRows[0].Count | ForEach-Object { "" }))
@@ -772,12 +803,9 @@ try {
     Build-AssetWorkflowTables -Workbook $workbook -Excel $excel | Out-Null
     Build-AssetRelationshipLists -Worksheet $validationSheet | Out-Null
 
-    $installedNames = Install-FormulaModules -Workbook $workbook
-    Build-DemoOutputs -Workbook $workbook | Out-Null
-
     [void]$reviewSheet.Activate()
     [void]$workbook.SaveAs($coreWorkbookPath, 51)
-    Write-Host "Built core governance workbook with $installedNames defined names: $coreWorkbookPath"
+    Write-Host "Built core governance workbook: $coreWorkbookPath"
 } finally {
     if ($workbook -ne $null) {
         $workbook.Close($false)
@@ -804,9 +832,12 @@ try {
     $excel.Visible = $false
     $excel.DisplayAlerts = $false
     $workbook = $excel.Workbooks.Open($starterWorkbookPath)
+    $installedNames = Install-FormulaModules -Workbook $workbook
+    Build-DemoOutputs -Workbook $workbook | Out-Null
     [void]$workbook.Worksheets.Item("Planning Review").Activate()
+    [void]$workbook.Save()
     [void]$workbook.SaveAs($templateWorkbookPath, 54)
-    Write-Host "Built governance starter workbook: $starterWorkbookPath"
+    Write-Host "Built governance starter workbook with $installedNames defined names: $starterWorkbookPath"
     Write-Host "Built governance starter template: $templateWorkbookPath"
 } finally {
     if ($workbook -ne $null) {

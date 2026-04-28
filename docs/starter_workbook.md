@@ -34,7 +34,9 @@ The generated starter includes:
 - demo planning output sheets,
 - notes staging,
 - optional asset workflow starter tables,
-- asset evidence Power Query setup and loaded output sheets.
+- asset evidence Power Query setup and loaded output sheets,
+- `Asset Finance Setup` / `tblAssetFinanceAssumptions`,
+- asset finance output sheets for depreciation, funding requirements, totals, and chart-ready feeds.
 
 The fastest no-build path is still a blank workbook with the minimum sheet names and starter table shape.
 
@@ -190,6 +192,25 @@ Download ApplyNotes.ts -> Automate > New Script -> paste -> save as ApplyNotes
 ```
 
 This keeps script installation explicit and tenant-controlled. The workbook has the staging tables and review surfaces; the operator chooses whether to import and run the optional writeback script.
+
+## Asset Finance Bridge
+
+The generated `Governance_Starter.xltx` includes `Asset Finance Setup` with `tblAssetFinanceAssumptions`. The minimum assumption fields are:
+
+```text
+DepreciationClass | UsefulLifeYears | DepreciationMethod | FundingSource | FundingRequirementRule | ChartGroup
+```
+
+The finance output sheets are generated from `modules/asset_finance.formula.txt`:
+
+| Sheet | Cell | Formula |
+|---|---|---|
+| `Asset Depreciation` | `A4` | `=AssetFinance.DEPRECIATION_SCHEDULE` |
+| `Asset Funding Requirements` | `A4` | `=AssetFinance.FUNDING_REQUIREMENTS` |
+| `Asset Finance Totals` | `A4` | `=AssetFinance.FINANCE_TOTALS` |
+| `Asset Finance Charts` | `A4` | `=AssetFinance.CHART_FEEDS` |
+
+These formulas read `tblAssetEvidence_ModelInputs`, not the raw setup tables. Rows with `PresentWithMappedEvidence = TRUE` remain visible for review, but mapped-only rows do not feed the finance outputs. A row must have `PresentWithClassifiedEvidence = TRUE` to drive depreciation, funding, totals, or chart-ready tables.
 
 `Setup Asset Workflow` is optional. It creates `tblAssets` plus the asset setup, mapping, change, and state-history tables used by `office-scripts/apply_asset_mappings.ts`; it is not part of the default setup path. It also applies dropdowns for asset state/status fields and advisory relationship dropdowns for asset IDs and project keys. Rerunning it recreates those workflow tables from headers, so use it as a starter/reset action before entering real asset rows or against a workbook copy.
 
