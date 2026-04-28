@@ -52,9 +52,9 @@ Mapped structural hints can support review queues and context, but they do not d
 ## v0.4 Assumption Semantics
 
 - `AssetFinance` outputs consume only rows from `tblAssetEvidence_ModelInputs` where `PresentWithClassifiedEvidence = TRUE`.
-- v0.4 depreciation supports straight-line behavior only. `DepreciationMethod` is a contract/display field; unsupported or non-straight-line values do not trigger method-specific calculations in this slice.
-- v0.4 funding requirements use full grouped classified amounts. `FundingRequirementRule` is a contract/label field and does not change `FundingRequirementAmount` in this slice.
-- `ChartGroup` affects funding chart feed grouping only. Depreciation chart feed rows group by `DepreciationClass`.
+- v0.4 depreciation supports straight-line behavior only. `DepreciationMethod` is a contract/display field; unsupported or non-straight-line values keep the row visible, preserve the entered method, blank `AnnualDepreciation`, and append `DepreciationIssue`.
+- v0.4 funding requirements use full grouped classified amounts. `FundingRequirementRule` is a contract/label field; unsupported values keep the grouped row visible, preserve the entered rule, blank `FundingRequirementAmount`, and append `FundingIssue`.
+- `ChartGroup` affects funding chart feed grouping only. Depreciation chart feed rows group by `DepreciationClass`. Chart feeds exclude unsupported rows by reading nonblank `AnnualDepreciation` and `FundingRequirementAmount` values from the formula outputs.
 
 ## Source Boundary
 
