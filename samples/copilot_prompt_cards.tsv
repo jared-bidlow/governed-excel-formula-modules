@@ -1,0 +1,6 @@
+PromptArea	PromptText	Guardrail
+Source health	Summarize tblBudgetImportIssues by severity and review status.	Use Copilot for explanation only; governed numeric calculations stay in Excel formulas.
+Schema review	Compare tblBudgetImportContract to tblBudgetInput headers and list missing required columns.	Do not treat Copilot output as the calculation source of record.
+Review meeting	Draft a capital planning review agenda from the Reforecast Queue and Budget Import Issues tables.	Check all generated text before sharing.
+Asset finance	Summarize unsupported depreciation or funding assumptions from AssetFinance outputs.	Do not ask Copilot to replace deterministic formula outputs.
+Cap pressure	Explain which BUs have the highest cap pressure using visible workbook tables.	Use native Excel formulas for totals that require accuracy or reproducibility.

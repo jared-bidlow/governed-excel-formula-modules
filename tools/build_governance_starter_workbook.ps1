@@ -312,7 +312,11 @@ function Set-WorkbookName {
     } catch {
     }
 
-    $definedName = $Workbook.Names.Add($Name, $RefersTo)
+    try {
+        $definedName = $Workbook.Names.Add($Name, $RefersTo)
+    } catch {
+        throw "Failed to install workbook name $Name`: $($_.Exception.Message)"
+    }
     try {
         $definedName.Comment = $Comment
     } catch {
@@ -333,6 +337,7 @@ function Install-FormulaModules {
         @{ Prefix = "Phasing"; Path = "modules\phasing.formula.txt" },
         @{ Prefix = "Ready"; Path = "modules\ready.formula.txt" },
         @{ Prefix = "Search"; Path = "modules\search.formula.txt" },
+        @{ Prefix = "Source"; Path = "modules\source.formula.txt" },
         @{ Prefix = "Assets"; Path = "modules\assets.formula.txt" },
         @{ Prefix = "AssetFinance"; Path = "modules\asset_finance.formula.txt" }
     )
@@ -625,6 +630,78 @@ function Build-AssetFinanceSetup {
     [void]$Worksheet.Columns.AutoFit()
 }
 
+function Build-DataImportSetup {
+    param([object]$Worksheet)
+
+    $Worksheet.Range("A1:H100").Clear()
+    $Worksheet.Range("A1").Value2 = "Data Import Setup"
+    $Worksheet.Range("A2").Value2 = "Public-safe source profile and canonical budget import contract. Formulas read tblBudgetInput; Planning Table remains the manual starter source."
+    $Worksheet.Range("A1").Font.Bold = $true
+    $Worksheet.Range("A1").Font.Size = 16
+    $Worksheet.Range("A2").WrapText = $true
+
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblDataSourceProfile" `
+        -TopLeft "A4" `
+        -Rows (Read-TsvMatrix "samples\data_source_profile_starter.tsv"))
+
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblBudgetImportParameters" `
+        -TopLeft "E4" `
+        -Rows (Read-TsvMatrix "samples\budget_import_parameters_starter.tsv"))
+
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblBudgetImportContract" `
+        -TopLeft "A16" `
+        -Rows (Read-TsvMatrix "samples\budget_import_contract_starter.tsv"))
+
+    $Worksheet.Range("A:H").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+}
+
+function Build-BudgetInput {
+    param([object]$Worksheet)
+
+    $Worksheet.Range("A1:BL234").Clear()
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblBudgetInput" `
+        -TopLeft "A1" `
+        -Rows (Read-TsvMatrix "samples\planning_table_starter.tsv"))
+
+    [void](Set-NumberFormat -Range $Worksheet.Range("O2:AZ234") -Format "$#,##0")
+    [void](Set-NumberFormat -Range $Worksheet.Range("BJ2:BJ234") -Format "0")
+    $Worksheet.Range("A:BL").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+}
+
+function Build-BudgetQA {
+    param([object]$Worksheet)
+
+    $Worksheet.Range("A1:F80").Clear()
+    $Worksheet.Range("A1").Value2 = "Budget Import Status"
+    $Worksheet.Range("A1").Font.Bold = $true
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblBudgetImportStatus" `
+        -TopLeft "A3" `
+        -Rows (Read-TsvMatrix "samples\budget_import_status_starter.tsv"))
+
+    $Worksheet.Range("A9").Value2 = "Budget Import Issues"
+    $Worksheet.Range("A9").Font.Bold = $true
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblBudgetImportIssues" `
+        -TopLeft "A11" `
+        -Rows (Read-TsvMatrix "samples\budget_import_issues_starter.tsv"))
+
+    $Worksheet.Range("A:F").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+}
+
 function Configure-DecisionStagingFormulas {
     param([object]$Table)
 
@@ -717,6 +794,7 @@ function Build-DemoOutputs {
         @{ Sheet = "Working Budget"; Title = "Working Budget Screen"; Note = "Current-job screening before budget drafting."; Formula = "=Analysis.WORKING_BUDGET_SCREEN()" },
         @{ Sheet = "Burndown"; Title = "Burndown Screen"; Note = "Meeting view of remaining burn and drivers."; Formula = "=Analysis.BURNDOWN_SCREEN()" },
         @{ Sheet = "Internal Jobs"; Title = "Internal Jobs Export"; Note = "Header-driven internal work export for readiness smoke testing."; Formula = "=Ready.InternalJobs_Export()" },
+        @{ Sheet = "Source Status"; Title = "Source Status"; Note = "Canonical budget import status and source trust checks."; Formula = "=Source.SOURCE_STATUS" },
         @{ Sheet = "Asset Review"; Title = "Asset Review"; Note = "Asset workflow issue queues from source-controlled formula modules."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
         @{ Sheet = "Asset Depreciation"; Title = "Asset Depreciation"; Note = "Classified asset evidence converted to depreciation-ready rows."; Formula = "=AssetFinance.DEPRECIATION_SCHEDULE" },
         @{ Sheet = "Asset Funding Requirements"; Title = "Asset Funding Requirements"; Note = "Classified asset evidence grouped into funding requirements."; Formula = "=AssetFinance.FUNDING_REQUIREMENTS" },
@@ -775,6 +853,18 @@ try {
     [void](Add-NonNegativeValidation -Range $capSheet.Range("B3:B100"))
     [void](Set-FreezeRows -Excel $excel -Worksheet $capSheet -Rows 2)
     [void]$capSheet.Columns.AutoFit()
+
+    $dataImportSheet = Add-Worksheet -Workbook $workbook -Name "Data Import Setup"
+    [void](Build-DataImportSetup -Worksheet $dataImportSheet)
+    [void](Set-FreezeRows -Excel $excel -Worksheet $dataImportSheet -Rows 16)
+
+    $budgetInputSheet = Add-Worksheet -Workbook $workbook -Name "PQ Budget Input"
+    [void](Build-BudgetInput -Worksheet $budgetInputSheet)
+    [void](Set-FreezeRows -Excel $excel -Worksheet $budgetInputSheet -Rows 1)
+
+    $budgetQaSheet = Add-Worksheet -Workbook $workbook -Name "PQ Budget QA"
+    [void](Build-BudgetQA -Worksheet $budgetQaSheet)
+    [void](Set-FreezeRows -Excel $excel -Worksheet $budgetQaSheet -Rows 3)
 
     $validationSheet = Add-Worksheet -Workbook $workbook -Name "Validation Lists"
     [void](Build-ValidationLists -Worksheet $validationSheet)

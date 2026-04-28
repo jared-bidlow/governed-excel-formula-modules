@@ -7,6 +7,9 @@
       capSetup: "Cap Setup",
       planningReview: "Planning Review",
       validationLists: "Validation Lists",
+      dataImportSetup: "Data Import Setup",
+      pqBudgetInput: "PQ Budget Input",
+      pqBudgetQa: "PQ Budget QA",
       notesStaging: "Decision Staging",
       assetSetup: "Asset Setup",
       assetRegister: "Asset Register",
@@ -33,7 +36,13 @@
     },
     starterTables: [
       { sheet: "Planning Table", address: "A2", path: "../samples/planning_table_starter.tsv" },
-      { sheet: "Cap Setup", address: "A2", path: "../samples/cap_setup_starter.tsv" }
+      { sheet: "Cap Setup", address: "A2", path: "../samples/cap_setup_starter.tsv" },
+      { sheet: "Data Import Setup", address: "A4", tableName: "tblDataSourceProfile", path: "../samples/data_source_profile_starter.tsv" },
+      { sheet: "Data Import Setup", address: "E4", tableName: "tblBudgetImportParameters", path: "../samples/budget_import_parameters_starter.tsv" },
+      { sheet: "Data Import Setup", address: "A16", tableName: "tblBudgetImportContract", path: "../samples/budget_import_contract_starter.tsv" },
+      { sheet: "PQ Budget Input", address: "A1", tableName: "tblBudgetInput", path: "../samples/planning_table_starter.tsv" },
+      { sheet: "PQ Budget QA", address: "A3", tableName: "tblBudgetImportStatus", path: "../samples/budget_import_status_starter.tsv" },
+      { sheet: "PQ Budget QA", address: "A11", tableName: "tblBudgetImportIssues", path: "../samples/budget_import_issues_starter.tsv" }
     ],
     notesWorkflow: {
       tableName: "tblDecisionStaging",
@@ -293,7 +302,8 @@
       { prefix: "Notes", path: "../modules/notes.formula.txt" },
       { prefix: "Phasing", path: "../modules/phasing.formula.txt" },
       { prefix: "Ready", path: "../modules/ready.formula.txt" },
-      { prefix: "Search", path: "../modules/search.formula.txt" }
+      { prefix: "Search", path: "../modules/search.formula.txt" },
+      { prefix: "Source", path: "../modules/source.formula.txt" }
     ],
     dropdownLists: {
       months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -388,6 +398,12 @@
         title: "Internal Jobs Export",
         formula: "=Ready.InternalJobs_Export()",
         note: "Header-driven internal work export for readiness smoke testing."
+      },
+      {
+        sheet: "Source Status",
+        title: "Source Status",
+        formula: "=Source.SOURCE_STATUS",
+        note: "Canonical budget import status and source trust checks."
       }
     ],
     requiredNames: [
@@ -413,7 +429,9 @@
       "Ready.InternalEligible",
       "Ready.ChargeableFlag",
       "Ready.InternalReady3",
-      "Ready.InternalJobs_Export"
+      "Ready.InternalJobs_Export",
+      "Source.SOURCE_STATUS",
+      "Source.SOURCE_SCHEMA_STATUS"
     ]
   };
 
@@ -424,6 +442,9 @@
   const requiredSheets = [
     applicationData.sheets.planningTable,
     applicationData.sheets.capSetup,
+    applicationData.sheets.dataImportSetup,
+    applicationData.sheets.pqBudgetInput,
+    applicationData.sheets.pqBudgetQa,
     applicationData.sheets.planningReview,
     applicationData.sheets.validationLists
   ];
@@ -507,6 +528,7 @@
       tables.push({
         sheet: table.sheet,
         address: table.address,
+        tableName: table.tableName,
         values: parseTsv(await fetchText(table.path))
       });
     }
@@ -517,14 +539,22 @@
 
       for (const table of tables) {
         const sheet = context.workbook.worksheets.getItem(table.sheet);
-        const rowCount = table.values.length;
-        const colCount = table.values[0].length;
-        const range = sheet.getRange(table.address).getResizedRange(rowCount - 1, colCount - 1);
-        range.values = table.values;
-        range.format.autofitColumns();
+        if (table.tableName) {
+          const [headers, ...dataRows] = table.values;
+          await refreshTableFromHeaders(context, sheet, table.tableName, table.address, headers, dataRows);
+        } else {
+          const rowCount = table.values.length;
+          const colCount = table.values[0].length;
+          const range = sheet.getRange(table.address).getResizedRange(rowCount - 1, colCount - 1);
+          range.values = table.values;
+          range.format.autofitColumns();
+        }
       }
 
       buildValidationLists(context.workbook.worksheets.getItem(validationSheet));
+      formatDataImportSetup(context.workbook.worksheets.getItem(applicationData.sheets.dataImportSetup));
+      formatBudgetInput(context.workbook.worksheets.getItem(applicationData.sheets.pqBudgetInput));
+      formatBudgetQa(context.workbook.worksheets.getItem(applicationData.sheets.pqBudgetQa));
       formatPlanningTable(
         context.workbook.worksheets.getItem(applicationData.sheets.planningTable),
         starterHeadersFor(tables, applicationData.sheets.planningTable)
@@ -658,6 +688,7 @@
     const expectedCapHeaders = parseTsv(
       await fetchText(starterTables.find((table) => table.sheet === applicationData.sheets.capSetup).path)
     )[0];
+    const expectedBudgetHeaders = expectedPlanningHeaders;
 
     const summary = await Excel.run(async (context) => {
       const sheets = {};
@@ -688,6 +719,13 @@
         }
       }
 
+      const budgetInputTable = context.workbook.tables.getItemOrNullObject("tblBudgetInput");
+      budgetInputTable.load("name");
+      await context.sync();
+      if (budgetInputTable.isNullObject) {
+        throw new Error("Missing table: tblBudgetInput.");
+      }
+
       const controlNameItems = {};
       for (const control of visibleControlNames) {
         const item = context.workbook.names.getItemOrNullObject(control.name);
@@ -702,17 +740,20 @@
       const planningHeaders = planning.getRange(applicationData.planningTable.headerRange);
       const capHeaders = capSetup.getRange(applicationData.capSetup.headerRange);
       const capRows = capSetup.getRange(applicationData.capSetup.dataRange);
+      const budgetInputHeaders = budgetInputTable.getHeaderRowRange();
       const reviewControls = review.getRange("B2:E2");
       const reviewMonths = review.getRange("M2:N2");
 
       planningHeaders.load("values");
       capHeaders.load("values");
       capRows.load("values");
+      budgetInputHeaders.load("values");
       reviewControls.load("values");
       reviewMonths.load("values");
       await context.sync();
 
       assertHeaderOrder(planningHeaders.values[0], expectedPlanningHeaders, "Planning Table");
+      assertHeaderOrder(budgetInputHeaders.values[0], expectedBudgetHeaders, "tblBudgetInput");
       assertHeaderOrder(capHeaders.values[0], expectedCapHeaders, "Cap Setup");
       assertRowValidationRulesConfigured(planningHeaders.values[0]);
       assertCapRowsAreValid(capRows.values);
@@ -723,6 +764,7 @@
         sheetCount: requiredSheets.length,
         workbookNameCount: requiredNames.length,
         planningHeaderCount: expectedPlanningHeaders.length,
+        budgetInputHeaderCount: expectedBudgetHeaders.length,
         capRowCount: countConfiguredCapRows(capRows.values),
         controlCount: visibleControlNames.length,
         dropdownListCount: validationListColumns.length,
@@ -998,6 +1040,39 @@
     sheet.getRange("A:B").format.autofitColumns();
   }
 
+  function formatDataImportSetup(sheet) {
+    sheet.getRange("A1:H2").clear(Excel.ClearApplyTo.all);
+    sheet.getRange("A1").values = [["Data Import Setup"]];
+    sheet.getRange("A2").values = [["Public-safe source profile and canonical budget import contract. Formulas read tblBudgetInput; Planning Table remains the manual starter source."]];
+    sheet.getRange("A1").format.font.bold = true;
+    sheet.getRange("A1").format.font.size = 16;
+    sheet.getRange("A2").format.wrapText = true;
+    sheet.freezePanes.freezeRows(16);
+    sheet.getRange("A:H").format.wrapText = true;
+    sheet.getRange("A:H").format.autofitColumns();
+  }
+
+  function formatBudgetInput(sheet) {
+    sheet.freezePanes.freezeRows(1);
+    sheet.getRange("A1:BL1").format.font.bold = true;
+    sheet.getRange("A1:BL1").format.font.color = "#000000";
+    sheet.getRange("A1:BL1").format.fill.color = "#D9EAF7";
+    applyNumberFormat(sheet.getRange("O2:AZ234"), 233, 38, "$#,##0");
+    applyNumberFormat(sheet.getRange("BJ2:BJ234"), 233, 1, "0");
+    sheet.getRange("A:BL").format.autofitColumns();
+  }
+
+  function formatBudgetQa(sheet) {
+    sheet.getRange("A1:F1").clear(Excel.ClearApplyTo.all);
+    sheet.getRange("A1").values = [["Budget Import Status"]];
+    sheet.getRange("A1").format.font.bold = true;
+    sheet.getRange("A9").values = [["Budget Import Issues"]];
+    sheet.getRange("A9").format.font.bold = true;
+    sheet.freezePanes.freezeRows(3);
+    sheet.getRange("A:F").format.wrapText = true;
+    sheet.getRange("A:F").format.autofitColumns();
+  }
+
   function formatPlanningReview(sheet) {
     sheet.freezePanes.freezeRows(3);
     sheet.getRange("A1:N3").clear(Excel.ClearApplyTo.all);
@@ -1238,6 +1313,7 @@
       `- Sheets present: ${summary.sheetCount}/${requiredSheets.length}`,
       `- Workbook names installed: ${summary.workbookNameCount}/${requiredNames.length}`,
       `- Planning Table headers: ${summary.planningHeaderCount}`,
+      `- tblBudgetInput headers: ${summary.budgetInputHeaderCount}`,
       `- Cap Setup rows with BU: ${summary.capRowCount}`,
       `- Visible controls bound: ${summary.controlCount}/${visibleControlNames.length}`,
       `- Dropdown lists ready: ${summary.dropdownListCount}`,

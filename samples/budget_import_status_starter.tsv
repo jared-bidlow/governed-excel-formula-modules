@@ -1,0 +1,4 @@
+QueryName	SourceMode	LastRefreshUtc	RowCount	Status	Message
+qBudget_Input	CurrentWorkbook		1	Not refreshed	Starter row loaded from tblPlanningTable until Power Query is refreshed.
+qBudget_Status	CurrentWorkbook		1	Not refreshed	Status query has not run yet.
+qBudget_Issues	CurrentWorkbook		0	Not refreshed	Issue query has not run yet.

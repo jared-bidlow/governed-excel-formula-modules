@@ -43,9 +43,12 @@ governed-excel-formula-modules/
 +-- docs/
 |   +-- asset_setup_workflow.md
 |   +-- asset_evidence_power_query.md
+|   +-- copilot_review_playbook.md
+|   +-- database_import_contract.md
 |   +-- notes_apply_workflow.md
 |   +-- operating_contract.md
 |   +-- planning_plugins.md
+|   +-- power_platform_fabric_integration.md
 |   +-- public_release_checklist.md
 |   +-- reference_architecture_tree.md
 |   +-- scenario_matrix.md
@@ -158,7 +161,9 @@ Governance_Starter.xlsx
 Governance_Starter.xltx
 ```
 
-The `.xltx` is the user-facing Excel template. The `.xlsx` is kept beside it for inspection and smoke testing. Both are generated from tracked text sources: formula modules in `modules/`, starter TSVs in `samples/`, and asset-evidence M templates in `samples/power-query/asset-evidence/`.
+The `.xltx` is the user-facing Excel template. The `.xlsx` is kept beside it for inspection and smoke testing. Both are generated from tracked text sources: formula modules in `modules/`, starter TSVs in `samples/`, and M templates in `samples/power-query/`.
+
+The v0.5 data import bridge adds `Data Import Setup`, `PQ Budget Input`, and `PQ Budget QA` sheets. The generated template creates `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`. Formula modules now read the canonical `tblBudgetInput` table; `Planning Table` remains the manual starter source and current-workbook adapter source.
 
 The generated starter also includes an `Automation Setup` worksheet. It explains how to import the optional `ApplyNotes.ts` release asset through Excel `Automate -> New Script`; the public template does not embed or auto-install Office Scripts.
 
@@ -173,9 +178,12 @@ The paste-ready starter table is in:
 ```text
 samples/planning_table_starter.tsv
 samples/cap_setup_starter.tsv
+samples/budget_import_contract_starter.tsv
 ```
 
-Paste the planning table into `Planning Table!A2`, paste the cap table into `Cap Setup!A2`, set `Planning Review!M2` to a month abbreviation such as `Mar`, then import the formula modules.
+Paste the planning table into `Planning Table!A2` and into `PQ Budget Input!A1` as `tblBudgetInput`, paste the cap table into `Cap Setup!A2`, set `Planning Review!M2` to a month abbreviation such as `Mar`, then import the formula modules. For a normal v0.5 start, use the generated `Governance_Starter.xltx` so the canonical import tables already exist.
+
+See `docs/database_import_contract.md` for the canonical `tblBudgetInput` contract, `docs/power_platform_fabric_integration.md` for the later platform path, and `docs/copilot_review_playbook.md` for prompt-card guidance. Copilot may explain and summarize reviewed tables, but governed numeric calculations stay in native Excel formulas.
 
 ## Office.js Add-In Starter
 

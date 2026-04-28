@@ -145,6 +145,15 @@ ASSET_FINANCE_PUBLIC_FORMULAS = [
     "CHART_FEEDS",
 ]
 
+SOURCE_PUBLIC_FORMULAS = [
+    "SOURCE_STATUS",
+    "SOURCE_SCHEMA_STATUS",
+    "SOURCE_REFRESH_STATUS",
+    "SOURCE_ROW_HEALTH",
+    "SOURCE_LINEAGE",
+    "SOURCE_RECONCILIATION_QUEUE",
+]
+
 REQUIRED_FORMULAS = {
     "modules/controls.formula.txt": [
         "PM_Filter_Dropdowns",
@@ -174,6 +183,7 @@ REQUIRED_FORMULAS = {
     "modules/analysis.formula.txt": ANALYSIS_PUBLIC_FORMULAS,
     "modules/assets.formula.txt": ASSET_PUBLIC_FORMULAS,
     "modules/asset_finance.formula.txt": ASSET_FINANCE_PUBLIC_FORMULAS,
+    "modules/source.formula.txt": SOURCE_PUBLIC_FORMULAS,
     "modules/ready.formula.txt": [
         "ColumnOrBlank",
         "InternalEligible",
@@ -206,6 +216,8 @@ NAMED_FORMULA_BUDGETS = [
     ("modules/assets.formula.txt", name) for name in ASSET_PUBLIC_FORMULAS
 ] + [
     ("modules/asset_finance.formula.txt", name) for name in ASSET_FINANCE_PUBLIC_FORMULAS
+] + [
+    ("modules/source.formula.txt", name) for name in SOURCE_PUBLIC_FORMULAS
 ]
 
 
@@ -231,6 +243,11 @@ def read_text(path: Path) -> str:
         return path.read_text(encoding="utf-8", errors="replace")
     except FileNotFoundError:
         return ""
+
+
+def read_tsv_rows(relative_path: str) -> list[list[str]]:
+    text = read_text(ROOT / relative_path)
+    return [line.split("\t") for line in text.splitlines() if line.strip()]
 
 
 def rel(path: Path) -> str:
@@ -681,9 +698,35 @@ def audit_formula_files(results: list[Result]) -> None:
         results,
         "modules/get.formula.txt",
         get,
-        "get module uses 64-column starter bounds",
-        r"GetBudgetHeaders\s*=\s*LAMBDA\('Planning Table'!\$A\$2:\$BL\$2\).*GetBudgetBodyRaw\s*=\s*LAMBDA\(TRIMRANGE_KEEPBLANKS\('Planning Table'!\$A\$3:\$BL\$234\)\)",
-        "Keep get range bounds aligned to the no-JobFlag and no-Eligible-fallback starter contract.",
+        "get module reads canonical budget input table",
+        r"GetBudgetRows\s*=\s*LAMBDA\(tblBudgetInput\[#All\]\).*GetBudgetHeaders\s*=\s*LAMBDA\(TAKE\(GetBudgetRows\(\),\s*1\)\).*GetBudgetBodyRaw\s*=\s*LAMBDA\(.*DROP\(GetBudgetRows\(\),\s*1\).*BYROW",
+        "Keep get pointed at tblBudgetInput so formulas consume the canonical import layer.",
+    )
+    add(
+        results,
+        "'Planning Table'!$A$2:$BL$2" not in get and "'Planning Table'!$A$3:$BL$234" not in get,
+        "modules/get.formula.txt",
+        "get module does not read Planning Table ranges directly",
+        "direct Planning Table ranges absent",
+        "Route source rows through tblBudgetInput instead of fixed Planning Table coordinates.",
+    )
+
+    source = read_text(ROOT / "modules" / "source.formula.txt")
+    check_required_regex(
+        results,
+        "modules/source.formula.txt",
+        source,
+        "Source module reads canonical import trust tables",
+        r"tblDataSourceProfile.*tblBudgetImportContract.*tblBudgetInput.*tblBudgetImportStatus.*tblBudgetImportIssues",
+        "Keep Source formulas aligned to the v0.5 import trust surfaces.",
+    )
+    check_required_regex(
+        results,
+        "modules/source.formula.txt",
+        source,
+        "Source module exposes schema and reconciliation outputs",
+        r"SOURCE_SCHEMA_STATUS.*MissingRequired.*ExtraInput.*SOURCE_RECONCILIATION_QUEUE",
+        "Keep source review outputs visible in workbook formulas.",
     )
 
     search = read_text(ROOT / "modules" / "search.formula.txt")
@@ -716,6 +759,9 @@ def audit_docs(results: list[Result]) -> None:
     starter = read_text(ROOT / "docs" / "starter_workbook.md")
     review = read_text(ROOT / "docs" / "technical_review_guide.md")
     notes_workflow = read_text(ROOT / "docs" / "notes_apply_workflow.md")
+    database_import = read_text(ROOT / "docs" / "database_import_contract.md")
+    platform_integration = read_text(ROOT / "docs" / "power_platform_fabric_integration.md")
+    copilot_playbook = read_text(ROOT / "docs" / "copilot_review_playbook.md")
     notes_formula = read_text(ROOT / "modules" / "notes.formula.txt")
     asset_workflow = read_text(ROOT / "docs" / "asset_setup_workflow.md")
     asset_evidence_pq = read_text(ROOT / "docs" / "asset_evidence_power_query.md")
@@ -741,6 +787,8 @@ def audit_docs(results: list[Result]) -> None:
     package_json = read_text(ROOT / "package.json")
     starter_table = read_text(ROOT / "samples" / "planning_table_starter.tsv")
     cap_starter = read_text(ROOT / "samples" / "cap_setup_starter.tsv")
+    budget_contract_starter = read_text(ROOT / "samples" / "budget_import_contract_starter.tsv")
+    copilot_cards = read_text(ROOT / "samples" / "copilot_prompt_cards.tsv")
     decision_starter = read_text(ROOT / "samples" / "decision_staging_starter.tsv")
     asset_setup_starter = read_text(ROOT / "samples" / "asset_setup_starter.tsv")
     semantic_assets_starter = read_text(ROOT / "samples" / "semantic_assets_starter.tsv")
@@ -748,6 +796,26 @@ def audit_docs(results: list[Result]) -> None:
     asset_changes_starter = read_text(ROOT / "samples" / "asset_changes_starter.tsv")
     asset_state_history_starter = read_text(ROOT / "samples" / "asset_state_history_starter.tsv")
     starter_rows = [line.split("\t") for line in starter_table.splitlines() if line.strip()]
+    budget_contract_rows = read_tsv_rows("samples/budget_import_contract_starter.tsv")
+    budget_contract_columns = [row[0] for row in budget_contract_rows[1:]]
+    planning_columns = starter_rows[0] if starter_rows else []
+
+    add(
+        results,
+        len(budget_contract_columns) == 64,
+        "samples/budget_import_contract_starter.tsv",
+        "budget import contract preserves 64-column wide planning contract",
+        f"{len(budget_contract_columns)} contract columns",
+        "Keep tblBudgetInput aligned to the existing 64-column planning table schema.",
+    )
+    add(
+        results,
+        budget_contract_columns == planning_columns,
+        "samples/budget_import_contract_starter.tsv",
+        "budget import contract matches planning starter headers",
+        "contract headers match planning starter" if budget_contract_columns == planning_columns else "contract headers drift from planning starter",
+        "Keep tblBudgetImportContract column order identical to samples/planning_table_starter.tsv.",
+    )
 
     check_required_regex(
         results,
@@ -903,6 +971,70 @@ def audit_docs(results: list[Result]) -> None:
         "README explains cap setup",
         r"Cap Setup.*samples/cap_setup_starter\.tsv.*kind\.CapByBU",
         "Tell public users how to set BU caps without editing formula modules.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
+        "README documents v0.5 data import bridge",
+        r"Data Import Setup.*PQ Budget Input.*PQ Budget QA.*tblBudgetInput.*Planning Table.*remains the manual starter source.*docs/database_import_contract\.md",
+        "Surface the canonical budget import layer from the README.",
+    )
+    check_required_regex(
+        results,
+        "docs/database_import_contract.md",
+        database_import,
+        "database import contract documents canonical tables",
+        r"tblDataSourceProfile.*tblBudgetImportParameters.*tblBudgetImportContract.*tblBudgetInput.*tblBudgetImportStatus.*tblBudgetImportIssues",
+        "Document every v0.5 canonical import table.",
+    )
+    check_required_regex(
+        results,
+        "docs/database_import_contract.md",
+        database_import,
+        "database import contract documents 64-column bridge",
+        r"tblBudgetInput.*64-column.*Planning Table.*manual/starter.*tblBudgetInput\[#All\]",
+        "Keep docs clear that formulas read the canonical table while Planning Table remains a starter source.",
+    )
+    check_required_regex(
+        results,
+        "docs/database_import_contract.md",
+        database_import,
+        "database import contract lists Power Query templates",
+        r"qBudget_Source_CurrentWorkbook.*qBudget_Source_AzureSql.*qBudget_Source_Dataverse.*qBudget_Source_FabricSqlEndpoint.*qBudget_Normalized.*qBudget_WideContract.*qBudget_Input.*qBudget_Status.*qBudget_Issues",
+        "Document the complete budget-input M template set.",
+    )
+    check_required_regex(
+        results,
+        "docs/database_import_contract.md",
+        database_import,
+        "database import contract states public-safe source profile rules",
+        r"Do not commit real server names.*tenant names.*workspace names.*connection strings.*credentials.*tokens.*private URLs.*local workbook paths",
+        "Keep public-safe adapter rules explicit.",
+    )
+    check_required_regex(
+        results,
+        "docs/power_platform_fabric_integration.md",
+        platform_integration,
+        "platform integration doc stays design-only",
+        r"Power Query adapter.*tblBudgetInput.*does not create.*workspace.*does not create Dataverse tables.*Power Apps.*Power Automate flows.*direct database writeback",
+        "Keep Power Platform/Fabric integration as a documented path, not a tenant-specific implementation.",
+    )
+    check_required_regex(
+        results,
+        "docs/copilot_review_playbook.md",
+        copilot_playbook,
+        "Copilot playbook includes deterministic calculation warning",
+        r"Copilot may explain.*must not be the source of governed numeric totals.*Use native Excel formulas for numerical tasks requiring accuracy or reproducibility",
+        "Keep Copilot positioned as a review aid, not a calculation engine.",
+    )
+    check_required_regex(
+        results,
+        "samples/copilot_prompt_cards.tsv",
+        copilot_cards,
+        "Copilot prompt cards include deterministic calculation guardrail",
+        r"Use Copilot for explanation only; governed numeric calculations stay in Excel formulas.*Use native Excel formulas for totals that require accuracy or reproducibility",
+        "Keep prompt cards aligned with deterministic calculation rules.",
     )
     check_required_regex(
         results,
@@ -2107,6 +2239,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("loads Office.js", r"Office\.onReady"),
         ("uses Excel.run", r"Excel\.run"),
         ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review.*Validation Lists"),
+        ("creates data import bridge sheets and tables", r"Data Import Setup.*PQ Budget Input.*PQ Budget QA.*tblDataSourceProfile.*tblBudgetImportParameters.*tblBudgetImportContract.*tblBudgetInput.*tblBudgetImportStatus.*tblBudgetImportIssues"),
         ("defines application data", r"applicationData\s*=\s*\{.*starterTables.*dropdownLists.*visibleControls.*rowValidationRules"),
         ("defines validation lists", r"dropdownLists\s*:\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo.*booleanFlags"),
         ("includes review status and boolean flags", r"statuses:\s*\[\"Active\",\s*\"Review\".*booleanFlags:\s*\[\"TRUE\",\s*\"FALSE\"\]"),
@@ -2118,6 +2251,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("uses 64-column starter layout", r"headerRange:\s*\"A2:BL2\".*requiredHeaderFill:\s*\[\"F2\",\s*\"G2\",\s*\"O2\",\s*\"P2\",\s*\"BE2\"\].*address:\s*\"O3:AZ234\".*address:\s*\"BJ3:BJ234\""),
         ("loads workbook controls", r"../modules/controls\.formula\.txt"),
         ("loads formula modules", r"../modules/kind\.formula\.txt.*../modules/analysis\.formula\.txt"),
+        ("loads Source formula module", r"../modules/source\.formula\.txt"),
         ("installs workbook names", r"context\.workbook\.names\.add"),
         ("binds visible control names", r"bindVisibleControlNames\(context\).*Governed formula visible control"),
         ("installs qualified module names", r"name:\s*`\$\{moduleFile\.prefix\}\.\$\{item\.name\}`"),
@@ -2127,12 +2261,13 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("validates implemented analysis screens", r"Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN"),
         ("validates Ready helpers", r"Ready\.ColumnOrBlank.*Ready\.InternalEligible.*Ready\.ChargeableFlag.*Ready\.InternalReady3.*Ready\.InternalJobs_Export"),
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
-        ("formats starter workbook", r"formatPlanningTable.*formatCapSetup.*formatPlanningReview"),
+        ("formats starter workbook", r"formatDataImportSetup.*formatBudgetInput.*formatBudgetQa.*formatPlanningTable.*formatCapSetup.*formatPlanningReview"),
         ("applies dropdown validation", r"applyListValidation.*dataValidation\.rule"),
         ("sizes validation list headers dynamically", r"getResizedRange\(0,\s*validationListColumns\.length - 1\)"),
         ("applies row validation by header", r"applyRowValidationRules.*dataRangeForHeader.*validationSourceForList"),
         ("applies non-negative validation", r"applyNonNegativeValidation.*greaterThanOrEqualTo"),
         ("validates starter header order", r"assertHeaderOrder\(planningHeaders\.values\[0\], expectedPlanningHeaders"),
+        ("validates canonical budget input table", r"getItemOrNullObject\(\"tblBudgetInput\"\).*budgetInputHeaders.*assertHeaderOrder\(budgetInputHeaders\.values\[0\], expectedBudgetHeaders, \"tblBudgetInput\"\)"),
         ("validates row validation rules", r"assertRowValidationRulesConfigured.*headerIndex"),
         ("validates spill-safe control band", r'review\.getRange\("B2:E2"\)'),
         ("validates visible controls", r"assertVisibleControls\(reviewControls\.values, reviewMonths\.values\)"),
@@ -2141,6 +2276,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("renders validation summary", r"renderValidationSummary.*Sheets present.*Workbook names installed.*Dropdown lists ready"),
         ("clears stale spill blockers", r'getRange\("J2:K6"\)\.clear'),
         ("defines demo outputs", r"demoOutputs\s*:\s*\[.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Analysis\.BU_CAP_SCORECARD.*Analysis\.REFORECAST_QUEUE.*Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN.*Ready\.InternalJobs_Export"),
+        ("defines Source demo output", r"Source Status.*Source\.SOURCE_STATUS"),
         ("runs demo outputs from combined setup", r"runAll\(\).*setupWorkbook\(\).*installModules\(\).*validateWorkbook\(\).*insertDemoOutputs\(\{\s*validateFirst:\s*false\s*\}\)"),
         ("binds demo output action", r"bind\(\"insertDemoOutputs\",\s*insertDemoOutputs\)"),
         ("inserts demo output formulas", r"insertDemoOutputs.*validateWorkbook\(\).*placeDemoOutput"),
@@ -2802,6 +2938,92 @@ def audit_asset_evidence_power_query_contract(results: list[Result]) -> None:
     )
 
 
+def audit_budget_input_power_query_contract(results: list[Result]) -> None:
+    query_dir = ROOT / "samples" / "power-query" / "budget-input"
+    expected_templates = {
+        "qBudget_Source_CurrentWorkbook.m": [
+            r"Excel\.CurrentWorkbook\(\)\{\[Name = \"tblPlanningTable\"\]\}\[Content\]",
+        ],
+        "qBudget_Source_AzureSql.m": [
+            r"SERVER_OR_ENDPOINT_PLACEHOLDER",
+            r"DATABASE_OR_WORKSPACE_PLACEHOLDER",
+            r"vBudgetPlanningWorkbookContract",
+            r"Sql\.Database",
+        ],
+        "qBudget_Source_Dataverse.m": [
+            r"DATAVERSE_ENVIRONMENT_PLACEHOLDER",
+            r"gef_budgetplanningworkbookcontract",
+            r"CommonDataService\.Database",
+        ],
+        "qBudget_Source_FabricSqlEndpoint.m": [
+            r"FABRIC_SQL_ENDPOINT_PLACEHOLDER",
+            r"DATABASE_OR_WORKSPACE_PLACEHOLDER",
+            r"vBudgetPlanningWorkbookContract",
+            r"Sql\.Database",
+        ],
+        "qBudget_Normalized.m": [
+            r"qBudget_Source_CurrentWorkbook",
+            r"tblBudgetImportContract",
+            r"Table\.SelectColumns\(Source, ContractColumns, MissingField\.UseNull\)",
+        ],
+        "qBudget_WideContract.m": [
+            r"qBudget_Normalized",
+            r"Table\.ReorderColumns\(Source, ContractColumns, MissingField\.UseNull\)",
+        ],
+        "qBudget_Input.m": [
+            r"qBudget_WideContract",
+        ],
+        "qBudget_Status.m": [
+            r"qBudget_Input",
+            r"QueryName.*SourceMode.*LastRefreshUtc.*RowCount.*Status.*Message",
+        ],
+        "qBudget_Issues.m": [
+            r"qBudget_Source_CurrentWorkbook",
+            r"tblBudgetImportContract",
+            r"MissingColumn.*ExtraColumn.*SchemaOK",
+        ],
+    }
+
+    for file_name, patterns in expected_templates.items():
+        path = query_dir / file_name
+        label = rel(path)
+        text = read_text(path)
+        add(
+            results,
+            bool(text),
+            label,
+            "budget input Power Query template exists",
+            "template present",
+            "Keep every expected budget-input M template in samples/power-query/budget-input/.",
+        )
+        for pattern in patterns:
+            check_required_regex(
+                results,
+                label,
+                text,
+                "budget input Power Query contract",
+                pattern,
+                "Keep the public budget input query contract intact.",
+            )
+
+    placeholders = [
+        "SERVER_OR_ENDPOINT_PLACEHOLDER",
+        "DATABASE_OR_WORKSPACE_PLACEHOLDER",
+        "DATAVERSE_ENVIRONMENT_PLACEHOLDER",
+        "FABRIC_SQL_ENDPOINT_PLACEHOLDER",
+    ]
+    combined = "\n".join(read_text(query_dir / file_name) for file_name in expected_templates)
+    for placeholder in placeholders:
+        add(
+            results,
+            placeholder in combined,
+            "samples/power-query/budget-input",
+            f"budget input adapters use {placeholder}",
+            "placeholder present",
+            "Keep public adapter templates placeholder-only.",
+        )
+
+
 def audit_governance_starter_template_contract(results: list[Result]) -> None:
     builder = read_text(ROOT / "tools" / "build_governance_starter_workbook.ps1")
     readme = read_text(ROOT / "README.md")
@@ -2833,7 +3055,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "tools/build_governance_starter_workbook.ps1",
         builder,
         "governance starter builder uses source-controlled inputs",
-        r"(?=.*modules\\controls\.formula\.txt)(?=.*modules\\analysis\.formula\.txt)(?=.*modules\\asset_finance\.formula\.txt)(?=.*samples\\planning_table_starter\.tsv)(?=.*samples\\asset_register_starter\.tsv)(?=.*samples\\asset_finance_assumptions_starter\.tsv)(?=.*install_asset_evidence_pq_workbook\.ps1)",
+        r"(?=.*modules\\controls\.formula\.txt)(?=.*modules\\analysis\.formula\.txt)(?=.*modules\\source\.formula\.txt)(?=.*modules\\asset_finance\.formula\.txt)(?=.*samples\\planning_table_starter\.tsv)(?=.*samples\\budget_import_contract_starter\.tsv)(?=.*samples\\asset_register_starter\.tsv)(?=.*samples\\asset_finance_assumptions_starter\.tsv)(?=.*install_asset_evidence_pq_workbook\.ps1)",
         "Keep the workbook artifact generated from tracked text sources.",
     )
     check_required_regex(
@@ -2851,6 +3073,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "governance starter builder creates Automation Setup sheet",
         r"(?=.*Build-AutomationSetup)(?=.*Automation Setup)(?=.*tblAutomationSetup)(?=.*ApplyNotes\.ts)(?=.*Automate > New Script)(?=.*Add-Worksheet.*Automation Setup)",
         "Keep the generated template explicit about optional Office Script import.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder creates data import bridge",
+        r"(?=.*Build-DataImportSetup)(?=.*Build-BudgetInput)(?=.*Build-BudgetQA)(?=.*Data Import Setup)(?=.*PQ Budget Input)(?=.*PQ Budget QA)(?=.*tblDataSourceProfile)(?=.*tblBudgetImportParameters)(?=.*tblBudgetImportContract)(?=.*tblBudgetInput)(?=.*tblBudgetImportStatus)(?=.*tblBudgetImportIssues)(?=.*Source Status)",
+        "Keep the generated starter aligned to the v0.5 canonical budget import bridge.",
     )
     check_required_regex(
         results,
@@ -2928,6 +3158,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         results,
         "README.md",
         readme,
+        "README documents generated data import bridge",
+        r"v0\.5 data import bridge.*Data Import Setup.*PQ Budget Input.*PQ Budget QA.*tblBudgetInput.*Planning Table.*remains the manual starter source",
+        "Surface the v0.5 canonical import layer in the generated starter docs.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
         "README documents Automation Setup sheet",
         r"Automation Setup.*ApplyNotes\.ts.*Automate -> New Script.*does not embed or auto-install Office Scripts",
         "Surface the Office Script release-asset boundary in the README.",
@@ -2945,8 +3183,16 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter_doc,
         "starter docs document generated template contents",
-        r"Generated Template.*Governance_Starter\.xltx.*Automation Setup.*formula-module workbook names.*optional asset workflow starter tables.*asset evidence Power Query setup",
+        r"Generated Template.*Governance_Starter\.xltx.*Data Import Setup.*tblBudgetInput.*Automation Setup.*formula-module workbook names.*optional asset workflow starter tables.*asset evidence Power Query setup",
         "Document what the generated starter template contains.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter_doc,
+        "starter docs document data import bridge",
+        r"Data Import Bridge.*tblBudgetInput.*Planning Table.*Power Query adapter.*tblBudgetInput\[#All\].*tblBudgetImportStatus.*tblBudgetImportIssues",
+        "Document the v0.5 canonical import bridge and table surfaces.",
     )
     check_required_regex(
         results,
@@ -2969,8 +3215,16 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs point new workbook starts to generated template",
-        r"preferred path is now the generated starter template.*build_governance_starter_workbook\.ps1.*\.xltx.*asset-evidence Power Query output sheets",
+        r"preferred path is now the generated starter template.*build_governance_starter_workbook\.ps1.*\.xltx.*data import bridge tables.*asset-evidence Power Query output sheets",
         "Keep the add-in boundary aligned with the generated starter path.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document data import bridge",
+        r"Data Import Setup.*PQ Budget Input.*PQ Budget QA.*tblBudgetInput.*formula modules consume `tblBudgetInput`.*refresh the current-workbook budget adapter",
+        "Keep blank-workbook add-in setup aligned to the v0.5 canonical import bridge.",
     )
     check_required_regex(
         results,
@@ -3081,6 +3335,7 @@ def main() -> int:
     audit_addin_contract(results)
     audit_governance_starter_template_contract(results)
     audit_asset_evidence_power_query_contract(results)
+    audit_budget_input_power_query_contract(results)
     audit_reforecast_contract(results)
 
     for result in results:
