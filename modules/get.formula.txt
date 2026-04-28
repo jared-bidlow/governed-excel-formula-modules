@@ -7,9 +7,16 @@ TRIMRANGE_KEEPBLANKS = LAMBDA(
     )
 );
 
-GetBudgetHeaders = LAMBDA('Planning Table'!$A$2:$BL$2);
+GetBudgetRows = LAMBDA(tblBudgetInput[#All]);
 
-GetBudgetBodyRaw = LAMBDA(TRIMRANGE_KEEPBLANKS('Planning Table'!$A$3:$BL$234));
+GetBudgetHeaders = LAMBDA(TAKE(GetBudgetRows(), 1));
+
+GetBudgetBodyRaw = LAMBDA(
+    LET(
+        rows, DROP(GetBudgetRows(), 1),
+        FILTER(rows, BYROW(rows, LAMBDA(r, SUM(--(r <> "")) > 0)))
+    )
+);
 
 GetHeaderPos = LAMBDA(hdr, XMATCH(hdr, GetBudgetHeaders(), 0));
 

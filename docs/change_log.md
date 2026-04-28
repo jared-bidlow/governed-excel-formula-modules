@@ -1,3 +1,32 @@
+## 2026-04-28 - Add v0.5 data import bridge
+
+Semantic change:
+
+- Moved the formula source boundary from direct `Planning Table` range reads to canonical `tblBudgetInput`.
+- Added `Data Import Setup`, `PQ Budget Input`, and `PQ Budget QA` starter surfaces with public-safe source profile, import contract, status, and issue tables.
+- Added `Source` formula outputs for source status, schema status, refresh status, row health, lineage, and reconciliation queue review.
+- Added public-safe budget Power Query templates for current workbook, Azure SQL, Dataverse, and Fabric SQL endpoint adapter paths.
+- Added documentation for the canonical budget import contract, Power Platform/Fabric path, and Copilot review playbook. Copilot remains explanatory; governed numeric calculations stay in native Excel formulas.
+
+Minimal diff summary:
+
+- Updated `modules/get.formula.txt`.
+- Added `modules/source.formula.txt`.
+- Added budget import starter TSVs and Copilot prompt cards.
+- Added `samples/power-query/budget-input/*.m`.
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Updated `addin/taskpane.js`.
+- Added and updated data import documentation.
+- Updated `tools/audit_capex_module.py`.
+
+Visible impact:
+
+- Workbook behavior: formulas now read `tblBudgetInput`, which is seeded from the same 64-column planning starter contract.
+- Main report totals: no intended change when `tblBudgetInput` matches `Planning Table`.
+- Subtotal flags: no intended change when `tblBudgetInput` matches `Planning Table`.
+- Cap remaining values: no intended change when `tblBudgetInput` matches `Planning Table`.
+- Depreciation, funding, finance total, and chart-ready outputs: no intended change.
+
 ## 2026-04-28 - Fix Defer audit reference and dropdown drift
 
 Semantic change:

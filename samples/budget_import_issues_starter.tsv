@@ -1,0 +1,2 @@
+IssueType	Severity	ColumnName	SourceKey	Message	ReviewStatus
+StarterInfo	Info	tblBudgetInput		The canonical budget input table is seeded from the planning starter until an adapter refresh runs.	Open

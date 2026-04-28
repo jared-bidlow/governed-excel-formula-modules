@@ -1,0 +1,65 @@
+ColumnName	Required	DataType	Description
+Composite Cat	TRUE	Text	Existing wide-contract column 1 from the planning table.
+Project Description	TRUE	Text	Existing wide-contract column 2 from the planning table.
+Category	TRUE	Text	Existing wide-contract column 3 from the planning table.
+Source ID	FALSE	Text	Existing wide-contract column 4 from the planning table.
+Job ID	FALSE	Text	Existing wide-contract column 5 from the planning table.
+Status	TRUE	Text	Existing wide-contract column 6 from the planning table.
+BU	TRUE	Text	Existing wide-contract column 7 from the planning table.
+Revised Group	FALSE	Text	Existing wide-contract column 8 from the planning table.
+Region	FALSE	Text	Existing wide-contract column 9 from the planning table.
+Site	FALSE	Text	Existing wide-contract column 10 from the planning table.
+PM	FALSE	Text	Existing wide-contract column 11 from the planning table.
+Type	FALSE	Text	Existing wide-contract column 12 from the planning table.
+Chargeable	FALSE	Text	Existing wide-contract column 13 from the planning table.
+Carry-over	FALSE	Text	Existing wide-contract column 14 from the planning table.
+Annual Projected	TRUE	Number	Existing wide-contract column 15 from the planning table.
+Current Authorized Amount	TRUE	Number	Existing wide-contract column 16 from the planning table.
+January Projected	FALSE	Number	Existing wide-contract column 17 from the planning table.
+January Actuals	FALSE	Number	Existing wide-contract column 18 from the planning table.
+January	FALSE	Number	Existing wide-contract column 19 from the planning table.
+February Projected	FALSE	Number	Existing wide-contract column 20 from the planning table.
+February Actuals	FALSE	Number	Existing wide-contract column 21 from the planning table.
+February	FALSE	Number	Existing wide-contract column 22 from the planning table.
+March Projected	FALSE	Number	Existing wide-contract column 23 from the planning table.
+March Actuals	FALSE	Number	Existing wide-contract column 24 from the planning table.
+March	FALSE	Number	Existing wide-contract column 25 from the planning table.
+April Projected	FALSE	Number	Existing wide-contract column 26 from the planning table.
+April Actuals	FALSE	Number	Existing wide-contract column 27 from the planning table.
+April	FALSE	Number	Existing wide-contract column 28 from the planning table.
+May Projected	FALSE	Number	Existing wide-contract column 29 from the planning table.
+May Actuals	FALSE	Number	Existing wide-contract column 30 from the planning table.
+May	FALSE	Number	Existing wide-contract column 31 from the planning table.
+June Projected	FALSE	Number	Existing wide-contract column 32 from the planning table.
+June Actuals	FALSE	Number	Existing wide-contract column 33 from the planning table.
+June	FALSE	Number	Existing wide-contract column 34 from the planning table.
+July Projected	FALSE	Number	Existing wide-contract column 35 from the planning table.
+July Actuals	FALSE	Number	Existing wide-contract column 36 from the planning table.
+July	FALSE	Number	Existing wide-contract column 37 from the planning table.
+August Projected	FALSE	Number	Existing wide-contract column 38 from the planning table.
+August Actuals	FALSE	Number	Existing wide-contract column 39 from the planning table.
+August	FALSE	Number	Existing wide-contract column 40 from the planning table.
+September Projected	FALSE	Number	Existing wide-contract column 41 from the planning table.
+September Actuals	FALSE	Number	Existing wide-contract column 42 from the planning table.
+September	FALSE	Number	Existing wide-contract column 43 from the planning table.
+October Projected	FALSE	Number	Existing wide-contract column 44 from the planning table.
+October Actuals	FALSE	Number	Existing wide-contract column 45 from the planning table.
+October	FALSE	Number	Existing wide-contract column 46 from the planning table.
+November Projected	FALSE	Number	Existing wide-contract column 47 from the planning table.
+November Actuals	FALSE	Number	Existing wide-contract column 48 from the planning table.
+November	FALSE	Number	Existing wide-contract column 49 from the planning table.
+December Projected	FALSE	Number	Existing wide-contract column 50 from the planning table.
+December Actuals	FALSE	Number	Existing wide-contract column 51 from the planning table.
+December	FALSE	Number	Existing wide-contract column 52 from the planning table.
+Comments	FALSE	Text	Existing wide-contract column 53 from the planning table.
+Stage	FALSE	Text	Existing wide-contract column 54 from the planning table.
+Planning Maturity	FALSE	Text	Existing wide-contract column 55 from the planning table.
+Planning Notes	FALSE	Text	Existing wide-contract column 56 from the planning table.
+Internal Eligible	FALSE	Text	Existing wide-contract column 57 from the planning table.
+Earliest Start (Internal)	FALSE	Text	Existing wide-contract column 58 from the planning table.
+Blocked Reason (Internal)	FALSE	Text	Existing wide-contract column 59 from the planning table.
+Timeline	FALSE	Text	Existing wide-contract column 60 from the planning table.
+Person	FALSE	Text	Existing wide-contract column 61 from the planning table.
+Hours	FALSE	Number	Existing wide-contract column 62 from the planning table.
+Future Tier Override	FALSE	Text	Existing wide-contract column 63 from the planning table.
+Canceled	FALSE	Text	Existing wide-contract column 64 from the planning table.

@@ -1,0 +1,9 @@
+Setting	SettingValue	Description
+SourceMode	CurrentWorkbook	Selected adapter path for the canonical budget input layer.
+ServerOrEnvironment	SERVER_OR_ENVIRONMENT_PLACEHOLDER	Public-safe placeholder only; do not commit real tenant, server, or workspace names.
+DatabaseOrWorkspace	DATABASE_OR_WORKSPACE_PLACEHOLDER	Public-safe placeholder only; do not commit real database or workspace names.
+ObjectName	vBudgetPlanningWorkbookContract	Expected source view or export object shaped to the workbook contract.
+FiscalYear	2027	Example planning year used by adapter parameters.
+LoadBehavior	Replace	Power Query refresh should replace the canonical budget input table.
+LastReviewedBy		Operator or reviewer initials; optional.
+LastReviewedOn		Optional review date for the source profile.

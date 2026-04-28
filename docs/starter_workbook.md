@@ -28,6 +28,8 @@ Use `Governance_Starter.xltx` as the Excel template. Use `Governance_Starter.xls
 The generated starter includes:
 
 - planning source/cap setup sheets,
+- `Data Import Setup`, `PQ Budget Input`, and `PQ Budget QA`,
+- canonical import tables `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`,
 - validation lists and visible controls,
 - an `Automation Setup` sheet that explains how to import the optional `ApplyNotes.ts` release asset,
 - formula-module workbook names,
@@ -40,6 +42,29 @@ The generated starter includes:
 
 The fastest no-build path is still a blank workbook with the minimum sheet names and starter table shape.
 
+## Data Import Bridge
+
+v0.5 moves the formula source boundary to `tblBudgetInput`. The flow is:
+
+```text
+Planning Table or external source -> Power Query adapter -> tblBudgetInput -> formula modules
+```
+
+`Planning Table` / `tblPlanningTable` remains the manual starter surface. The current-workbook Power Query adapter reads it and shapes the same 64 columns into `tblBudgetInput`. The formulas in `modules/get.formula.txt` read `tblBudgetInput[#All]`, not fixed `Planning Table` coordinates.
+
+The generated starter creates:
+
+| Sheet | Table |
+|---|---|
+| `Data Import Setup` | `tblDataSourceProfile` |
+| `Data Import Setup` | `tblBudgetImportParameters` |
+| `Data Import Setup` | `tblBudgetImportContract` |
+| `PQ Budget Input` | `tblBudgetInput` |
+| `PQ Budget QA` | `tblBudgetImportStatus` |
+| `PQ Budget QA` | `tblBudgetImportIssues` |
+
+After notes writeback or manual Planning Table edits, refresh the budget Power Query adapter before relying on outputs that read `tblBudgetInput`.
+
 ## Minimum Sheets
 
 Create these worksheets:
@@ -51,6 +76,9 @@ Create these worksheets:
 | `Planning Review` | Output/control sheet for report formulas and the as-of month cell. |
 | `Validation Lists` | Dropdown source values used by the starter add-in. |
 | `Decision Staging` | Notes/status/timeline staging table created by the notes workflow. |
+| `Data Import Setup` | Source profile, import parameters, and the 64-column budget input contract. |
+| `PQ Budget Input` | Canonical `tblBudgetInput` table consumed by formula modules. |
+| `PQ Budget QA` | Import status and issue tables used by `Source` formulas. |
 
 Optional asset setup creates additional worksheets only when `Setup Asset Workflow` is selected:
 
@@ -120,7 +148,7 @@ The scorecard and report become more meaningful when the monthly budget columns 
 Import formula modules in this order:
 
 ```text
-get -> kind -> CapitalPlanning -> Analysis
+get -> kind -> CapitalPlanning -> Analysis -> Source
 ```
 
 Then try these formulas on `Planning Review`:
@@ -136,11 +164,12 @@ After those spill successfully, the other implemented planning screens are:
 =Analysis.PM_SPEND_REPORT()
 =Analysis.WORKING_BUDGET_SCREEN()
 =Analysis.BURNDOWN_SCREEN()
+=Source.SOURCE_STATUS
 ```
 
 ## Starter Layout And Controls
 
-The Office.js starter can create the workbook layout for you. It writes the starter data, creates the `Validation Lists` sheet, formats the source sheets, and adds a visible control panel on `Planning Review`. Its setup behavior is driven by the `applicationData` model in `addin/taskpane.js`, which defines dropdown lists, control bindings, and row-validation rules in one place.
+The Office.js starter can create the workbook layout for you. It writes the starter data, creates the `Validation Lists` sheet, creates the data import bridge tables, formats the source sheets, and adds a visible control panel on `Planning Review`. Its setup behavior is driven by the `applicationData` model in `addin/taskpane.js`, which defines dropdown lists, control bindings, row-validation rules, and the canonical `tblBudgetInput` setup in one place.
 
 The public control cells are:
 

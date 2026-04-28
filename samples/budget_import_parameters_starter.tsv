@@ -1,0 +1,7 @@
+Parameter	Value	Description
+ActiveAdapter	CurrentWorkbook	CurrentWorkbook, AzureSQL, Dataverse, or FabricSqlEndpoint.
+CanonicalTable	tblBudgetInput	Loaded table consumed by formula modules.
+ManualSourceTable	tblPlanningTable	Manual/starter source table used by the current-workbook adapter.
+ContractView	vBudgetPlanningWorkbookContract	Public-safe example source view name.
+RefreshOwner	Operator	Role responsible for refreshing and reviewing imports.
+RefreshCadence	Before review meeting	Operational reminder only; no automation is embedded.
