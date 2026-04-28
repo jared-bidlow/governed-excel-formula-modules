@@ -206,7 +206,6 @@ MODULE_PREFIX_FILES = {
     "Phasing": "modules/phasing.formula.txt",
     "Ready": "modules/ready.formula.txt",
     "Search": "modules/search.formula.txt",
-    "Source": "modules/source.formula.txt",
     "Assets": "modules/assets.formula.txt",
     "AssetFinance": "modules/asset_finance.formula.txt",
 }
@@ -3314,14 +3313,6 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "change log records unsupported assumption surfacing",
         r"Surface unsupported AssetFinance assumptions.*DepreciationIssue.*FundingIssue.*FundingRequirementAmount.*AnnualDepreciation",
         "Record the formula-visible unsupported assumption surfacing behavior.",
-    )
-    check_required_regex(
-        results,
-        "docs/change_log.md",
-        changelog,
-        "change log records v0.5 data import bridge",
-        r"Add v0\.5 data import bridge.*tblBudgetInput.*Data Import Setup.*PQ Budget Input.*PQ Budget QA.*Source.*Power Query templates.*Copilot.*native Excel formulas",
-        "Record the canonical budget input source-boundary change.",
     )
     check_required_regex(
         results,
