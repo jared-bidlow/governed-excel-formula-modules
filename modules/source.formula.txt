@@ -1,0 +1,62 @@
+SOURCE_STATUS = LET(
+    source_mode, IFERROR(INDEX(tblDataSourceProfile[SettingValue], XMATCH("SourceMode", tblDataSourceProfile[Setting], 0)), "not configured"),
+    last_refresh, IFERROR(INDEX(tblBudgetImportStatus[LastRefreshUtc], XMATCH("qBudget_Input", tblBudgetImportStatus[QueryName], 0)), ""),
+    import_status, IFERROR(INDEX(tblBudgetImportStatus[Status], XMATCH("qBudget_Input", tblBudgetImportStatus[QueryName], 0)), "not refreshed"),
+    VSTACK(
+        {"Metric", "Value"},
+        HSTACK("Canonical Table", "tblBudgetInput"),
+        HSTACK("Budget Input Rows", ROWS(tblBudgetInput[#Data])),
+        HSTACK("Source Mode", source_mode),
+        HSTACK("Last Refresh", last_refresh),
+        HSTACK("Import Status", import_status)
+    )
+);
+
+SOURCE_SCHEMA_STATUS = LET(
+    expected, tblBudgetImportContract[ColumnName],
+    required, tblBudgetImportContract[Required],
+    expected_required, FILTER(expected, ((required = TRUE) + (required = "TRUE") + (required = "Y")) > 0),
+    actual, TRANSPOSE(tblBudgetInput[#Headers]),
+    missing_rows, IFERROR(HSTACK("MissingRequired", FILTER(expected_required, ISNA(XMATCH(expected_required, actual)))), {"OK", "No missing required columns"}),
+    extra_rows, IFERROR(HSTACK("ExtraInput", FILTER(actual, ISNA(XMATCH(actual, expected)))), {"OK", "No extra input columns"}),
+    VSTACK(
+        {"IssueType", "ColumnName"},
+        missing_rows,
+        extra_rows
+    )
+);
+
+SOURCE_REFRESH_STATUS = VSTACK(tblBudgetImportStatus[#Headers], tblBudgetImportStatus[#Data]);
+
+SOURCE_ROW_HEALTH = LET(
+    rows, get.GetBudgetDetailBody(),
+    source_id, get.GetColByHeader(rows, "Source ID"),
+    project, get.GetColByHeader(rows, "Project Description"),
+    status, get.GetColByHeader(rows, "Status"),
+    bu, get.GetColByHeader(rows, "BU"),
+    missing_project, FILTER(HSTACK("Missing Project Description", source_id, project, status, bu), project = "", {"OK", "", "", "", ""}),
+    missing_status, FILTER(HSTACK("Missing Status", source_id, project, status, bu), status = "", {"OK", "", "", "", ""}),
+    missing_bu, FILTER(HSTACK("Missing BU", source_id, project, status, bu), bu = "", {"OK", "", "", "", ""}),
+    VSTACK(
+        {"IssueType", "Source ID", "Project Description", "Status", "BU"},
+        missing_project,
+        missing_status,
+        missing_bu
+    )
+);
+
+SOURCE_LINEAGE = LET(
+    rows, get.GetBudgetDetailBody(),
+    VSTACK(
+        {"Source ID", "Job ID", "Project Description", "Status", "BU"},
+        HSTACK(
+            get.GetColByHeader(rows, "Source ID"),
+            get.GetColByHeader(rows, "Job ID"),
+            get.GetColByHeader(rows, "Project Description"),
+            get.GetColByHeader(rows, "Status"),
+            get.GetColByHeader(rows, "BU")
+        )
+    )
+);
+
+SOURCE_RECONCILIATION_QUEUE = VSTACK(tblBudgetImportIssues[#Headers], tblBudgetImportIssues[#Data]);

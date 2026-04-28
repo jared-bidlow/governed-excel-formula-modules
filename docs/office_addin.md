@@ -4,13 +4,14 @@ This repo includes a minimal Excel Office.js task-pane add-in under `addin/`.
 
 The add-in is an installer and validator. It does not replace the formula modules with JavaScript business logic.
 
-For a new workbook artifact, the preferred path is now the generated starter template from `tools/build_governance_starter_workbook.ps1`. The add-in remains useful for blank-workbook setup, validation, and formula-module installation, while the generated `.xltx` already includes the starter sheets, asset workflow tables, and asset-evidence Power Query output sheets.
+For a new workbook artifact, the preferred path is now the generated starter template from `tools/build_governance_starter_workbook.ps1`. The add-in remains useful for blank-workbook setup, validation, and formula-module installation, while the generated `.xltx` already includes the starter sheets, data import bridge tables, asset workflow tables, and asset-evidence Power Query output sheets.
 
 The generated template also includes an `Automation Setup` worksheet. That sheet explains that `ApplyNotes.ts` is an optional Office Script release asset and must be imported through Excel `Automate -> New Script` before the notes writeback automation can run.
 
 ## What It Does
 
-- Creates the starter sheets: `Planning Table`, `Cap Setup`, and `Planning Review`.
+- Creates the starter sheets: `Planning Table`, `Cap Setup`, `Data Import Setup`, `PQ Budget Input`, `PQ Budget QA`, and `Planning Review`.
+- Creates canonical data import tables: `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`.
 - Creates the `Validation Lists` sheet for dropdown sources.
 - Pastes the public starter TSV data into `Planning Table!A2` and `Cap Setup!A2`.
 - Formats starter headers, freezes top rows, applies currency formats, and adds non-negative cap validation.
@@ -25,7 +26,7 @@ The generated template also includes an `Automation Setup` worksheet. That sheet
 - Rebinds the unqualified workbook-control names to the visible `Planning Review` cells after module installation.
 - Adds module-qualified names such as `kind.CapByBU` and `Analysis.REFORECAST_QUEUE`.
 - Adds unqualified compatibility aliases for the first occurrence of each formula name.
-- Validates required sheets, names, starter header order, cap setup shape, visible control values, bound control names, row-validation headers, and compatibility helpers such as `TRIMRANGE_KEEPBLANKS` and `RBYROW`.
+- Validates required sheets, names, starter header order, `tblBudgetInput` header order, cap setup shape, visible control values, bound control names, row-validation headers, and compatibility helpers such as `TRIMRANGE_KEEPBLANKS` and `RBYROW`.
 - Prints a validation summary showing sheets present, workbook names installed, header count, configured cap rows, bound controls, dropdown lists, and row-validation rules.
 - Inserts demo output formulas into predictable review sheets so a reviewer can inspect the implemented screens without typing formula names.
 - Provides an `ApplyNotes` setup helper in the task pane that loads the script template from `../office-scripts/apply_notes.ts`, copies it when clipboard access is available, displays the script text when clipboard access is blocked, and shows the exact Excel `Automate -> New Script` import step.
@@ -76,6 +77,7 @@ Validation summary:
 - Sheets present
 - Workbook names installed
 - Planning Table headers
+- tblBudgetInput headers
 - Cap Setup rows with BU
 - Visible controls bound
 - Dropdown lists ready
@@ -118,6 +120,8 @@ Asset Evidence Power Query is intentionally outside the Office.js task pane on t
 
 The generated starter also installs the v0.4 asset finance bridge outside the Office.js task pane. It creates `Asset Finance Setup` / `tblAssetFinanceAssumptions`, installs `AssetFinance` names from `modules/asset_finance.formula.txt`, and creates `Asset Depreciation`, `Asset Funding Requirements`, `Asset Finance Totals`, and `Asset Finance Charts`. Those formulas consume `tblAssetEvidence_ModelInputs` only, and mapped-only evidence does not drive final finance outputs.
 
+The v0.5 data import bridge is part of both generated starter setup and blank-workbook add-in setup. `Planning Table` remains the manual starter source, but formula modules consume `tblBudgetInput`. After `ApplyNotes.ts` or manual edits update `Planning Table`, refresh the current-workbook budget adapter before relying on formula outputs that read `tblBudgetInput`.
+
 | Sheet | Cell | Formula |
 |---|---|---|
 | `Planning Review` | `A4` | `=CapitalPlanning.CAPITAL_PLANNING_REPORT()` |
@@ -127,6 +131,7 @@ The generated starter also installs the v0.4 asset finance bridge outside the Of
 | `Working Budget` | `A4` | `=Analysis.WORKING_BUDGET_SCREEN()` |
 | `Burndown` | `A4` | `=Analysis.BURNDOWN_SCREEN()` |
 | `Internal Jobs` | `A4` | `=Ready.InternalJobs_Export()` |
+| `Source Status` | `A4` | `=Source.SOURCE_STATUS` |
 
 When the test session is done, run:
 
@@ -159,6 +164,9 @@ The task pane reads formula modules and samples by relative path, so it needs th
 The setup path is intentionally small and inspectable:
 
 - `Planning Table` starts at `A2`, freezes the top two rows, formats the 64-column starter contract, and adds model-driven dropdowns for common status and yes/no fields.
+- `Data Import Setup` starts the public-safe source profile and 64-column import contract.
+- `PQ Budget Input` starts `tblBudgetInput` at `A1`; formula modules read this table.
+- `PQ Budget QA` stores `tblBudgetImportStatus` and `tblBudgetImportIssues`.
 - The `Chargeable` dropdown is applied by finding the `Chargeable` header on row `2`, then validating rows `3:2000` against `Y,N`.
 - `Chargeable` is the chargeability input used by the `Search` and `Ready` helper modules. `Internal Eligible` is the readiness eligibility input used by `Ready.InternalEligible`. `Ready.InternalJobs_Export` computes `Internal Ready Final`; there is no source-table `Internal Ready`, no `JobFlag` starter column, and no separate visible `Eligible` fallback column.
 - `Composite Cat` remains a manual pre-formula helper for operator sorting, dedupe, and Excel Data > Subtotal workflows.
