@@ -375,8 +375,9 @@ $dropdownLists = [ordered]@{
     groupFields = @("Revised Group", "Site", "Region", "PM", "BU", "Category")
     futureFilters = @("All", "Exclude Future", "Keep F1 Only", "Keep F1+F2")
     closedRows = @("SHOW", "HIDE")
-    statuses = @("Active", "Hold", "Closed", "In Service", "Skipping", "Canceled")
+    statuses = @("Active", "Review", "Hold", "Closed", "In Service", "Skipping", "Canceled")
     yesNo = @("Y", "N")
+    booleanFlags = @("TRUE", "FALSE")
     assetStatuses = @("planned", "active", "in_service", "maintenance", "retired")
     assetConditions = @("new", "good", "fair", "poor", "critical")
     assetCriticalities = @("low", "medium", "high", "critical")
@@ -394,6 +395,7 @@ $validationColumns = @(
     @{ Key = "closedRows"; Header = "Closed Rows" },
     @{ Key = "statuses"; Header = "Status" },
     @{ Key = "yesNo"; Header = "Yes No" },
+    @{ Key = "booleanFlags"; Header = "Boolean Flag" },
     @{ Key = "assetStatuses"; Header = "Asset Status" },
     @{ Key = "assetConditions"; Header = "Asset Condition" },
     @{ Key = "assetCriticalities"; Header = "Asset Criticality" },
@@ -695,7 +697,7 @@ function Build-AssetWorkflowTables {
         [void](Apply-TableListValidation -Table $table -Header "PromotionStatus" -ListKey "assetPromotionStatuses")
         [void](Apply-TableListValidation -Table $table -Header "MappingStatus" -ListKey "assetMappingStatuses")
         [void](Apply-TableListValidation -Table $table -Header "ChangeStatus" -ListKey "assetChangeStatuses")
-        [void](Apply-TableListValidation -Table $table -Header "ApplyReady" -ListKey "yesNo")
+        [void](Apply-TableListValidation -Table $table -Header "ApplyReady" -ListKey "booleanFlags")
     }
 
     foreach ($sheet in @($assetRegisterSheet, $semanticSheet, $assetSetupSheet, $projectMapSheet, $assetChangesSheet, $assetHistorySheet)) {

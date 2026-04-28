@@ -557,7 +557,7 @@ Selectorv2 = LAMBDA(targetRec,
 Audit = LAMBDA(targetRec,
     LET(
         FinanceBlock, get.GetFinanceBlock(),
-        BudgetRows, get.GetBudgetActiveRows(),
+        BudgetRows, get.GetBudgetDetailRows(),
         Hdr, TAKE(BudgetRows, 1),
         IdxBU, XMATCH("BU", Hdr, 0),
         IdxDesc, XMATCH("Project Description", Hdr, 0),

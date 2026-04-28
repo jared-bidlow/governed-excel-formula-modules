@@ -43,7 +43,7 @@ PROJECT_PROMOTION_QUEUE = LET(
         candidateId,
         constCol("planned"),
         constCol(""),
-        constCol("Review"),
+        constCol("review"),
         constCol(FALSE),
         constCol(""),
         constCol(""),

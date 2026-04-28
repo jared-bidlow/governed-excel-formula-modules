@@ -1,2 +1,2 @@
 ProjectKey	ProjectDescription	CandidateAssetId	AssetLabel	AssetType	ProposedChangeType	SourceAssetId	TargetAssetId	InstalledState	EvidenceId	PromotionStatus	ApplyReady	ApplyStatus	AppliedOn	ApplyMessage
-SRC-001-JOB-001	Sample over-projected work	ASSET-001	Sample asset one	Asset	new_asset		ASSET-001	planned		Review	FALSE	Starter		Starter semantic row
+SRC-001-JOB-001	Sample over-projected work	ASSET-001	Sample asset one	Asset	new_asset		ASSET-001	planned		review	FALSE	Starter		Starter semantic row

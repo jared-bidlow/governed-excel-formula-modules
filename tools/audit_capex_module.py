@@ -185,6 +185,21 @@ REQUIRED_FORMULAS = {
     ],
 }
 
+MODULE_PREFIX_FILES = {
+    "Controls": "modules/controls.formula.txt",
+    "get": "modules/get.formula.txt",
+    "kind": "modules/kind.formula.txt",
+    "CapitalPlanning": "modules/capital_planning_report.formula.txt",
+    "Analysis": "modules/analysis.formula.txt",
+    "defer": "modules/defer.formula.txt",
+    "Notes": "modules/notes.formula.txt",
+    "Phasing": "modules/phasing.formula.txt",
+    "Ready": "modules/ready.formula.txt",
+    "Search": "modules/search.formula.txt",
+    "Assets": "modules/assets.formula.txt",
+    "AssetFinance": "modules/asset_finance.formula.txt",
+}
+
 NAMED_FORMULA_BUDGETS = [
     ("modules/capital_planning_report.formula.txt", "CAPITAL_PLANNING_REPORT"),
 ] + [("modules/analysis.formula.txt", name) for name in ANALYSIS_PUBLIC_FORMULAS] + [
@@ -342,6 +357,33 @@ def has_formula(text: str, name: str) -> bool:
     return re.search(rf"(?m)^{re.escape(name)}\s*=", text) is not None
 
 
+def strip_formula_literals(text: str) -> str:
+    source = strip_block_comments(text)
+    out: list[str] = []
+    in_string = False
+    in_quoted_sheet = False
+    i = 0
+    while i < len(source):
+        ch = source[i]
+        if ch == '"' and not in_quoted_sheet:
+            if in_string and i + 1 < len(source) and source[i + 1] == '"':
+                i += 2
+                continue
+            in_string = not in_string
+            i += 1
+            continue
+        if ch == "'" and not in_string:
+            if in_quoted_sheet and i + 1 < len(source) and source[i + 1] == "'":
+                i += 2
+                continue
+            in_quoted_sheet = not in_quoted_sheet
+            i += 1
+            continue
+        out.append(ch if not in_string and not in_quoted_sheet else " ")
+        i += 1
+    return "".join(out)
+
+
 def check_required_regex(results: list[Result], file: str, text: str, check: str, pattern: str, suggestion: str) -> None:
     found = re.search(pattern, text, flags=re.S) is not None
     add(results, found, file, check, "pattern present" if found else "required pattern missing", suggestion)
@@ -396,6 +438,36 @@ def audit_public_safety(results: list[Result], files: list[Path]) -> None:
             )
 
 
+def audit_qualified_formula_references(results: list[Result]) -> None:
+    module_bodies: dict[str, list[tuple[str, str]]] = {}
+    definitions: dict[str, set[str]] = {}
+    for prefix, file_name in MODULE_PREFIX_FILES.items():
+        bodies = extract_named_formula_bodies(read_text(ROOT / file_name))
+        module_bodies[file_name] = bodies
+        definitions[prefix] = {name for name, _body in bodies}
+
+    prefix_pattern = "|".join(re.escape(prefix) for prefix in sorted(MODULE_PREFIX_FILES, key=len, reverse=True))
+    reference_pattern = re.compile(rf"(?<![A-Za-z0-9_])({prefix_pattern})\.([A-Za-z_][A-Za-z0-9_]*)\b")
+
+    for file_name, bodies in sorted(module_bodies.items()):
+        reference_count = 0
+        missing: list[str] = []
+        for source_name, body in bodies:
+            for match in reference_pattern.finditer(strip_formula_literals(body)):
+                prefix, target = match.groups()
+                reference_count += 1
+                if target not in definitions[prefix]:
+                    missing.append(f"{source_name}: {prefix}.{target}")
+        add(
+            results,
+            not missing,
+            file_name,
+            "qualified formula references resolve",
+            f"{reference_count} qualified references resolved" if not missing else f"missing references: {'; '.join(missing[:5])}",
+            "Define the referenced formula in the target module or update the qualified reference.",
+        )
+
+
 def audit_formula_files(results: list[Result]) -> None:
     for path in sorted(MODULES.glob("*.formula.txt")):
         results.extend(balance_check(path))
@@ -415,6 +487,19 @@ def audit_formula_files(results: list[Result]) -> None:
                 "formula definition present",
                 f"Keep {name} importable from {file_name}.",
             )
+
+    audit_qualified_formula_references(results)
+
+    defer = read_text(ROOT / "modules" / "defer.formula.txt")
+    defer_audit = extract_named_formula(defer, "Audit")
+    add(
+        results,
+        "get.GetBudgetDetailRows()" in defer_audit and "get.GetBudgetActiveRows()" not in defer_audit,
+        "modules/defer.formula.txt",
+        "defer.Audit uses defined budget detail helper",
+        "defer.Audit points to get.GetBudgetDetailRows()",
+        "Keep defer.Audit aligned to the get module's defined budget row helper.",
+    )
 
     for file_name, name in NAMED_FORMULA_BUDGETS:
         path = ROOT / file_name
@@ -478,6 +563,16 @@ def audit_formula_files(results: list[Result]) -> None:
         "Ready helper uses chargeability parameter name",
         r"InternalReady3\s*=\s*LAMBDA\(eligible,\s*maturity,\s*stage,\s*chargeableFlag",
         "Use Chargeable wording for the fourth InternalReady3 input.",
+    )
+
+    assets = read_text(ROOT / "modules" / "assets.formula.txt")
+    check_required_regex(
+        results,
+        "modules/assets.formula.txt",
+        assets,
+        "Assets promotion queue uses dropdown-normalized review status",
+        r"PROJECT_PROMOTION_QUEUE.*constCol\(\"review\"\).*constCol\(FALSE\)",
+        "Keep generated asset promotion queue values aligned with asset validation lists.",
     )
 
     asset_finance = read_text(ROOT / "modules" / "asset_finance.formula.txt")
@@ -2013,8 +2108,10 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("uses Excel.run", r"Excel\.run"),
         ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review.*Validation Lists"),
         ("defines application data", r"applicationData\s*=\s*\{.*starterTables.*dropdownLists.*visibleControls.*rowValidationRules"),
-        ("defines validation lists", r"dropdownLists\s*:\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo"),
+        ("defines validation lists", r"dropdownLists\s*:\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo.*booleanFlags"),
+        ("includes review status and boolean flags", r"statuses:\s*\[\"Active\",\s*\"Review\".*booleanFlags:\s*\[\"TRUE\",\s*\"FALSE\"\]"),
         ("defines asset dropdown lists", r"assetStatuses.*assetConditions.*assetCriticalities.*assetChangeTypes.*assetStates.*assetPromotionStatuses.*assetMappingStatuses.*assetChangeStatuses"),
+        ("validates asset ApplyReady as boolean flags", r"tblSemanticAssets:.*ApplyReady\",\s*listKey:\s*\"booleanFlags\".*tblAssetPromotionQueue:.*ApplyReady\",\s*listKey:\s*\"booleanFlags\".*tblAssetMappingStaging:.*ApplyReady\",\s*listKey:\s*\"booleanFlags\""),
         ("defines visible controls", r"visibleControls.*PM_Filter_Dropdowns.*B2.*Burndown_Cut_Target.*E2"),
         ("defines row validation max row", r"maxValidationRow:\s*2000"),
         ("defines header-driven Chargeable validation", r"rowValidationRules.*header:\s*\"Chargeable\".*listKey:\s*\"yesNo\""),
@@ -2719,6 +2816,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         results,
         "tools/build_governance_starter_workbook.ps1",
         builder,
+        "governance starter builder keeps dropdown values aligned",
+        r"statuses = @\(\"Active\", \"Review\".*booleanFlags = @\(\"TRUE\", \"FALSE\"\).*@{ Key = \"booleanFlags\"; Header = \"Boolean Flag\" }.*Apply-TableListValidation -Table \$table -Header \"ApplyReady\" -ListKey \"booleanFlags\"",
+        "Keep generated starter dropdown lists aligned with seeded notes and asset values.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
         "governance starter builder creates xlsx and xltx artifacts",
         r"(?=.*Governance_Starter\.xlsx)(?=.*Governance_Starter\.xltx)(?=.*SaveAs\(\$templateWorkbookPath,\s*54\))",
         "Keep the generated starter template build reproducible.",
@@ -2762,6 +2867,38 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "asset finance assumptions starter has minimum columns",
         r"DepreciationClass\tUsefulLifeYears\tDepreciationMethod\tFundingSource\tFundingRequirementRule\tChartGroup",
         "Keep the generated assumption table shape stable.",
+    )
+    check_required_regex(
+        results,
+        "samples/asset_setup_starter.tsv",
+        read_text(ROOT / "samples" / "asset_setup_starter.tsv"),
+        "asset setup starter uses validation-list values",
+        r"\treview\tFALSE\tStarter\t\tStarter promotion row.*\tactive\tFALSE\tStarter\t\tStarter staging row",
+        "Keep asset setup starter values aligned with assetPromotionStatuses and booleanFlags.",
+    )
+    check_required_regex(
+        results,
+        "samples/semantic_assets_starter.tsv",
+        read_text(ROOT / "samples" / "semantic_assets_starter.tsv"),
+        "semantic assets starter uses validation-list values",
+        r"\treview\tFALSE\t",
+        "Keep semantic asset starter values aligned with assetPromotionStatuses and booleanFlags.",
+    )
+    check_required_regex(
+        results,
+        "samples/project_asset_map_starter.tsv",
+        read_text(ROOT / "samples" / "project_asset_map_starter.tsv"),
+        "project asset map starter uses validation-list values",
+        r"\tactive\tApplied\t",
+        "Keep project asset map starter values aligned with assetMappingStatuses.",
+    )
+    check_required_regex(
+        results,
+        "samples/asset_changes_starter.tsv",
+        read_text(ROOT / "samples" / "asset_changes_starter.tsv"),
+        "asset changes starter uses validation-list values",
+        r"\tdraft\t\tStarter change row",
+        "Keep asset changes starter values aligned with assetChangeStatuses.",
     )
     check_required_regex(
         results,
@@ -2922,6 +3059,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "change log records unsupported assumption surfacing",
         r"Surface unsupported AssetFinance assumptions.*DepreciationIssue.*FundingIssue.*FundingRequirementAmount.*AnnualDepreciation",
         "Record the formula-visible unsupported assumption surfacing behavior.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records Defer audit and dropdown drift fix",
+        r"Fix Defer audit reference and dropdown drift.*defer\.Audit.*get\.GetBudgetDetailRows\(\).*Review.*ApplyReady.*qualified formula references",
+        "Record the Defer audit reference fix and validation-list drift cleanup.",
     )
 
 

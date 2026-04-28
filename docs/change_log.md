@@ -1,3 +1,30 @@
+## 2026-04-28 - Fix Defer audit reference and dropdown drift
+
+Semantic change:
+
+- Updated `defer.Audit` to use `get.GetBudgetDetailRows()` instead of the undefined `get.GetBudgetActiveRows()` reference.
+- Normalized planning and asset validation contracts so starter values match dropdown lists, including `Review` planning status and boolean `ApplyReady` values.
+- Added audit coverage for qualified formula references and starter/dropdown drift.
+
+Minimal diff summary:
+
+- Updated `modules/defer.formula.txt`.
+- Updated `modules/assets.formula.txt`.
+- Updated `addin/taskpane.js`.
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Updated asset starter TSV samples.
+- Updated `tools/audit_capex_module.py`.
+- Updated `docs/change_log.md`.
+
+Visible impact:
+
+- `defer.Audit(...)` can now resolve its budget-row helper at workbook runtime.
+- Starter dropdowns now accept the seeded notes and asset workflow values.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- Depreciation, funding, finance total, and chart-ready outputs: no intended change.
+
 ## 2026-04-28 - Surface unsupported AssetFinance assumptions
 
 Semantic change:

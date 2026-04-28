@@ -240,7 +240,7 @@
           { header: "TargetAssetId", relationshipListKey: "assetIds" },
           { header: "InstalledState", listKey: "assetStates" },
           { header: "PromotionStatus", listKey: "assetPromotionStatuses" },
-          { header: "ApplyReady", listKey: "yesNo" }
+          { header: "ApplyReady", listKey: "booleanFlags" }
         ],
         tblAssetPromotionQueue: [
           { header: "ProjectKey", relationshipListKey: "projectKeys" },
@@ -250,7 +250,7 @@
           { header: "TargetAssetId", relationshipListKey: "assetIds" },
           { header: "InstalledState", listKey: "assetStates" },
           { header: "PromotionStatus", listKey: "assetPromotionStatuses" },
-          { header: "ApplyReady", listKey: "yesNo" }
+          { header: "ApplyReady", listKey: "booleanFlags" }
         ],
         tblAssetMappingStaging: [
           { header: "ProjectKey", relationshipListKey: "projectKeys" },
@@ -260,7 +260,7 @@
           { header: "AssetId", relationshipListKey: "assetIds" },
           { header: "InstalledState", listKey: "assetStates" },
           { header: "MappingStatus", listKey: "assetMappingStatuses" },
-          { header: "ApplyReady", listKey: "yesNo" }
+          { header: "ApplyReady", listKey: "booleanFlags" }
         ],
         tblProjectAssetMap: [
           { header: "ProjectKey", relationshipListKey: "projectKeys" },
@@ -300,8 +300,9 @@
       groupFields: ["Revised Group", "Site", "Region", "PM", "BU", "Category"],
       futureFilters: ["All", "Exclude Future", "Keep F1 Only", "Keep F1+F2"],
       closedRows: ["SHOW", "HIDE"],
-      statuses: ["Active", "Hold", "Closed", "In Service", "Skipping", "Canceled"],
+      statuses: ["Active", "Review", "Hold", "Closed", "In Service", "Skipping", "Canceled"],
       yesNo: ["Y", "N"],
+      booleanFlags: ["TRUE", "FALSE"],
       assetStatuses: ["planned", "active", "in_service", "maintenance", "retired"],
       assetConditions: ["new", "good", "fair", "poor", "critical"],
       assetCriticalities: ["low", "medium", "high", "critical"],
@@ -318,6 +319,7 @@
       { key: "closedRows", header: "Closed Rows" },
       { key: "statuses", header: "Status" },
       { key: "yesNo", header: "Yes No" },
+      { key: "booleanFlags", header: "Boolean Flag" },
       { key: "assetStatuses", header: "Asset Status" },
       { key: "assetConditions", header: "Asset Condition" },
       { key: "assetCriticalities", header: "Asset Criticality" },
