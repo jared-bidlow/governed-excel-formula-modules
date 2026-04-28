@@ -505,6 +505,36 @@ def audit_formula_files(results: list[Result]) -> None:
         r"tblAssetFinanceAssumptions.*UsefulLifeYears.*FundingRequirementRule.*ChartGroup",
         "Keep asset finance assumptions source-controlled and operator editable.",
     )
+    check_required_regex(
+        results,
+        "modules/asset_finance.formula.txt",
+        asset_finance,
+        "AssetFinance surfaces unsupported depreciation methods",
+        r"DEPRECIATION_SCHEDULE.*DepreciationIssue.*RawMethod.*DepreciationMethod.*Method, IF\(TRIM\(RawMethod & \"\"\) = \"\", \"Straight-line\", RawMethod\).*SupportedMethod.*AnnualDepreciation, IF\(SupportedMethod, Amount / UsefulLife, \"\"\).*Unsupported DepreciationMethod:",
+        "Keep unsupported DepreciationMethod values visible with blank depreciation amounts.",
+    )
+    check_required_regex(
+        results,
+        "modules/asset_finance.formula.txt",
+        asset_finance,
+        "AssetFinance surfaces unsupported funding rules",
+        r"FUNDING_REQUIREMENTS.*FundingIssue.*RawRules.*FundingRequirementRule.*Rules, IF\(TRIM\(RawRules & \"\"\) = \"\", \"Fund full classified amount\", RawRules\).*SupportedRule.*RequirementAmount, IF\(SupportedRule, GroupedAmount, \"\"\).*Unsupported FundingRequirementRule:",
+        "Keep unsupported FundingRequirementRule values visible with blank funding amounts.",
+    )
+    asset_finance_bodies = dict(extract_named_formula_bodies(asset_finance))
+    chart_feeds = asset_finance_bodies.get("CHART_FEEDS", "")
+    add(
+        results,
+        "AssetFinance.FUNDING_REQUIREMENTS" in chart_feeds
+        and "AssetFinance.CLASSIFIED_MODEL_INPUTS" not in chart_feeds
+        and "CHOOSECOLS(FundRows, 6)" in chart_feeds
+        and "AssetFinance.DEPRECIATION_SCHEDULE" in chart_feeds
+        and "CHOOSECOLS(DepSourceRows, 9)" in chart_feeds,
+        "modules/asset_finance.formula.txt",
+        "AssetFinance chart feeds use supported output amounts",
+        "chart feeds read supported output amounts",
+        "Keep chart feeds aligned to supported depreciation and funding outputs, not raw classified inputs.",
+    )
     for forbidden_source in [
         "tblAssetEvidenceSource",
         "tblAssetEvidenceRules",
@@ -2839,6 +2869,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/asset_finance_model_modules.md",
+        finance_doc,
+        "asset finance docs constrain v0.4 assumption semantics",
+        r"v0\.4 Assumption Semantics.*tblAssetEvidence_ModelInputs.*PresentWithClassifiedEvidence = TRUE.*straight-line behavior only.*DepreciationMethod.*blank `AnnualDepreciation`.*`DepreciationIssue`.*FundingRequirementRule.*blank `FundingRequirementAmount`.*`FundingIssue`.*Chart feeds exclude unsupported rows",
+        "Document the v0.4 straight-line, full-amount, issue-field, and chart-exclusion assumption semantics.",
+    )
+    check_required_regex(
+        results,
         "docs/change_log.md",
         changelog,
         "change log records governance starter template",
@@ -2868,6 +2906,22 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "change log records v0.4 asset finance bridge",
         r"Add v0\.4 asset finance bridge outputs.*modules/asset_finance\.formula\.txt.*tblAssetFinanceAssumptions.*Asset Depreciation.*Asset Funding Requirements.*Asset Finance Totals.*Asset Finance Charts.*PresentWithClassifiedEvidence = TRUE",
         "Record the v0.4 asset finance bridge implementation.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records v0.4 assumption semantics constraint",
+        r"Constrain v0\.4 AssetFinance assumption semantics.*PresentWithClassifiedEvidence = TRUE.*straight-line behavior only.*full grouped classified amounts.*DepreciationMethod.*FundingRequirementRule.*ChartGroup.*DepreciationClass",
+        "Record the v0.4 AssetFinance assumption semantics documentation and audit clarification.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records unsupported assumption surfacing",
+        r"Surface unsupported AssetFinance assumptions.*DepreciationIssue.*FundingIssue.*FundingRequirementAmount.*AnnualDepreciation",
+        "Record the formula-visible unsupported assumption surfacing behavior.",
     )
 
 

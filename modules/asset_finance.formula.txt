@@ -52,7 +52,8 @@ DEPRECIATION_SCHEDULE = LET(
         "DepreciableAmount",
         "AnnualDepreciation",
         "EvidenceDate",
-        "ClassifiedCategoryName"
+        "ClassifiedCategoryName",
+        "DepreciationIssue"
     },
     IFERROR(
         LET(
@@ -68,15 +69,17 @@ DEPRECIATION_SCHEDULE = LET(
             Amount, CHOOSECOLS(Rows, 7),
             DepreciationClass, CHOOSECOLS(Rows, 9),
             CategoryName, CHOOSECOLS(Rows, 11),
-            Method, IFERROR(
+            RawMethod, IFERROR(
                 XLOOKUP(
                     DepreciationClass,
                     tblAssetFinanceAssumptions[DepreciationClass],
                     tblAssetFinanceAssumptions[DepreciationMethod],
-                    "Straight-line"
+                    ""
                 ),
-                "Straight-line"
+                ""
             ),
+            Method, IF(TRIM(RawMethod & "") = "", "Straight-line", RawMethod),
+            SupportedMethod, LOWER(TRIM(Method & "")) = "straight-line",
             UsefulLifeRaw, IFERROR(
                 --XLOOKUP(
                     DepreciationClass,
@@ -87,11 +90,8 @@ DEPRECIATION_SCHEDULE = LET(
                 10
             ),
             UsefulLife, IF(UsefulLifeRaw > 0, UsefulLifeRaw, 10),
-            AnnualDepreciation, IF(
-                LOWER(TRIM(Method & "")) = "straight-line",
-                Amount / UsefulLife,
-                Amount / UsefulLife
-            ),
+            AnnualDepreciation, IF(SupportedMethod, Amount / UsefulLife, ""),
+            DepreciationIssue, IF(SupportedMethod, "", "Unsupported DepreciationMethod: " & Method),
             VSTACK(
                 Headers,
                 HSTACK(
@@ -105,7 +105,8 @@ DEPRECIATION_SCHEDULE = LET(
                     Amount,
                     AnnualDepreciation,
                     EvidenceDate,
-                    CategoryName
+                    CategoryName,
+                    DepreciationIssue
                 )
             )
         ),
@@ -120,7 +121,8 @@ FUNDING_REQUIREMENTS = LET(
         "AssetId",
         "ClassifiedCategoryName",
         "FundingRequirementRule",
-        "FundingRequirementAmount"
+        "FundingRequirementAmount",
+        "FundingIssue"
     },
     IFERROR(
         LET(
@@ -142,16 +144,18 @@ FUNDING_REQUIREMENTS = LET(
                 CHOOSECOLS(Rows, 11)
             ),
             Keys, UNIQUE(HSTACK(FundingSource, ProjectKey, AssetId, CategoryName)),
-            Rules, IFERROR(
+            RawRules, IFERROR(
                 XLOOKUP(
                     CHOOSECOLS(Keys, 1),
                     tblAssetFinanceAssumptions[FundingSource],
                     tblAssetFinanceAssumptions[FundingRequirementRule],
-                    "Fund full classified amount"
+                    ""
                 ),
-                "Fund full classified amount"
+                ""
             ),
-            RequirementAmount, MAP(
+            Rules, IF(TRIM(RawRules & "") = "", "Fund full classified amount", RawRules),
+            SupportedRule, LOWER(TRIM(Rules & "")) = "fund full classified amount",
+            GroupedAmount, MAP(
                 CHOOSECOLS(Keys, 1),
                 CHOOSECOLS(Keys, 2),
                 CHOOSECOLS(Keys, 3),
@@ -160,7 +164,9 @@ FUNDING_REQUIREMENTS = LET(
                     SUM(FILTER(Amount, (FundingSource = fs) * (ProjectKey = pk) * (AssetId = aid) * (CategoryName = cat), 0))
                 )
             ),
-            VSTACK(Headers, HSTACK(Keys, Rules, RequirementAmount))
+            RequirementAmount, IF(SupportedRule, GroupedAmount, ""),
+            FundingIssue, IF(SupportedRule, "", "Unsupported FundingRequirementRule: " & Rules),
+            VSTACK(Headers, HSTACK(Keys, Rules, RequirementAmount, FundingIssue))
         ),
         VSTACK(Headers, MAKEARRAY(1, COLUMNS(Headers), LAMBDA(r, c, "")))
     )
@@ -193,58 +199,73 @@ CHART_FEEDS = LET(
     Headers, {"FeedName", "Series", "Category", "Value"},
     IFERROR(
         LET(
-            Rows, FILTER(
-                DROP(AssetFinance.CLASSIFIED_MODEL_INPUTS, 1),
-                CHOOSECOLS(DROP(AssetFinance.CLASSIFIED_MODEL_INPUTS, 1), 1) <> ""
-            ),
-            Amount, CHOOSECOLS(Rows, 7),
-            FundingSource, IF(
-                TRIM(CHOOSECOLS(Rows, 8) & "") = "",
-                "(No Funding Source)",
-                CHOOSECOLS(Rows, 8)
-            ),
-            ChartGroup, IFERROR(
-                XLOOKUP(
-                    FundingSource,
-                    tblAssetFinanceAssumptions[FundingSource],
-                    tblAssetFinanceAssumptions[ChartGroup],
-                    FundingSource
+            FundingRows, IFERROR(
+                LET(
+                    FundSourceRows, DROP(AssetFinance.FUNDING_REQUIREMENTS, 1),
+                    FundRows, FILTER(
+                        FundSourceRows,
+                        TRIM(CHOOSECOLS(FundSourceRows, 6) & "") <> ""
+                    ),
+                    FundingAmount, CHOOSECOLS(FundRows, 6),
+                    FundingSource, CHOOSECOLS(FundRows, 1),
+                    ChartGroup, IFERROR(
+                        XLOOKUP(
+                            FundingSource,
+                            tblAssetFinanceAssumptions[FundingSource],
+                            tblAssetFinanceAssumptions[ChartGroup],
+                            FundingSource
+                        ),
+                        FundingSource
+                    ),
+                    FundingKeys, UNIQUE(ChartGroup),
+                    FundingAmounts, MAP(
+                        FundingKeys,
+                        LAMBDA(groupName, SUM(FILTER(FundingAmount, ChartGroup = groupName, 0)))
+                    ),
+                    HSTACK(
+                        MAKEARRAY(ROWS(FundingKeys), 1, LAMBDA(r, c, "Funding by chart group")),
+                        MAKEARRAY(ROWS(FundingKeys), 1, LAMBDA(r, c, "Funding requirement")),
+                        FundingKeys,
+                        FundingAmounts
+                    )
                 ),
-                FundingSource
+                MAKEARRAY(1, COLUMNS(Headers), LAMBDA(r, c, ""))
             ),
-            FundingKeys, UNIQUE(ChartGroup),
-            FundingAmounts, MAP(
-                FundingKeys,
-                LAMBDA(groupName, SUM(FILTER(Amount, ChartGroup = groupName, 0)))
+            DepRowsOut, IFERROR(
+                LET(
+                    DepSourceRows, DROP(AssetFinance.DEPRECIATION_SCHEDULE, 1),
+                    DepRows, FILTER(
+                        DepSourceRows,
+                        TRIM(CHOOSECOLS(DepSourceRows, 9) & "") <> ""
+                    ),
+                    DepClass, IF(
+                        TRIM(CHOOSECOLS(DepRows, 5) & "") = "",
+                        "(No Depreciation Class)",
+                        CHOOSECOLS(DepRows, 5)
+                    ),
+                    AnnualDepreciation, CHOOSECOLS(DepRows, 9),
+                    DepKeys, UNIQUE(DepClass),
+                    DepAmounts, MAP(
+                        DepKeys,
+                        LAMBDA(className, SUM(FILTER(AnnualDepreciation, DepClass = className, 0)))
+                    ),
+                    HSTACK(
+                        MAKEARRAY(ROWS(DepKeys), 1, LAMBDA(r, c, "Annual depreciation by class")),
+                        MAKEARRAY(ROWS(DepKeys), 1, LAMBDA(r, c, "Annual depreciation")),
+                        DepKeys,
+                        DepAmounts
+                    )
+                ),
+                MAKEARRAY(1, COLUMNS(Headers), LAMBDA(r, c, ""))
             ),
-            FundingRows, HSTACK(
-                MAKEARRAY(ROWS(FundingKeys), 1, LAMBDA(r, c, "Funding by chart group")),
-                MAKEARRAY(ROWS(FundingKeys), 1, LAMBDA(r, c, "Funding requirement")),
-                FundingKeys,
-                FundingAmounts
-            ),
-            DepRows, FILTER(
-                DROP(AssetFinance.DEPRECIATION_SCHEDULE, 1),
-                CHOOSECOLS(DROP(AssetFinance.DEPRECIATION_SCHEDULE, 1), 1) <> ""
-            ),
-            DepClass, IF(
-                TRIM(CHOOSECOLS(DepRows, 5) & "") = "",
-                "(No Depreciation Class)",
-                CHOOSECOLS(DepRows, 5)
-            ),
-            AnnualDepreciation, CHOOSECOLS(DepRows, 9),
-            DepKeys, UNIQUE(DepClass),
-            DepAmounts, MAP(
-                DepKeys,
-                LAMBDA(className, SUM(FILTER(AnnualDepreciation, DepClass = className, 0)))
-            ),
-            DepRowsOut, HSTACK(
-                MAKEARRAY(ROWS(DepKeys), 1, LAMBDA(r, c, "Annual depreciation by class")),
-                MAKEARRAY(ROWS(DepKeys), 1, LAMBDA(r, c, "Annual depreciation")),
-                DepKeys,
-                DepAmounts
-            ),
-            VSTACK(Headers, FundingRows, DepRowsOut)
+            CombinedRows, VSTACK(FundingRows, DepRowsOut),
+            VSTACK(
+                Headers,
+                IFERROR(
+                    FILTER(CombinedRows, TRIM(CHOOSECOLS(CombinedRows, 1) & "") <> ""),
+                    MAKEARRAY(1, COLUMNS(Headers), LAMBDA(r, c, ""))
+                )
+            )
         ),
         VSTACK(Headers, MAKEARRAY(1, COLUMNS(Headers), LAMBDA(r, c, "")))
     )

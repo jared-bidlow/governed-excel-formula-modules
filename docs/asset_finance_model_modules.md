@@ -49,6 +49,13 @@ Mapped structural hints can support review queues and context, but they do not d
 - Totals summarize classified evidence amount, annual depreciation, funding requirement amount, classified evidence count, and classified asset count.
 - Chart integration means chart-ready feed tables first; no polished native Excel chart objects are created in this slice.
 
+## v0.4 Assumption Semantics
+
+- `AssetFinance` outputs consume only rows from `tblAssetEvidence_ModelInputs` where `PresentWithClassifiedEvidence = TRUE`.
+- v0.4 depreciation supports straight-line behavior only. `DepreciationMethod` is a contract/display field; unsupported or non-straight-line values keep the row visible, preserve the entered method, blank `AnnualDepreciation`, and append `DepreciationIssue`.
+- v0.4 funding requirements use full grouped classified amounts. `FundingRequirementRule` is a contract/label field; unsupported values keep the grouped row visible, preserve the entered rule, blank `FundingRequirementAmount`, and append `FundingIssue`.
+- `ChartGroup` affects funding chart feed grouping only. Depreciation chart feed rows group by `DepreciationClass`. Chart feeds exclude unsupported rows by reading nonblank `AnnualDepreciation` and `FundingRequirementAmount` values from the formula outputs.
+
 ## Source Boundary
 
 Workbook binaries remain generated release artifacts. The source of truth stays in text:

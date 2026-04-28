@@ -1,3 +1,72 @@
+## 2026-04-28 - Surface unsupported AssetFinance assumptions
+
+Semantic change:
+
+- Updated `AssetFinance.DEPRECIATION_SCHEDULE` so unsupported nonblank `DepreciationMethod` values keep their rows visible, preserve the entered method, blank `AnnualDepreciation`, and append `DepreciationIssue`.
+- Updated `AssetFinance.FUNDING_REQUIREMENTS` so unsupported nonblank `FundingRequirementRule` values keep their grouped rows visible, preserve the entered rule, blank `FundingRequirementAmount`, and append `FundingIssue`.
+- Updated `AssetFinance.CHART_FEEDS` so funding chart values come from supported `FundingRequirementAmount` output rows and depreciation chart values come from supported `AnnualDepreciation` output rows.
+
+Minimal diff summary:
+
+- Updated `modules/asset_finance.formula.txt`.
+- Updated `docs/asset_finance_model_modules.md`.
+- Updated `docs/change_log.md`.
+- Updated `tools/audit_capex_module.py`.
+
+Visible impact:
+
+- Workbook behavior: unsupported assumption values are now visible as issue text and their affected calculated amounts are blank.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- Depreciation, funding, finance total, and chart-ready outputs: can change when `tblAssetFinanceAssumptions` contains unsupported nonblank methods or rules.
+
+## 2026-04-28 - Constrain v0.4 AssetFinance assumption semantics
+
+Semantic change:
+
+- Clarified that v0.4 `AssetFinance` outputs remain classified-only and consume `tblAssetEvidence_ModelInputs` rows where `PresentWithClassifiedEvidence = TRUE`.
+- Documented that depreciation is straight-line behavior only, funding requirements use full grouped classified amounts, and `DepreciationMethod` / `FundingRequirementRule` are limited contract fields in this slice.
+- Documented that `ChartGroup` affects funding chart feed grouping only, while depreciation chart feed rows group by `DepreciationClass`.
+- Added audit coverage so the v0.4 docs cannot silently drift from those assumption semantics.
+
+Minimal diff summary:
+
+- Updated `docs/asset_finance_model_modules.md`.
+- Updated `docs/change_log.md`.
+- Updated `tools/audit_capex_module.py`.
+
+Visible impact:
+
+- Documentation and audit only.
+- Formula logic: no change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- Depreciation, funding, finance total, and chart-ready outputs: no intended change.
+
+## 2026-04-28 - Clarify asset evidence bridge boundary for v0.4 AssetFinance
+
+Semantic change:
+
+- Clarified that the asset-evidence Power Query slice prepares classified model-input rows but does not itself calculate depreciation, funding requirements, finance totals, or chart-ready feeds.
+- Documented that the v0.4 `AssetFinance` formula bridge consumes `tblAssetEvidence_ModelInputs` for those outputs.
+- Reaffirmed that only rows with `PresentWithClassifiedEvidence = TRUE` feed `AssetFinance` outputs; mapped-only evidence remains reviewable until classified.
+
+Minimal diff summary:
+
+- Updated `docs/asset_evidence_power_query.md`.
+- Updated `docs/change_log.md`.
+
+Visible impact:
+
+- Documentation only.
+- Formula logic: no change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- Depreciation, funding, finance total, and chart-ready outputs: no intended change.
+
 ## 2026-04-27 - Add v0.4 asset finance bridge outputs
 
 Semantic change:
