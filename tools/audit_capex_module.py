@@ -2839,6 +2839,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
+        "docs/asset_finance_model_modules.md",
+        finance_doc,
+        "asset finance docs constrain v0.4 assumption semantics",
+        r"v0\.4 Assumption Semantics.*tblAssetEvidence_ModelInputs.*PresentWithClassifiedEvidence = TRUE.*straight-line behavior only.*DepreciationMethod.*contract/display field.*FundingRequirementRule.*contract/label field.*FundingRequirementAmount.*ChartGroup.*funding chart feed grouping only.*DepreciationClass",
+        "Document the v0.4 straight-line, full-amount, funding-chart-only assumption semantics.",
+    )
+    check_required_regex(
+        results,
         "docs/change_log.md",
         changelog,
         "change log records governance starter template",
@@ -2868,6 +2876,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "change log records v0.4 asset finance bridge",
         r"Add v0\.4 asset finance bridge outputs.*modules/asset_finance\.formula\.txt.*tblAssetFinanceAssumptions.*Asset Depreciation.*Asset Funding Requirements.*Asset Finance Totals.*Asset Finance Charts.*PresentWithClassifiedEvidence = TRUE",
         "Record the v0.4 asset finance bridge implementation.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records v0.4 assumption semantics constraint",
+        r"Constrain v0\.4 AssetFinance assumption semantics.*PresentWithClassifiedEvidence = TRUE.*straight-line behavior only.*full grouped classified amounts.*DepreciationMethod.*FundingRequirementRule.*ChartGroup.*DepreciationClass",
+        "Record the v0.4 AssetFinance assumption semantics documentation and audit clarification.",
     )
 
 
