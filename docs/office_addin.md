@@ -6,6 +6,8 @@ The add-in is an installer and validator. It does not replace the formula module
 
 For a new workbook artifact, the preferred path is now the generated starter template from `tools/build_governance_starter_workbook.ps1`. The add-in remains useful for blank-workbook setup, validation, and formula-module installation, while the generated `.xltx` already includes the starter sheets, asset workflow tables, and asset-evidence Power Query output sheets.
 
+The generated template also includes an `Automation Setup` worksheet. That sheet explains that `ApplyNotes.ts` is an optional Office Script release asset and must be imported through Excel `Automate -> New Script` before the notes writeback automation can run.
+
 ## What It Does
 
 - Creates the starter sheets: `Planning Table`, `Cap Setup`, and `Planning Review`.
@@ -114,6 +116,8 @@ That action creates the asset setup sheets and tables only when selected. It is 
 
 Asset Evidence Power Query is intentionally outside the Office.js task pane on this branch. For new workbook starts, run `tools/build_governance_starter_workbook.ps1` and use `release_artifacts/governance-starter/Governance_Starter.xltx`. For a button-driven local install into an existing workbook copy, run `tools/start_asset_evidence_pq_installer.ps1`; for automation, run `tools/install_asset_evidence_pq_workbook.ps1` against a workbook copy. The installed sheets include `Asset Evidence Setup` with `tblAssetEvidenceSource`, `tblAssetEvidenceRules`, and `tblAssetEvidenceOverrides`, plus loaded output tables for `qAssetEvidence_Normalized`, `qAssetEvidence_Classified`, `qAssetEvidence_Linked`, `qAssetEvidence_Status`, `qAssetEvidence_ModelInputs`, and `qQA_AssetEvidence_MappingQueue`. See `docs/asset_evidence_power_query.md`.
 
+The generated starter also installs the v0.4 asset finance bridge outside the Office.js task pane. It creates `Asset Finance Setup` / `tblAssetFinanceAssumptions`, installs `AssetFinance` names from `modules/asset_finance.formula.txt`, and creates `Asset Depreciation`, `Asset Funding Requirements`, `Asset Finance Totals`, and `Asset Finance Charts`. Those formulas consume `tblAssetEvidence_ModelInputs` only, and mapped-only evidence does not drive final finance outputs.
+
 | Sheet | Cell | Formula |
 |---|---|---|
 | `Planning Review` | `A4` | `=CapitalPlanning.CAPITAL_PLANNING_REPORT()` |
@@ -160,6 +164,7 @@ The setup path is intentionally small and inspectable:
 - `Composite Cat` remains a manual pre-formula helper for operator sorting, dedupe, and Excel Data > Subtotal workflows.
 - `Cap Setup` starts at `A2`, formats `Cap` as currency, and validates caps as non-negative numbers.
 - `Planning Review` uses `B2:E2` for visible controls, `M2:N2` for month controls, leaves `A4:N200` open for the main report spill, uses `O1:R3` for `ApplyNotes Control`, and leaves `O4:R200` open for note examples.
+- `Automation Setup` explains the public release boundary for Office Scripts: download `ApplyNotes.ts`, open `Automate -> New Script`, paste the script, save it as `ApplyNotes`, then run the two-pass workflow when writeback is wanted.
 - `Planning Review!O:R` is used by the notes workflow: `ExistingMeetingNotes`, `NewPlanningNotes`, `NewTimeline`, and `NewStatus`.
 - `Decision Staging` stores formula-backed `tblDecisionStaging`, the controlled staging table consumed by `office-scripts/apply_notes.ts`; ApplyNotes run 1 resizes it from `Planning Review!P:R` while preserving `ReviewRow`-keyed review/context/helper formulas.
 - `Validation Lists` stores the dropdown values used by the starter workbook.

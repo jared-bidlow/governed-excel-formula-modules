@@ -1,3 +1,51 @@
+## 2026-04-27 - Add v0.4 asset finance bridge outputs
+
+Semantic change:
+
+- Added `modules/asset_finance.formula.txt` with `AssetFinance` formulas for classified model inputs, depreciation, funding requirements, totals, and chart-ready feeds.
+- Added `samples/asset_finance_assumptions_starter.tsv` and generated `Asset Finance Setup` / `tblAssetFinanceAssumptions`.
+- Updated the generated starter build so formula names and output sheets are installed after asset-evidence Power Query tables exist.
+- Added generated output sheets: `Asset Depreciation`, `Asset Funding Requirements`, `Asset Finance Totals`, and `Asset Finance Charts`.
+- Preserved the evidence distinction: formulas read `tblAssetEvidence_ModelInputs` and filter final finance outputs to `PresentWithClassifiedEvidence = TRUE`; mapped-only rows remain reviewable but do not drive depreciation, funding, totals, or chart feeds.
+
+Minimal diff summary:
+
+- Added `modules/asset_finance.formula.txt`.
+- Added `samples/asset_finance_assumptions_starter.tsv`.
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Updated README, starter/add-in/asset finance docs, asset next steps, changelog, and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: generated starter workbooks gain `Asset Finance Setup`, `tblAssetFinanceAssumptions`, four asset finance output sheets, and `AssetFinance` defined names.
+- Formula logic: new asset finance formulas consume the loaded `tblAssetEvidence_ModelInputs` bridge table.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
+## 2026-04-27 - Start v0.4 asset finance model branch with Automation Setup
+
+Semantic change:
+
+- Started `codex/asset-finance-model-modules` as the v0.4 branch.
+- Added an `Automation Setup` worksheet to the generated governance starter template.
+- The sheet explains that `ApplyNotes.ts` is an optional Office Script release asset and must be imported through Excel `Automate -> New Script`; the public `.xltx` does not embed or auto-install Office Scripts.
+- Added a v0.4 planning note for the next asset finance model modules: depreciation, funding requirements, totals, and chart-ready feeds.
+
+Minimal diff summary:
+
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Added `docs/asset_finance_model_modules.md`.
+- Updated README, starter/add-in/asset docs, changelog, and static audit coverage.
+
+Visible impact:
+
+- Workbook behavior: generated starter workbooks gain an `Automation Setup` sheet with `tblAutomationSetup`.
+- Formula logic: no formula module change.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+
 ## 2026-04-27 - Normalize generated starter table headers
 
 Semantic change:

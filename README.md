@@ -160,6 +160,10 @@ Governance_Starter.xltx
 
 The `.xltx` is the user-facing Excel template. The `.xlsx` is kept beside it for inspection and smoke testing. Both are generated from tracked text sources: formula modules in `modules/`, starter TSVs in `samples/`, and asset-evidence M templates in `samples/power-query/asset-evidence/`.
 
+The generated starter also includes an `Automation Setup` worksheet. It explains how to import the optional `ApplyNotes.ts` release asset through Excel `Automate -> New Script`; the public template does not embed or auto-install Office Scripts.
+
+The generated starter includes the first v0.4 asset finance bridge: `Asset Finance Setup` / `tblAssetFinanceAssumptions`, the `AssetFinance` formula names, and output sheets named `Asset Depreciation`, `Asset Funding Requirements`, `Asset Finance Totals`, and `Asset Finance Charts`. Those outputs read `tblAssetEvidence_ModelInputs`; mapped-only evidence remains reviewable in the Power Query status and mapping queue, but only rows with `PresentWithClassifiedEvidence = TRUE` feed the finance model outputs.
+
 ## Start From A Blank Workbook
 
 For a first local trial without the generated template, create a blank workbook and follow `docs/starter_workbook.md`.
