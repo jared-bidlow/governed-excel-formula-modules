@@ -1037,9 +1037,7 @@
     sheet.getRange("A18:C18").format.fill.color = "#D9EAF7";
     const navSheets = ["Source Status", "Data Import Setup", "Planning Table", "Cap Setup", "Planning Review", "Analysis Hub", "Asset Hub", "Asset Finance Hub"];
     for (let index = 0; index < navSheets.length; index += 1) {
-      sheet.getRange(`A${19 + index}`).values = [[navSheets[index]]];
-      sheet.getRange(`A${19 + index}`).format.font.bold = true;
-      sheet.getRange(`A${19 + index}`).format.font.color = "#1F4E79";
+      setInternalSheetLink(sheet.getRange(`A${19 + index}`), navSheets[index], "A1", navSheets[index]);
     }
 
     formatSectionHeader(
@@ -1079,7 +1077,7 @@
   }
 
   function formatHubToc(sheet, sheetName, sections) {
-    const values = [["Section", "What it shows"]];
+    const values = [["Go to section", "What it shows"]];
     for (const section of sections) {
       values.push([section.title, section.note || ""]);
     }
@@ -1089,9 +1087,7 @@
     sheet.getRange("A4:B4").format.fill.color = "#D9EAF7";
     for (let index = 0; index < sections.length; index += 1) {
       const row = 5 + index;
-      sheet.getRange(`A${row}`).values = [[sections[index].title]];
-      sheet.getRange(`A${row}`).format.font.bold = true;
-      sheet.getRange(`A${row}`).format.font.color = "#1F4E79";
+      setInternalSheetLink(sheet.getRange(`A${row}`), sheetName, sections[index].anchor, sections[index].title);
     }
     sheet.getRange("A:B").format.wrapText = true;
     sheet.getRange("A:A").format.columnWidth = 170;
@@ -1140,6 +1136,27 @@
     range.format.borders.getItem("EdgeBottom").style = Excel.BorderLineStyle.continuous;
     range.format.borders.getItem("EdgeLeft").style = Excel.BorderLineStyle.continuous;
     range.format.borders.getItem("EdgeRight").style = Excel.BorderLineStyle.continuous;
+  }
+
+  function setInternalSheetLink(range, sheetName, targetCell, displayText) {
+    const safeSheet = sheetName.replace(/'/g, "''");
+    range.values = [[displayText]];
+    try {
+      range.hyperlink = {
+        documentReference: `'${safeSheet}'!${targetCell}`,
+        screenTip: `Go to ${displayText}`,
+        textToDisplay: displayText
+      };
+    } catch (error) {
+      // Older hosts can still use the friendly label even if internal hyperlinks are unavailable.
+    }
+    range.format.font.bold = true;
+    range.format.font.color = "#1F4E79";
+    try {
+      range.format.font.underline = Excel.RangeUnderlineStyle.single;
+    } catch (error) {
+      // Blue bold text still reads as navigation if a host does not expose underline formatting.
+    }
   }
 
   function applyHubColumnWidths(sheet, template) {

@@ -52,7 +52,7 @@ The generated starter includes:
 - `Asset Finance Setup` / `tblAssetFinanceAssumptions`,
 - asset finance hub sections for depreciation, funding requirements, totals, and chart-ready feeds when the `AssetsFull` edition is generated.
 
-`Start Here` is not just a title sheet. It includes a workbook-flow table, the key source rule, navigation links to the visible sheets, and a short explanation of hidden backend/admin sheets. The stacked hub sheets also include section indexes near the top so operators can jump to the output they need.
+`Start Here` is not just a title sheet. It includes a workbook-flow table, the key source rule, navigation links to the visible sheets, and a short explanation of hidden backend/admin sheets. The stacked hub sheets also include clickable `Go to section` tables near the top so operators can jump to the output they need.
 
 The default visible workbook surface is:
 
@@ -267,7 +267,7 @@ These formulas read `tblAssetEvidence_ModelInputs`, not the raw setup tables. Ro
 
 `Setup Asset Workflow` is optional. It creates `tblAssets` plus the asset setup, mapping, change, and state-history tables used by `office-scripts/apply_asset_mappings.ts`; it is not part of the default setup path. It also applies dropdowns for asset state/status fields and advisory relationship dropdowns for asset IDs and project keys. Rerunning it recreates those workflow tables from headers, so use it as a starter/reset action before entering real asset rows or against a workbook copy.
 
-The task-pane `Setup + Install + Validate + Outputs` button creates the public demo hub sheets as part of the full starter flow. The standalone `Insert Demo Outputs` button remains available for rerunning only the hub output insertion. Before either path writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis Hub sections for `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, `Burndown`, and `Internal Jobs` with `=Ready.InternalJobs_Export()` instead of creating separate output sheets. Each generated hub includes a section index before the stacked outputs.
+The task-pane `Setup + Install + Validate + Outputs` button creates the public demo hub sheets as part of the full starter flow. The standalone `Insert Demo Outputs` button remains available for rerunning only the hub output insertion. Before either path writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis Hub sections for `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, `Burndown`, and `Internal Jobs` with `=Ready.InternalJobs_Export()` instead of creating separate output sheets. Each generated hub includes a clickable section table before the stacked outputs.
 
 ## SemanticTwin Edition
 

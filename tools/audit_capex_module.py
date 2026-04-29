@@ -2327,7 +2327,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
         ("formats starter workbook", r"formatDataImportSetup.*formatBudgetInput.*formatBudgetQa.*formatPlanningTable.*formatCapSetup.*formatPlanningReview.*formatStartHere.*formatSourceStatus.*formatHubShell"),
         ("enriches Start Here navigation", r"formatStartHere.*Workbook flow.*Manual source / database / Fabric / Dataverse.*Go to.*Backend/admin sheets.*setMergedPanel"),
-        ("adds hub table of contents", r"formatHubToc.*Section.*What it shows.*#1F4E79"),
+        ("adds clickable hub table of contents", r"formatHubToc.*Go to section.*setInternalSheetLink.*documentReference.*#1F4E79"),
         ("normalizes row heights", r"normalizeSheetRows.*rowHeight"),
         ("widens Start Here flow text columns", r"formatStartHere.*C:C.*columnWidth.*D:D.*columnWidth"),
         ("widens import contract description column", r"formatDataImportSetup.*D:D.*columnWidth"),
@@ -2394,6 +2394,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         "task pane avoids formula hyperlink navigation",
         "formula hyperlink navigation absent",
         "Use plain labels or real worksheet hyperlinks instead of cached HYPERLINK formulas.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.js",
+        taskpane,
+        "task pane uses real internal worksheet hyperlinks",
+        r"(?=.*setInternalSheetLink)(?=.*range\.hyperlink)(?=.*documentReference)(?=.*formatHubToc)(?=.*setInternalSheetLink\(sheet\.getRange)",
+        "Use real worksheet hyperlinks for Start Here and hub section navigation when the host supports them.",
     )
     run_all_match = re.search(r"async function runAll\(\)\s*\{(?P<body>.*?)\n\s*\}", taskpane, flags=re.S)
     run_all_body = run_all_match.group("body") if run_all_match else ""
@@ -3413,8 +3421,16 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "tools/build_governance_starter_workbook.ps1",
         builder,
         "governance starter builder adds hub tables of contents",
-        r"Add-HubTableOfContents.*tblAnalysisHubSections.*tblAssetHubSections.*tblAssetFinanceHubSections",
+        r"Add-HubTableOfContents.*Go to section.*tblAnalysisHubSections.*tblAssetHubSections.*TopLeft \"A4\".*tblAssetFinanceHubSections.*TopLeft \"A4\".*tblSemanticMapHubSections",
         "Keep stacked hub sections navigable.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder keeps hub contents readable after column templates",
+        r"Set-HubTableOfContentsColumnWidths.*ColumnWidth = 28.*ColumnWidth = 64.*Apply-HubColumnWidthTemplate.*Set-HubTableOfContentsColumnWidths",
+        "Keep generated hub contents tables readable after fixed hub column widths are applied.",
     )
     check_required_regex(
         results,

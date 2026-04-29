@@ -95,7 +95,7 @@ The standalone output button remains available when you want to rerun only the o
 Insert Demo Outputs
 ```
 
-That button validates the workbook first, checks `Planning Review!A4:N200` for cells that would block the main report spill, then places demo formulas at fixed hub locations. It writes `Planning Review` with `=CapitalPlanning.CAPITAL_PLANNING_REPORT()` and uses the hub sheets for the stacked review outputs, including `Analysis Hub` sections for Burndown with `=Analysis.BURNDOWN_SCREEN()` and Internal Jobs with `=Ready.InternalJobs_Export()`. Each hub starts with a small section index. If `Planning Review!A4` already contains the expected main report formula and is not showing `#SPILL!`, the button is safe to rerun.
+That button validates the workbook first, checks `Planning Review!A4:N200` for cells that would block the main report spill, then places demo formulas at fixed hub locations. It writes `Planning Review` with `=CapitalPlanning.CAPITAL_PLANNING_REPORT()` and uses the hub sheets for the stacked review outputs, including `Analysis Hub` sections for Burndown with `=Analysis.BURNDOWN_SCREEN()` and Internal Jobs with `=Ready.InternalJobs_Export()`. Each hub starts with a clickable `Go to section` table. If `Planning Review!A4` already contains the expected main report formula and is not showing `#SPILL!`, the button is safe to rerun.
 
 The task pane also includes this helper:
 
@@ -184,7 +184,7 @@ The setup path is intentionally small and inspectable:
 - `Planning Review!O:R` is used by the notes workflow: `ExistingMeetingNotes`, `NewPlanningNotes`, `NewTimeline`, and `NewStatus`.
 - Hidden `Decision Staging` stores formula-backed `tblDecisionStaging`, the controlled staging table consumed by `office-scripts/apply_notes.ts`; ApplyNotes run 1 resizes it from `Planning Review!P:R` while preserving `ReviewRow`-keyed review/context/helper formulas.
 - Hidden `Validation Lists` stores the dropdown values used by the starter workbook.
-- `Source Status`, `Analysis Hub`, `Asset Hub`, and `Asset Finance Hub` replace the old scattered demo output sheets. The stacked hub sheets include section indexes at the top.
+- `Source Status`, `Analysis Hub`, `Asset Hub`, and `Asset Finance Hub` replace the old scattered demo output sheets. The stacked hub sheets include clickable section tables at the top.
 - Optional asset setup creates `Asset Register`, `Asset Setup`, `Project Asset Map`, `Semantic Assets`, `Asset Changes`, and `Asset State History` with `tblAssets`, asset staging, mapping, change, and state-history tables.
 - Asset setup also writes dropdown-backed validation lists for asset status, condition, criticality, change type, asset state, promotion status, mapping status, and advisory relationship lists for `Asset ID` and `Project Key`.
 - Optional asset evidence setup is handled by the generated governance starter template, the generated seed workbook, and the PowerShell installer, not by task-pane copy buttons.

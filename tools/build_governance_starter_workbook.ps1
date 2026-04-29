@@ -566,7 +566,7 @@ function Add-HubTableOfContents {
     )
 
     $rows = New-Object 'object[][]' ($Sections.Count + 1)
-    $rows[0] = [object[]]@("Section", "What it shows")
+    $rows[0] = [object[]]@("Go to section", "What it shows")
     for ($index = 0; $index -lt $Sections.Count; $index++) {
         $rows[$index + 1] = [object[]]@($Sections[$index].Title, $Sections[$index].Note)
     }
@@ -576,9 +576,15 @@ function Add-HubTableOfContents {
         $cell = $table.DataBodyRange.Cells.Item($index + 1, 1)
         Set-InternalWorksheetLink -Range $cell -SheetName $Worksheet.Name -DisplayText $Sections[$index].Title -TargetCell $Sections[$index].Cell
     }
-    $Worksheet.Columns.Item(1).ColumnWidth = 28
-    $Worksheet.Columns.Item(2).ColumnWidth = 64
+    Set-HubTableOfContentsColumnWidths -Table $table
     return $table
+}
+
+function Set-HubTableOfContentsColumnWidths {
+    param([object]$Table)
+
+    $Table.Range.Columns.Item(1).ColumnWidth = 28
+    $Table.Range.Columns.Item(2).ColumnWidth = 64
 }
 
 function Format-HubSheet {
@@ -1248,13 +1254,14 @@ function Build-AnalysisHub {
         @{ Cell = "A238"; Title = "Burndown Screen"; Note = "Meeting view of remaining burn and drivers."; Formula = "=Analysis.BURNDOWN_SCREEN()" },
         @{ Cell = "A300"; Title = "Internal Jobs Export"; Note = "Header-driven internal work export for readiness smoke testing."; Formula = "=Ready.InternalJobs_Export()" }
     )
-    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAnalysisHubSections" -Sections $sections)
+    $toc = Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAnalysisHubSections" -Sections $sections
     foreach ($section in $sections) {
         Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
     }
     $Worksheet.Range("A:Z").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
     Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "Analysis"
+    Set-HubTableOfContentsColumnWidths -Table $toc
     Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(14, 52, 114, 176, 238, 300) -DefaultHeight 20
 }
 
@@ -1267,67 +1274,82 @@ function Build-AssetHub {
         -Note "Optional workflow for connecting projects to assets. Start here only when project-to-asset tracking is in scope." `
         -ClearRange "A1:Z380"
 
+    $sections = @(
+        @{ Cell = "D4"; Title = "Asset workflow mode"; Note = "Choose whether optional asset tracking is in scope." },
+        @{ Cell = "A18"; Title = "What should I do first?"; Note = "Mode-aware next action for the asset workflow." },
+        @{ Cell = "A32"; Title = "Asset paths"; Note = "Plain-English paths for map, candidate, change, or finance work." },
+        @{ Cell = "A54"; Title = "Asset workflow status"; Note = "Counts for real asset rows, mappings, candidates, issues, and finance-ready evidence." },
+        @{ Cell = "A76"; Title = "Review queues"; Note = "Friendly overview of asset queues before technical issue sections." },
+        @{ Cell = "A102"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review." },
+        @{ Cell = "A142"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows." },
+        @{ Cell = "A182"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply." },
+        @{ Cell = "A222"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links." },
+        @{ Cell = "A262"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context." },
+        @{ Cell = "A312"; Title = "Asset terms"; Note = "Plain-language glossary for asset workflow terminology." },
+        @{ Cell = "A342"; Title = "Admin / troubleshooting table map"; Note = "Hidden asset tables for intentional administration and troubleshooting." }
+    )
+    $toc = Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetHubSections" -Sections $sections -TopLeft "A4"
+
     Format-SectionHeader `
-        -Anchor $Worksheet.Range("A4") `
+        -Anchor $Worksheet.Range("D4") `
         -Title "Asset workflow mode" `
         -Note "Assets are optional. Leave the mode Off when the workbook is only being used for capital planning."
     $settingsTable = Add-TableFromMatrix `
         -Worksheet $Worksheet `
         -TableName "tblAssetWorkflowSettings" `
-        -TopLeft "A6" `
+        -TopLeft "D6" `
         -Rows (Read-TsvMatrix "samples\asset_workflow_settings_starter.tsv")
     [void](Add-ValidationList -Range $settingsTable.DataBodyRange.Cells.Item(1, 2) -Source (Get-ListValidationSource "assetWorkflowModes"))
 
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A11" `
+        -Cell "A18" `
         -Title "What should I do first?" `
         -Note "The next action responds to the selected asset workflow mode and whether asset data is present." `
         -Formula "=Assets.ASSET_NEXT_ACTIONS"
 
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A25" `
+        -Cell "A32" `
         -Title "Asset paths" `
         -Note "Choose the path that matches the work you actually need. Do not start with asset evidence or finance." `
         -Formula "=Assets.ASSET_START_HERE"
 
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A47" `
+        -Cell "A54" `
         -Title "Asset workflow status" `
         -Note "Counts show whether the asset register, mappings, candidates, and finance-ready evidence have real rows." `
         -Formula "=Assets.ASSET_WORKFLOW_STATUS"
 
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A69" `
+        -Cell "A76" `
         -Title "Review queues" `
         -Note "Friendly map of the technical queues below. Use these only after choosing an asset path." `
         -Formula "=Assets.ASSET_REVIEW_QUEUE"
 
-    $sections = @(
-        @{ Cell = "A95"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
-        @{ Cell = "A135"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows."; Formula = "=Assets.PROJECT_PROMOTION_QUEUE" },
-        @{ Cell = "A175"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply."; Formula = "=Assets.ASSET_CHANGE_ISSUES" },
-        @{ Cell = "A215"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links."; Formula = "=Assets.INSTALLED_WITHOUT_EVIDENCE" },
-        @{ Cell = "A255"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context."; Formula = "=Assets.REPLACEMENT_SOURCE_TARGET_ISSUES" }
+    $technicalSections = @(
+        @{ Cell = "A102"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
+        @{ Cell = "A142"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows."; Formula = "=Assets.PROJECT_PROMOTION_QUEUE" },
+        @{ Cell = "A182"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply."; Formula = "=Assets.ASSET_CHANGE_ISSUES" },
+        @{ Cell = "A222"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links."; Formula = "=Assets.INSTALLED_WITHOUT_EVIDENCE" },
+        @{ Cell = "A262"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context."; Formula = "=Assets.REPLACEMENT_SOURCE_TARGET_ISSUES" }
     )
-    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetHubSections" -Sections $sections -TopLeft "A84")
-    foreach ($section in $sections) {
+    foreach ($section in $technicalSections) {
         Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
     }
 
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A305" `
+        -Cell "A312" `
         -Title "Asset terms" `
         -Note "Plain-language glossary for asset workflow terminology." `
         -Formula "=Assets.ASSET_GLOSSARY"
 
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A335" `
+        -Cell "A342" `
         -Title "Admin / troubleshooting table map" `
         -Note "Hidden asset tables are still available for operators who intentionally enable the asset workflow." `
         -Formula "=Assets.ASSET_TABLE_MAP"
@@ -1335,7 +1357,8 @@ function Build-AssetHub {
     $Worksheet.Range("A:Z").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
     Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "Asset"
-    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(4, 11, 25, 47, 69, 95, 135, 175, 215, 255, 305, 335) -DefaultHeight 20
+    Set-HubTableOfContentsColumnWidths -Table $toc
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(4, 18, 32, 54, 76, 102, 142, 182, 222, 262, 312, 342) -DefaultHeight 20
 }
 
 function Build-AssetFinanceHub {
@@ -1347,34 +1370,23 @@ function Build-AssetFinanceHub {
         -Note "Optional finance outputs. Use this only when classified asset evidence exists and is ready for AssetFinance." `
         -ClearRange "A1:Z300"
 
-    Add-HubSection `
-        -Worksheet $Worksheet `
-        -Cell "A4" `
-        -Title "Finance gate" `
-        -Note "Asset finance reads tblAssetEvidence_ModelInputs. It does not read the Asset Register, Project Asset Map, raw evidence source rows, or mapped-only evidence directly." `
-        -Formula "=AssetFinance.FINANCE_START_HERE"
-
-    Add-HubSection `
-        -Worksheet $Worksheet `
-        -Cell "A18" `
-        -Title "Readiness status" `
-        -Note "Classified evidence count and unsupported-assumption counts before reviewing finance outputs." `
-        -Formula "=AssetFinance.FINANCE_READINESS_STATUS"
-
     $sections = @(
-        @{ Cell = "A42"; Title = "Asset Depreciation"; Note = "Classified asset evidence converted to depreciation-ready rows."; Formula = "=AssetFinance.DEPRECIATION_SCHEDULE" },
-        @{ Cell = "A116"; Title = "Asset Funding Requirements"; Note = "Classified asset evidence grouped into funding requirements."; Formula = "=AssetFinance.FUNDING_REQUIREMENTS" },
-        @{ Cell = "A176"; Title = "Asset Finance Totals"; Note = "Asset finance summary totals from classified model inputs."; Formula = "=AssetFinance.FINANCE_TOTALS" },
-        @{ Cell = "A206"; Title = "Asset Finance Charts"; Note = "Chart-ready asset finance feeds; no native chart objects yet."; Formula = "=AssetFinance.CHART_FEEDS" }
+        @{ Cell = "A12"; Title = "Finance gate"; Note = "Asset finance reads tblAssetEvidence_ModelInputs, not raw or mapped-only asset rows."; Formula = "=AssetFinance.FINANCE_START_HERE" },
+        @{ Cell = "A26"; Title = "Readiness status"; Note = "Classified evidence count and unsupported-assumption counts before reviewing finance outputs."; Formula = "=AssetFinance.FINANCE_READINESS_STATUS" },
+        @{ Cell = "A50"; Title = "Asset Depreciation"; Note = "Classified asset evidence converted to depreciation-ready rows."; Formula = "=AssetFinance.DEPRECIATION_SCHEDULE" },
+        @{ Cell = "A124"; Title = "Asset Funding Requirements"; Note = "Classified asset evidence grouped into funding requirements."; Formula = "=AssetFinance.FUNDING_REQUIREMENTS" },
+        @{ Cell = "A184"; Title = "Asset Finance Totals"; Note = "Asset finance summary totals from classified model inputs."; Formula = "=AssetFinance.FINANCE_TOTALS" },
+        @{ Cell = "A214"; Title = "Asset Finance Charts"; Note = "Chart-ready asset finance feeds; no native chart objects yet."; Formula = "=AssetFinance.CHART_FEEDS" }
     )
-    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetFinanceHubSections" -Sections $sections -TopLeft "A31")
+    $toc = Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetFinanceHubSections" -Sections $sections -TopLeft "A4"
     foreach ($section in $sections) {
         Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
     }
     $Worksheet.Range("A:Z").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
     Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "AssetFinance"
-    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(4, 18, 42, 116, 176, 206) -DefaultHeight 20
+    Set-HubTableOfContentsColumnWidths -Table $toc
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(12, 26, 50, 124, 184, 214) -DefaultHeight 20
 }
 
 function Build-SemanticMapSetup {
@@ -1419,7 +1431,7 @@ function Build-SemanticMapHub {
         @{ Cell = "A190"; Title = "Relationship map"; Note = "Curated relationships for location, composition, feeds, points, and project impact."; Formula = "=Ontology.RELATIONSHIP_MAP" },
         @{ Cell = "A225"; Title = "JSON-LD and digital twin note"; Note = "Guidance only. This slice does not implement JSON-LD, RDF, Fabric graph, or Azure Digital Twins export."; Formula = "=Ontology.JSONLD_EXPORT_HELP" }
     )
-    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblSemanticMapHubSections" -Sections $sections -TopLeft "A4")
+    $toc = Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblSemanticMapHubSections" -Sections $sections -TopLeft "A4"
     foreach ($section in $sections) {
         Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
     }
@@ -1427,6 +1439,7 @@ function Build-SemanticMapHub {
     $Worksheet.Range("A:Z").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
     Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "Semantic"
+    Set-HubTableOfContentsColumnWidths -Table $toc
     Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(15, 35, 55, 100, 150, 190, 225) -DefaultHeight 20
 }
 

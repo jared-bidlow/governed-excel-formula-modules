@@ -20,7 +20,7 @@ Asset workflow is optional. `AssetsLite` continues from `Analysis Hub` to `Asset
 | Planning Table | Manual/staging/local writeback surface. | Not the formula source; refresh or re-sync after edits or ApplyNotes. |
 | tblBudgetInput | Canonical formula source. | Lives on hidden `PQ Budget Input`; formulas read this table through `get`. |
 | Planning Review | Main report and notes-entry surface. | Preserve report totals, subtotal flags, and cap remaining values unless intentional. |
-| Analysis Hub | Scorecards, queues, burndown, working budget, and readiness output. | Includes a section index and replaces scattered analysis demo sheets. |
+| Analysis Hub | Scorecards, queues, burndown, working budget, and readiness output. | Includes a clickable `Go to section` table and replaces scattered analysis demo sheets. |
 | Asset Hub | Optional project-to-asset workflow onboarding, mode selection, next actions, and review queues. | Start with Asset Hub only when asset tracking is in scope; backend asset tables stay hidden/admin-scoped by default. |
 | Asset Finance Hub | Optional depreciation, funding, totals, and chart-ready feeds. | Asset Finance is advanced and requires classified evidence; reads classified model inputs only. |
 | Semantic Map Hub | Optional REC/Brick semantic crosswalk and triple export queue. | SemanticTwin only; this is not a full ontology import or completed digital-twin integration. |

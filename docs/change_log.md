@@ -1,3 +1,15 @@
+## 2026-04-29 - Add clickable hub section navigation
+
+Semantic change:
+
+- Added clickable `Go to section` tables for stacked hub sheets, including top-of-page navigation for `Asset Hub` and `Asset Finance Hub`.
+- Updated Office.js hub navigation to use real internal worksheet hyperlinks when supported, with plain labels as a fallback.
+
+Visible impact:
+
+- Report math, AssetFinance calculations, canonical input behavior, and workbook edition rules are unchanged.
+- Generated hub sheets are easier to navigate because operators can jump down-page to each section instead of scrolling through stacked outputs.
+
 ## 2026-04-29 - Add optional SemanticTwin REC/Brick semantic crosswalk
 
 Semantic change:

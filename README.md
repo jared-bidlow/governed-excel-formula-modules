@@ -187,7 +187,7 @@ For v0.5, `Planning Table` is a manual/staging surface and governed report formu
 
 The generated starter also includes a hidden `Automation Setup` worksheet. It explains how to import the optional `ApplyNotes.ts` release asset through Excel `Automate -> New Script`; the public template does not embed or auto-install Office Scripts.
 
-The generated starter includes the first v0.4 asset finance bridge: hidden `Asset Finance Setup` / `tblAssetFinanceAssumptions`, the `AssetFinance` formula names, and `Asset Finance Hub` sections for depreciation, funding requirements, totals, and chart-ready feeds. The stacked hub sheets include small section indexes at the top so operators can jump to the relevant output without browsing backend sheets. Those outputs read `tblAssetEvidence_ModelInputs`; mapped-only evidence remains reviewable in the Power Query status and mapping queue, but only rows with `PresentWithClassifiedEvidence = TRUE` feed the finance model outputs.
+The generated starter includes the first v0.4 asset finance bridge: hidden `Asset Finance Setup` / `tblAssetFinanceAssumptions`, the `AssetFinance` formula names, and `Asset Finance Hub` sections for depreciation, funding requirements, totals, and chart-ready feeds. The stacked hub sheets include clickable `Go to section` tables near the top so operators can jump down-page to the relevant output without browsing backend sheets. Those outputs read `tblAssetEvidence_ModelInputs`; mapped-only evidence remains reviewable in the Power Query status and mapping queue, but only rows with `PresentWithClassifiedEvidence = TRUE` feed the finance model outputs.
 
 ## Start From A Blank Workbook
 
