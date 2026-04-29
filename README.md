@@ -42,6 +42,7 @@ governed-excel-formula-modules/
 |   \-- supporting workbook modules
 +-- docs/
 |   +-- asset_setup_workflow.md
+|   +-- asset_quick_start.md
 |   +-- asset_evidence_power_query.md
 |   +-- copilot_review_playbook.md
 |   +-- database_import_contract.md
@@ -88,9 +89,24 @@ From the repo root:
 ```bash
 python tools/audit_capex_module.py
 python tools/lint_formulas.py modules/*.formula.txt
+python tools/report_feature_status.py
 ```
 
 The audit is intentionally text-only. It does not open Excel, edit workbook binaries, or require workbook data.
+
+For release review, `npm run validate` runs the static audit, formula lint, and feature-status reporter. `npm run review:packet` writes an ignored review packet under `release_artifacts/review_packet/` so reviewers can see what is built, scaffolded, or still missing.
+
+## Starter Workbook Editions
+
+The default generated `Governance_Starter.xltx` is planning-only. Its visible flow is:
+
+```text
+Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
+```
+
+Asset workflow is optional. Start with Asset Hub only when you explicitly need project-to-asset tracking. `AssetsLite` adds `Asset Hub`; `AssetsFull` adds both `Asset Hub` and `Asset Finance Hub`.
+
+`tblBudgetInput` is the canonical formula source. `Planning Table` / `tblPlanningTable` is manual/staging/local writeback. After manual Planning Table edits or `ApplyNotes`, refresh or re-sync the current-workbook adapter before relying on formula outputs.
 
 To validate, commit, rebase, and push the public repo in one local command:
 

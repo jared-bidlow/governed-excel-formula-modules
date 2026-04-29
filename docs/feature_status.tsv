@@ -11,7 +11,7 @@ release_artifact_scan	Release artifact scanner	Built	Release	pattern	all_exists:
 ci_validation	GitHub Actions validation	Built	Dev Velocity	pattern	all_exists:.github/workflows/validate.yml	source validation workflow exists
 review_packet	Review packet generator	Built	Dev Velocity	pattern	all_exists:tools/build_review_packet.py	review packet can be generated from source
 feature_status_reporter	Feature status reporter	Built	Dev Velocity	pattern	all_exists:tools/report_feature_status.py	feature status reporter exists
-asset_editions	Planning, AssetsLite, and AssetsFull workbook editions	Missing	Assets	pattern	contains:tools/build_governance_starter_workbook.ps1::ValidateSet("Planning","AssetsLite","AssetsFull")	planned optional asset visibility layer
-asset_guided_start	Friendly asset workflow onboarding formulas	Missing	Assets	pattern	contains:modules/assets.formula.txt::ASSET_START_HERE||ASSET_WORKFLOW_STATUS||ASSET_NEXT_ACTIONS	planned asset onboarding layer
-asset_finance_empty_state	AssetFinance empty-state guidance	Missing	Assets	pattern	contains:modules/asset_finance.formula.txt::FINANCE_START_HERE||FINANCE_READINESS_STATUS	planned finance onboarding guidance
+asset_editions	Planning, AssetsLite, and AssetsFull workbook editions	Built	Assets	pattern	contains:tools/build_governance_starter_workbook.ps1::ValidateSet||Planning||AssetsLite||AssetsFull	optional asset visibility layer exists
+asset_guided_start	Friendly asset workflow onboarding formulas	Built	Assets	pattern	contains:modules/assets.formula.txt::ASSET_START_HERE||ASSET_WORKFLOW_STATUS||ASSET_NEXT_ACTIONS||ASSET_TABLE_MAP||ASSET_GLOSSARY||ASSET_REVIEW_QUEUE	asset onboarding layer exists
+asset_finance_empty_state	AssetFinance empty-state guidance	Built	Assets	pattern	contains:modules/asset_finance.formula.txt::FINANCE_START_HERE||FINANCE_READINESS_STATUS	finance onboarding guidance exists
 external_database_writeback	External database writeback	Missing	Data Import	pattern	contains:docs/database_import_contract.md::external database writeback implemented	intentionally out of v0.5 scope

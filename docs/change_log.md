@@ -1,3 +1,32 @@
+## 2026-04-29 - Make asset workflow optional and guided
+
+Semantic change:
+
+- Added generated workbook editions: `Planning` by default, `AssetsLite` with `Asset Hub`, and `AssetsFull` with `Asset Hub` plus `Asset Finance Hub`.
+- Extended the workbook manifest with `Edition` and `FriendlyName` metadata so visibility is driven by edition without deleting backend sheets.
+- Rebuilt `Asset Hub` around mode selection, next actions, asset paths, workflow status, review queues, glossary, and table map before technical issue outputs.
+- Added friendly asset onboarding formulas in `modules/assets.formula.txt`: `ASSET_START_HERE`, `ASSET_WORKFLOW_STATUS`, `ASSET_NEXT_ACTIONS`, `ASSET_TABLE_MAP`, `ASSET_GLOSSARY`, and `ASSET_REVIEW_QUEUE`.
+- Added `AssetFinance.FINANCE_START_HERE` and `AssetFinance.FINANCE_READINESS_STATUS` guidance without changing existing depreciation, funding, totals, or chart-feed calculations.
+- Moved fake asset demo rows into `samples/demo/asset_workflow/` and left public asset starter TSVs as blank starter tables.
+
+Minimal diff summary:
+
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Updated `samples/workbook_manifest.tsv` and asset starter TSVs.
+- Added `samples/asset_workflow_settings_starter.tsv` and demo asset TSVs.
+- Updated `modules/assets.formula.txt`, `modules/asset_finance.formula.txt`, docs, feature status, and audit checks.
+
+Visible impact:
+
+- Default generated starter shows planning surfaces only.
+- `AssetsLite` visibly adds guided asset workflow onboarding.
+- `AssetsFull` visibly adds guided asset finance onboarding.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- Existing AssetFinance calculation semantics: no intended change.
+- Workbook binaries and generated artifacts remain out of tracked source.
+
 ## 2026-04-29 - Add v0.5 release accelerator tooling
 
 Semantic change:

@@ -8,6 +8,8 @@ External or manual source -> Power Query adapter -> tblBudgetInput -> formula mo
 
 Excel remains the review and calculation surface. This slice does not build a database app, Power App, Fabric workspace, or direct database writeback.
 
+Asset workflow is optional and separate from the budget import source boundary. `tblBudgetInput` remains the canonical planning formula source whether or not an asset edition is generated.
+
 ## Canonical Tables
 
 The generated `Governance_Starter.xltx` and the Office.js blank-workbook setup create:
@@ -55,7 +57,7 @@ The database-oriented adapters are placeholder templates. They use public-safe p
 
 ## Operator Flow
 
-1. Open `Governance_Starter.xltx` as a workbook copy.
+1. Open `Governance_Starter.xltx` as a workbook copy. Use `Governance_Starter_AssetsLite.xltx` or `Governance_Starter_AssetsFull.xltx` only when the optional asset workflow is in scope.
 2. Use `Planning Table` / `tblPlanningTable` for manual starter data, or import a Power Query adapter.
 3. Refresh Power Query so `qBudget_Input` loads `tblBudgetInput`.
 4. Review `Source Status`; unhide `PQ Budget QA` only when troubleshooting `tblBudgetImportStatus` or `tblBudgetImportIssues`.

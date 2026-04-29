@@ -23,33 +23,44 @@ Governance_Starter.xlsx
 Governance_Starter.xltx
 ```
 
+The default build is the `Planning` edition. Optional editions can be generated with:
+
+```powershell
+.\tools\build_governance_starter_workbook.ps1 -Edition AssetsLite
+.\tools\build_governance_starter_workbook.ps1 -Edition AssetsFull
+```
+
+`AssetsLite` writes `Governance_Starter_AssetsLite.xlsx` / `.xltx`. `AssetsFull` writes `Governance_Starter_AssetsFull.xlsx` / `.xltx`.
+
 Use `Governance_Starter.xltx` as the Excel template. Use `Governance_Starter.xlsx` for inspection and smoke testing. The generator pulls from source-controlled formula modules, starter TSVs, and M templates, so the workbook artifact can be rebuilt instead of reviewed as source.
 
 The generated starter includes:
 
 - `Start Here` as the active front door,
-- visible hub sheets: `Source Status`, `Analysis Hub`, `Asset Hub`, and `Asset Finance Hub`,
+- visible planning sheets: `Source Status`, `Data Import Setup`, `Planning Table`, `Cap Setup`, `Planning Review`, and `Analysis Hub`,
 - planning source/cap setup sheets,
 - `Data Import Setup`, `PQ Budget Input`, and `PQ Budget QA`,
 - canonical import tables `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`,
-- hidden `Workbook Manifest` / `tblWorkbookManifest` loaded from `samples/workbook_manifest.tsv`, including a `Presence` field for generated sheets versus `OptionalLegacy` sheet names,
+- hidden `Workbook Manifest` / `tblWorkbookManifest` loaded from `samples/workbook_manifest.tsv`, including `Presence`, `Edition`, and `FriendlyName` fields for generated sheets versus `OptionalLegacy` sheet names,
 - validation lists and visible controls,
 - a hidden `Automation Setup` sheet that explains how to import the optional `ApplyNotes.ts` release asset,
 - formula-module workbook names,
 - hub-based demo planning outputs,
 - notes staging,
-- optional asset workflow starter tables,
+- optional asset workflow starter tables and `tblAssetWorkflowSettings`,
 - asset evidence Power Query setup and loaded output sheets,
 - `Asset Finance Setup` / `tblAssetFinanceAssumptions`,
-- asset finance hub sections for depreciation, funding requirements, totals, and chart-ready feeds.
+- asset finance hub sections for depreciation, funding requirements, totals, and chart-ready feeds when the `AssetsFull` edition is generated.
 
 `Start Here` is not just a title sheet. It includes a workbook-flow table, the key source rule, navigation links to the visible sheets, and a short explanation of hidden backend/admin sheets. The stacked hub sheets also include section indexes near the top so operators can jump to the output they need.
 
 The default visible workbook surface is:
 
 ```text
-Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub -> Asset Hub -> Asset Finance Hub
+Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
 ```
+
+Asset workflow is optional. `AssetsLite` adds `Asset Hub`; `AssetsFull` adds `Asset Hub` and `Asset Finance Hub`. Start with Asset Hub only when project-to-asset tracking is in scope. Do not start with PQ asset evidence sheets or `Asset State History`.
 
 Backend/admin sheets such as `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, `Automation Setup`, asset workflow tables, `Asset Finance Setup`, and intermediate asset-evidence Power Query sheets are hidden by default. They are still present for auditability and troubleshooting. Legacy separate output sheet names remain in the manifest as `OptionalLegacy`, but the generated workbook uses the hub sheets instead.
 

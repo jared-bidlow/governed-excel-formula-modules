@@ -4,7 +4,7 @@ This repo includes a minimal Excel Office.js task-pane add-in under `addin/`.
 
 The add-in is an installer and validator. It does not replace the formula modules with JavaScript business logic.
 
-For a new workbook artifact, the preferred path is now the generated starter template from `tools/build_governance_starter_workbook.ps1`. The add-in remains useful for blank-workbook setup, validation, and formula-module installation, while the generated `.xltx` already includes `Start Here`, the hub sheets, the starter sheets, data import bridge tables, asset workflow tables, and asset-evidence Power Query output sheets.
+For a new workbook artifact, the preferred path is now the generated starter template from `tools/build_governance_starter_workbook.ps1`. The default generated `.xltx` is planning-only. Use `-Edition AssetsLite` for a visible `Asset Hub`, and `-Edition AssetsFull` for visible `Asset Hub` plus `Asset Finance Hub`.
 
 The generated template also includes a hidden `Automation Setup` worksheet. That sheet explains that `ApplyNotes.ts` is an optional Office Script release asset and must be imported through Excel `Automate -> New Script` before the notes writeback automation can run.
 
@@ -34,6 +34,8 @@ The generated template also includes a hidden `Automation Setup` worksheet. That
 - Runs `Setup Notes Workflow` as part of the normal `Setup + Install + Validate + Outputs` path, creating a visible `Planning Review!O1:R3` `ApplyNotes Control` area, creating `Planning Review!O:R` notes columns, seeding public-safe `Planning Review!P5:R5` smoke input when blank, and creating formula-backed `Decision Staging` / `tblDecisionStaging` for the ApplyNotes first-pass staging step keyed by `ReviewRow`.
 - Provides a standalone `Setup Asset Workflow` button for optional asset sheets, `tblAssets`, mapping/change/history tables, and asset relationship dropdowns; asset setup is not run from the default path.
 - Leaves asset evidence Power Query import to the generated seed workbook plus PowerShell installer on this branch; the task pane does not expose duplicate M-template copy buttons.
+
+Asset workflow is optional. Start with `Asset Hub` only when project-to-asset tracking is needed. Do not start with PQ asset evidence sheets. Do not start with `Asset State History`. Asset Finance is advanced and requires classified evidence.
 
 ## Local Trial Shape
 

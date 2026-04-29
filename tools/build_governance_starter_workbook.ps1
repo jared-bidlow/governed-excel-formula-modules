@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$OutputDirectory = "release_artifacts\governance-starter"
+    [string]$OutputDirectory = "release_artifacts\governance-starter",
+    [ValidateSet("Planning", "AssetsLite", "AssetsFull")]
+    [string]$Edition = "Planning"
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,9 +21,10 @@ if (-not $resolvedOutputDirectory.StartsWith($artifactRoot, [System.StringCompar
 }
 
 $scratchDirectory = Join-Path $resolvedOutputDirectory "_scratch"
-$coreWorkbookPath = Join-Path $scratchDirectory "Governance_Starter_Core.xlsx"
-$starterWorkbookPath = Join-Path $resolvedOutputDirectory "Governance_Starter.xlsx"
-$templateWorkbookPath = Join-Path $resolvedOutputDirectory "Governance_Starter.xltx"
+$artifactSuffix = if ($Edition -eq "Planning") { "" } else { "_$Edition" }
+$coreWorkbookPath = Join-Path $scratchDirectory "Governance_Starter$artifactSuffix`_Core.xlsx"
+$starterWorkbookPath = Join-Path $resolvedOutputDirectory "Governance_Starter$artifactSuffix.xlsx"
+$templateWorkbookPath = Join-Path $resolvedOutputDirectory "Governance_Starter$artifactSuffix.xltx"
 $assetEvidenceInstaller = Join-Path $PSScriptRoot "install_asset_evidence_pq_workbook.ps1"
 
 New-Item -ItemType Directory -Path $resolvedOutputDirectory -Force | Out-Null
@@ -100,6 +103,30 @@ function Write-Matrix {
     return ,$range
 }
 
+function Ensure-TableRows {
+    param([object]$Rows)
+
+    if ($Rows.Count -gt 1) {
+        return ,$Rows
+    }
+
+    $blank = New-Object 'object[]' $Rows[0].Count
+    for ($index = 0; $index -lt $Rows[0].Count; $index++) {
+        $blank[$index] = ""
+    }
+    return ,@($Rows[0], $blank)
+}
+
+function New-BlankRowLike {
+    param([object]$HeaderRow)
+
+    $blank = New-Object 'object[]' $HeaderRow.Count
+    for ($index = 0; $index -lt $HeaderRow.Count; $index++) {
+        $blank[$index] = ""
+    }
+    return ,$blank
+}
+
 function Add-Worksheet {
     param(
         [object]$Workbook,
@@ -158,8 +185,13 @@ function Add-TableFromMatrix {
     )
 
     Remove-WorkbookTableIfExists -Workbook $Worksheet.Parent -TableName $TableName
+    $Rows = Ensure-TableRows -Rows $Rows
     $range = Write-Matrix -Worksheet $Worksheet -TopLeft $TopLeft -Rows $Rows
-    $table = $Worksheet.ListObjects.Add(1, $range, $null, 1)
+    try {
+        $table = $Worksheet.ListObjects.Add(1, $range, $null, 1)
+    } catch {
+        throw "Failed to create table $TableName on sheet $($Worksheet.Name) at $TopLeft`: $($_.Exception.Message)"
+    }
     $table.Name = $TableName
     $table.TableStyle = $Style
     Format-TableHeader -Table $table
@@ -527,7 +559,8 @@ function Add-HubTableOfContents {
     param(
         [object]$Worksheet,
         [string]$TableName,
-        [object[]]$Sections
+        [object[]]$Sections,
+        [string]$TopLeft = "A4"
     )
 
     $rows = New-Object 'object[][]' ($Sections.Count + 1)
@@ -536,7 +569,7 @@ function Add-HubTableOfContents {
         $rows[$index + 1] = [object[]]@($Sections[$index].Title, $Sections[$index].Note)
     }
 
-    $table = Add-TableFromMatrix -Worksheet $Worksheet -TableName $TableName -TopLeft "A4" -Rows $rows
+    $table = Add-TableFromMatrix -Worksheet $Worksheet -TableName $TableName -TopLeft $TopLeft -Rows $rows
     for ($index = 0; $index -lt $Sections.Count; $index++) {
         $cell = $table.DataBodyRange.Cells.Item($index + 1, 1)
         Set-InternalWorksheetLink -Range $cell -SheetName $Worksheet.Name -DisplayText $Sections[$index].Title -TargetCell $Sections[$index].Cell
@@ -739,6 +772,7 @@ $dropdownLists = [ordered]@{
     assetPromotionStatuses = @("draft", "review", "accepted", "ready", "project_ready", "rejected")
     assetMappingStatuses = @("draft", "active", "ready", "needs_review", "inactive")
     assetChangeStatuses = @("draft", "ready", "applied", "needs_review", "blocked")
+    assetWorkflowModes = @("Off", "Map existing assets", "Create candidate assets", "Track replacements/upgrades", "Asset finance from evidence")
 }
 
 $validationColumns = @(
@@ -756,7 +790,8 @@ $validationColumns = @(
     @{ Key = "assetStates"; Header = "Asset State" },
     @{ Key = "assetPromotionStatuses"; Header = "Asset Promotion Status" },
     @{ Key = "assetMappingStatuses"; Header = "Asset Mapping Status" },
-    @{ Key = "assetChangeStatuses"; Header = "Asset Change Status" }
+    @{ Key = "assetChangeStatuses"; Header = "Asset Change Status" },
+    @{ Key = "assetWorkflowModes"; Header = "Asset Workflow Mode" }
 )
 
 function Get-ListValidationSource {
@@ -948,7 +983,7 @@ function Build-AutomationSetup {
     $Worksheet.Range("A13").Value2 = "Release assets"
     $Worksheet.Range("A13").Font.Bold = $true
     $releaseRows = New-Object 'object[][]' 2
-    $releaseRows[0] = [object[]]@("Governance_Starter.xltx", "Workbook template with sheets, tables, formulas, and Power Query outputs.")
+    $releaseRows[0] = [object[]]@("Governance_Starter$artifactSuffix.xltx", "Workbook template with sheets, tables, formulas, and Power Query outputs.")
     $releaseRows[1] = [object[]]@("ApplyNotes.ts", "Optional Office Script source for notes/status/timeline writeback.")
     [void](Write-Matrix -Worksheet $Worksheet -TopLeft "A14" -Rows $releaseRows)
 
@@ -1072,21 +1107,23 @@ function Build-BudgetQA {
 function Build-WorkbookManifest {
     param([object]$Worksheet)
 
-    $Worksheet.Range("A1:J200").Clear()
+    $Worksheet.Range("A1:L220").Clear()
     Format-PageHeader `
         -Worksheet $Worksheet `
         -Title "Workbook Manifest" `
         -Subtitle "Source-controlled sheet/table map used for workbook navigation and visibility." `
-        -BandRange "A1:J3"
+        -BandRange "A1:L3"
     [void](Add-TableFromMatrix `
         -Worksheet $Worksheet `
         -TableName "tblWorkbookManifest" `
         -TopLeft "A4" `
         -Rows (Read-TsvMatrix "samples\workbook_manifest.tsv"))
-    $Worksheet.Range("A:J").WrapText = $true
+    $Worksheet.Range("A:L").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
     $Worksheet.Columns.Item(6).ColumnWidth = 18
-    $Worksheet.Columns.Item(10).ColumnWidth = 52
+    $Worksheet.Columns.Item(7).ColumnWidth = 20
+    $Worksheet.Columns.Item(8).ColumnWidth = 24
+    $Worksheet.Columns.Item(12).ColumnWidth = 52
 }
 
 function Build-StartHere {
@@ -1224,23 +1261,78 @@ function Build-AssetHub {
     Format-HubSheet `
         -Worksheet $Worksheet `
         -Title "Asset Hub" `
-        -Note "Asset workflow review queues; backend asset tables stay hidden unless administration is needed." `
-        -ClearRange "A1:Z230"
+        -Note "Optional workflow for connecting projects to assets. Start here only when project-to-asset tracking is in scope." `
+        -ClearRange "A1:Z380"
+
+    Format-SectionHeader `
+        -Anchor $Worksheet.Range("A4") `
+        -Title "Asset workflow mode" `
+        -Note "Assets are optional. Leave the mode Off when the workbook is only being used for capital planning."
+    $settingsTable = Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblAssetWorkflowSettings" `
+        -TopLeft "A6" `
+        -Rows (Read-TsvMatrix "samples\asset_workflow_settings_starter.tsv")
+    [void](Add-ValidationList -Range $settingsTable.DataBodyRange.Cells.Item(1, 2) -Source (Get-ListValidationSource "assetWorkflowModes"))
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A11" `
+        -Title "What should I do first?" `
+        -Note "The next action responds to the selected asset workflow mode and whether asset data is present." `
+        -Formula "=Assets.ASSET_NEXT_ACTIONS"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A25" `
+        -Title "Asset paths" `
+        -Note "Choose the path that matches the work you actually need. Do not start with asset evidence or finance." `
+        -Formula "=Assets.ASSET_START_HERE"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A47" `
+        -Title "Asset workflow status" `
+        -Note "Counts show whether the asset register, mappings, candidates, and finance-ready evidence have real rows." `
+        -Formula "=Assets.ASSET_WORKFLOW_STATUS"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A69" `
+        -Title "Review queues" `
+        -Note "Friendly map of the technical queues below. Use these only after choosing an asset path." `
+        -Formula "=Assets.ASSET_REVIEW_QUEUE"
+
     $sections = @(
-        @{ Cell = "A13"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
-        @{ Cell = "A53"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows."; Formula = "=Assets.PROJECT_PROMOTION_QUEUE" },
-        @{ Cell = "A93"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply."; Formula = "=Assets.ASSET_CHANGE_ISSUES" },
-        @{ Cell = "A133"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links."; Formula = "=Assets.INSTALLED_WITHOUT_EVIDENCE" },
-        @{ Cell = "A173"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context."; Formula = "=Assets.REPLACEMENT_SOURCE_TARGET_ISSUES" }
+        @{ Cell = "A95"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
+        @{ Cell = "A135"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows."; Formula = "=Assets.PROJECT_PROMOTION_QUEUE" },
+        @{ Cell = "A175"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply."; Formula = "=Assets.ASSET_CHANGE_ISSUES" },
+        @{ Cell = "A215"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links."; Formula = "=Assets.INSTALLED_WITHOUT_EVIDENCE" },
+        @{ Cell = "A255"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context."; Formula = "=Assets.REPLACEMENT_SOURCE_TARGET_ISSUES" }
     )
-    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetHubSections" -Sections $sections)
+    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetHubSections" -Sections $sections -TopLeft "A84")
     foreach ($section in $sections) {
         Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
     }
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A305" `
+        -Title "Asset terms" `
+        -Note "Plain-language glossary for asset workflow terminology." `
+        -Formula "=Assets.ASSET_GLOSSARY"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A335" `
+        -Title "Admin / troubleshooting table map" `
+        -Note "Hidden asset tables are still available for operators who intentionally enable the asset workflow." `
+        -Formula "=Assets.ASSET_TABLE_MAP"
+
     $Worksheet.Range("A:Z").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
     Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "Asset"
-    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(13, 53, 93, 133, 173) -DefaultHeight 20
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(4, 11, 25, 47, 69, 95, 135, 175, 215, 255, 305, 335) -DefaultHeight 20
 }
 
 function Build-AssetFinanceHub {
@@ -1249,30 +1341,52 @@ function Build-AssetFinanceHub {
     Format-HubSheet `
         -Worksheet $Worksheet `
         -Title "Asset Finance Hub" `
-        -Note "Classified asset evidence converted into depreciation, funding, total, and chart-ready finance outputs." `
-        -ClearRange "A1:Z220"
+        -Note "Optional finance outputs. Use this only when classified asset evidence exists and is ready for AssetFinance." `
+        -ClearRange "A1:Z300"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A4" `
+        -Title "Finance gate" `
+        -Note "Asset finance reads tblAssetEvidence_ModelInputs. It does not read the Asset Register, Project Asset Map, raw evidence source rows, or mapped-only evidence directly." `
+        -Formula "=AssetFinance.FINANCE_START_HERE"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A18" `
+        -Title "Readiness status" `
+        -Note "Classified evidence count and unsupported-assumption counts before reviewing finance outputs." `
+        -Formula "=AssetFinance.FINANCE_READINESS_STATUS"
+
     $sections = @(
-        @{ Cell = "A12"; Title = "Asset Depreciation"; Note = "Classified asset evidence converted to depreciation-ready rows."; Formula = "=AssetFinance.DEPRECIATION_SCHEDULE" },
-        @{ Cell = "A84"; Title = "Asset Funding Requirements"; Note = "Classified asset evidence grouped into funding requirements."; Formula = "=AssetFinance.FUNDING_REQUIREMENTS" },
-        @{ Cell = "A140"; Title = "Asset Finance Totals"; Note = "Asset finance summary totals from classified model inputs."; Formula = "=AssetFinance.FINANCE_TOTALS" },
-        @{ Cell = "A168"; Title = "Asset Finance Charts"; Note = "Chart-ready asset finance feeds; no native chart objects yet."; Formula = "=AssetFinance.CHART_FEEDS" }
+        @{ Cell = "A42"; Title = "Asset Depreciation"; Note = "Classified asset evidence converted to depreciation-ready rows."; Formula = "=AssetFinance.DEPRECIATION_SCHEDULE" },
+        @{ Cell = "A116"; Title = "Asset Funding Requirements"; Note = "Classified asset evidence grouped into funding requirements."; Formula = "=AssetFinance.FUNDING_REQUIREMENTS" },
+        @{ Cell = "A176"; Title = "Asset Finance Totals"; Note = "Asset finance summary totals from classified model inputs."; Formula = "=AssetFinance.FINANCE_TOTALS" },
+        @{ Cell = "A206"; Title = "Asset Finance Charts"; Note = "Chart-ready asset finance feeds; no native chart objects yet."; Formula = "=AssetFinance.CHART_FEEDS" }
     )
-    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetFinanceHubSections" -Sections $sections)
+    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetFinanceHubSections" -Sections $sections -TopLeft "A31")
     foreach ($section in $sections) {
         Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
     }
     $Worksheet.Range("A:Z").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
     Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "AssetFinance"
-    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(12, 84, 140, 168) -DefaultHeight 20
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(4, 18, 42, 116, 176, 206) -DefaultHeight 20
 }
 
 function Apply-WorkbookManifestVisibility {
-    param([object]$Workbook)
+    param(
+        [object]$Workbook,
+        [string]$Edition = "Planning"
+    )
 
     $visibleValue = -1
     $hiddenValue = 0
     $rows = Read-TsvMatrix "samples\workbook_manifest.tsv"
+    $headers = @{}
+    for ($columnIndex = 0; $columnIndex -lt $rows[0].Count; $columnIndex++) {
+        $headers[[string]$rows[0][$columnIndex]] = $columnIndex
+    }
     $visibleSheetOrder = @()
     $startSheet = Get-WorksheetOrNull -Workbook $Workbook -Name "Start Here"
     if ($null -ne $startSheet) {
@@ -1281,17 +1395,20 @@ function Apply-WorkbookManifestVisibility {
     }
 
     for ($index = 1; $index -lt $rows.Count; $index++) {
-        $sheetName = [string]$rows[$index][0]
-        $visibility = ([string]$rows[$index][4]).Trim().ToLowerInvariant()
+        $sheetName = [string]$rows[$index][$headers["SheetName"]]
+        $visibility = ([string]$rows[$index][$headers["Visibility"]]).Trim().ToLowerInvariant()
+        $editionList = if ($headers.ContainsKey("Edition")) { [string]$rows[$index][$headers["Edition"]] } else { "Planning;AssetsLite;AssetsFull" }
+        $editionTokens = @($editionList -split ";" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+        $includedInEdition = $editionTokens.Count -eq 0 -or $editionTokens -contains "All" -or $editionTokens -contains $Edition
         if ([string]::IsNullOrWhiteSpace($sheetName)) { continue }
 
         $sheet = Get-WorksheetOrNull -Workbook $Workbook -Name $sheetName
         if ($null -eq $sheet) { continue }
 
-        if ($visibility -eq "visible") {
+        if ($visibility -eq "visible" -and $includedInEdition) {
             $sheet.Visible = $visibleValue
             $visibleSheetOrder += $sheetName
-        } elseif ($visibility -eq "hidden") {
+        } elseif ($visibility -eq "hidden" -or -not $includedInEdition) {
             $sheet.Visible = $hiddenValue
         } else {
             throw "Unsupported workbook manifest visibility '$visibility' for sheet '$sheetName'."
@@ -1356,8 +1473,17 @@ function Build-AssetWorkflowTables {
 
     $assetSetupSheet = Add-Worksheet -Workbook $Workbook -Name "Asset Setup"
     $assetSetupRows = Read-TsvMatrix "samples\asset_setup_starter.tsv"
-    $promotionRows = @($assetSetupRows[0], $assetSetupRows[1])
-    $mappingRows = @($assetSetupRows[2], $assetSetupRows[3])
+    if ($assetSetupRows.Count -ge 4) {
+        $promotionRows = @($assetSetupRows[0], $assetSetupRows[1])
+        $mappingRows = @($assetSetupRows[2], $assetSetupRows[3])
+    } else {
+        $promotionRows = New-Object 'object[][]' 2
+        $promotionRows[0] = $assetSetupRows[0]
+        $promotionRows[1] = New-BlankRowLike -HeaderRow $assetSetupRows[0]
+        $mappingRows = New-Object 'object[][]' 2
+        $mappingRows[0] = $assetSetupRows[1]
+        $mappingRows[1] = New-BlankRowLike -HeaderRow $assetSetupRows[1]
+    }
     $promotionTable = Add-TableFromMatrix -Worksheet $assetSetupSheet -TableName "tblAssetPromotionQueue" -TopLeft "A1" -Rows $promotionRows
     $mappingTable = Add-TableFromMatrix -Worksheet $assetSetupSheet -TableName "tblAssetMappingStaging" -TopLeft "A6" -Rows $mappingRows
 
@@ -1517,7 +1643,7 @@ try {
     $installedNames = Install-FormulaModules -Workbook $workbook
     Build-DemoOutputs -Workbook $workbook | Out-Null
     [void]$workbook.Worksheets.Item("Start Here").Activate()
-    Apply-WorkbookManifestVisibility -Workbook $workbook
+    Apply-WorkbookManifestVisibility -Workbook $workbook -Edition $Edition
     [void]$workbook.Worksheets.Item("Start Here").Activate()
     Set-PublicWorkbookProperties -Workbook $workbook
     [void]$excel.CalculateFull()

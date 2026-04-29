@@ -2,6 +2,8 @@
 
 This branch adds an optional asset-evidence Power Query seed workbook for workbooks where the main operating object is an asset, project, funding requirement, or financial model input rather than a folder or file.
 
+Asset workflow is optional. Start with `Asset Hub` when asset tracking is needed. Do not start with PQ asset evidence sheets; they are advanced import/debug surfaces. Do not start with `Asset State History`.
+
 The Office.js add-in does not create Power Query queries. The asset-evidence import path is:
 
 - `samples/power-query/asset-evidence/*.m` are the Power Query module sources.
@@ -16,11 +18,11 @@ For a new workbook, prefer the generated governance starter template:
 .\tools\build_governance_starter_workbook.ps1
 ```
 
-That build creates `release_artifacts/governance-starter/Governance_Starter.xltx` with the planning starter, optional asset workflow tables, and these asset-evidence queries already loaded. Use the installer below when adding the same query surface to an existing workbook copy.
+That default build creates the planning-only `release_artifacts/governance-starter/Governance_Starter.xltx`. Use `-Edition AssetsFull` when the starter should visibly include `Asset Hub` and `Asset Finance Hub`; the backend asset-evidence query sheets remain hidden/admin-scoped. Use the installer below when adding the same query surface to an existing workbook copy.
 
 ## Operator Flow
 
-1. Run the normal add-in setup on a workbook copy when formula modules and starter sheets are needed, or start from `Governance_Starter.xltx`.
+1. Run the normal add-in setup on a workbook copy when formula modules and starter sheets are needed, or start from `Governance_Starter_AssetsFull.xltx`.
 2. Build the seed workbook with `tools/build_asset_evidence_pq_seed.ps1`.
 3. Run `tools/install_asset_evidence_pq_workbook.ps1 -TargetWorkbookPath <workbook-copy.xlsx>`.
 4. Open the new `.asset-evidence-pq.xlsx` output workbook.

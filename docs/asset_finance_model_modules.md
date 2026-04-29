@@ -2,6 +2,8 @@
 
 This is the v0.4 working slice for turning asset evidence into workbook-native finance outputs on branch `codex/asset-finance-model-modules`.
 
+Asset workflow is optional. Start with Asset Hub before Asset Finance Hub. Asset Finance is advanced and requires classified evidence.
+
 `Automation Setup` remains the Office Script import handoff; this slice adds depreciation, funding requirements, totals, and chart-ready feeds from `qAssetEvidence_ModelInputs`.
 
 ## Implemented Bridge
@@ -9,17 +11,19 @@ This is the v0.4 working slice for turning asset evidence into workbook-native f
 The generated workbook path is:
 
 ```text
-Governance_Starter.xltx -> Asset Evidence Setup -> qAssetEvidence_ModelInputs -> PQ Asset Evidence Model Inputs / tblAssetEvidence_ModelInputs -> AssetFinance outputs
+Governance_Starter_AssetsFull.xltx -> Asset Evidence Setup -> qAssetEvidence_ModelInputs -> PQ Asset Evidence Model Inputs / tblAssetEvidence_ModelInputs -> AssetFinance outputs
 ```
 
-The `AssetFinance` formulas live in `modules/asset_finance.formula.txt`. The generated starter installs these workbook names and output sheets:
+The `AssetFinance` formulas live in `modules/asset_finance.formula.txt`. The generated `AssetsFull` starter installs these workbook names and surfaces them in `Asset Finance Hub`:
 
-| Sheet | Formula |
+| Hub section | Formula |
 |---|---|
-| `Asset Depreciation` | `=AssetFinance.DEPRECIATION_SCHEDULE` |
-| `Asset Funding Requirements` | `=AssetFinance.FUNDING_REQUIREMENTS` |
-| `Asset Finance Totals` | `=AssetFinance.FINANCE_TOTALS` |
-| `Asset Finance Charts` | `=AssetFinance.CHART_FEEDS` |
+| Finance gate | `=AssetFinance.FINANCE_START_HERE` |
+| Readiness status | `=AssetFinance.FINANCE_READINESS_STATUS` |
+| Asset Depreciation | `=AssetFinance.DEPRECIATION_SCHEDULE` |
+| Asset Funding Requirements | `=AssetFinance.FUNDING_REQUIREMENTS` |
+| Asset Finance Totals | `=AssetFinance.FINANCE_TOTALS` |
+| Asset Finance Charts | `=AssetFinance.CHART_FEEDS` |
 
 `Asset Finance Setup` contains `tblAssetFinanceAssumptions`, sourced from `samples/asset_finance_assumptions_starter.tsv`.
 
@@ -27,14 +31,17 @@ The `AssetFinance` formulas live in `modules/asset_finance.formula.txt`. The gen
 
 In Excel:
 
-1. Open `Governance_Starter.xltx` as a workbook copy.
-2. Enter evidence in `Asset Evidence Setup` / `tblAssetEvidenceSource`.
-3. Enter rules in `tblAssetEvidenceRules` or reviewed overrides in `tblAssetEvidenceOverrides`.
-4. Refresh Power Query.
-5. Review `PQ Asset Evidence Status`, `PQ Asset Evidence Mapping Queue`, and `PQ Asset Evidence Model Inputs`.
-6. Adjust `Asset Finance Setup` / `tblAssetFinanceAssumptions`.
-7. Review `Asset Depreciation`, `Asset Funding Requirements`, `Asset Finance Totals`, and `Asset Finance Charts`.
-8. Use `Automation Setup` only if notes writeback is wanted; import `ApplyNotes.ts` through `Automate -> New Script`.
+1. Open `Governance_Starter_AssetsFull.xltx` as a workbook copy.
+2. Start with `Asset Hub` and confirm asset tracking is needed.
+3. Enter evidence in `Asset Evidence Setup` / `tblAssetEvidenceSource`.
+4. Enter rules in `tblAssetEvidenceRules` or reviewed overrides in `tblAssetEvidenceOverrides`.
+5. Refresh Power Query.
+6. Review `PQ Asset Evidence Status`, `PQ Asset Evidence Mapping Queue`, and `PQ Asset Evidence Model Inputs` only when troubleshooting.
+7. Adjust `Asset Finance Setup` / `tblAssetFinanceAssumptions`.
+8. Review `Asset Finance Hub`.
+9. Use `Automation Setup` only if notes writeback is wanted; import `ApplyNotes.ts` through `Automate -> New Script`.
+
+Do not start with PQ asset evidence sheets. Do not start with `Asset State History`.
 
 ## Evidence Rule
 

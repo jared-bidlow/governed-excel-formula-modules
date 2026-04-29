@@ -6,13 +6,14 @@ It explains how the repository tree works, which layer owns which behavior, and 
 
 ## Current Launch State
 
-The current `main` branch includes the v0.2.0 notes/apply and optional asset setup workflow.
+The v0.5 branch adds a canonical data-import bridge and generated workbook editions.
 
 The launched shape is:
 
 - capital-planning formula modules remain the primary reference architecture;
 - the notes workflow is part of the normal add-in setup path;
-- the asset workflow is opt-in and remains separate from the normal setup button;
+- the asset workflow is opt-in and visible only in asset-enabled generated editions;
+- the default generated starter is planning-only;
 - formula modules create review surfaces;
 - Office Scripts perform controlled workbook writes;
 - workbook binaries and generated workbook artifacts remain out of scope.
@@ -65,7 +66,7 @@ governed-excel-formula-modules/
 |---|---|---|---|
 | Contract and docs | `README.md`, `docs/*.md`, `AGENTS.md` | Public story, operating rules, workflow boundaries, scenario expectations | Workbook state or hidden implementation |
 | Formula modules | `modules/*.formula.txt` | Native Excel named formulas, review surfaces, report logic, helper logic | Hidden writes, workbook mutation, generated artifacts |
-| Starter data | `samples/*.tsv` | Public-safe table headers and fake starter rows | Production data |
+| Starter data | `samples/*.tsv` | Public-safe table headers, blank asset starter rows, and demo rows under `samples/demo/` | Production data |
 | Office.js add-in | `addin/taskpane.*`, `addin/manifest.xml` | Workbook setup, formula installation, validation, demo output placement | Business calculation engine |
 | Office Scripts | `office-scripts/*.ts` | Explicit controlled writeback from staged workbook rows | Silent background mutation or source-control truth |
 | Validation tools | `tools/audit_capex_module.py`, `tools/lint_formulas.py` | Public-safety checks, formula presence, formula size, docs and setup contracts | Runtime proof inside every Excel tenant |
@@ -83,6 +84,7 @@ Office.js add-in setup
         +--> validation lists and visible controls
         +--> workbook defined names from modules/*.formula.txt
         +--> demo output formulas
+        +--> generated starter editions: Planning, AssetsLite, AssetsFull
         |
         v
 Excel workbook runtime
@@ -99,6 +101,8 @@ Office Scripts controlled apply
 
 The workbook is the runtime surface. Git is the source-control surface. The add-in installs and validates. Office Scripts apply staged changes. Those are separate roles.
 
+Asset workflow is optional. Start with `Asset Hub` only when project-to-asset tracking is needed. Do not start with PQ asset evidence sheets. Do not start with `Asset State History`. Asset Finance is advanced and requires classified evidence.
+
 ## Formula Dependency Tree
 
 The core formula dependency spine is:
@@ -107,7 +111,8 @@ The core formula dependency spine is:
 controls
 
 get
-  -> reads Planning Table and source ranges by header and block position
+  -> reads tblBudgetInput as the canonical formula source
+  -> Planning Table remains manual/staging/local writeback
 
 kind
   -> shared calculation helpers
