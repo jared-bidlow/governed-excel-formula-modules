@@ -2,13 +2,15 @@
 
 The asset workflow is optional. It is not part of the default `Setup + Install + Validate + Outputs` path.
 
-Start with `Asset Hub` when a workbook needs asset-mapping review surfaces and controlled asset writeback tables. If the workbook only needs capital planning, stay in `Planning Review` and `Analysis Hub`.
+Start with Asset Hub to decide whether assets are needed. Start with Asset Register to enter a simple asset. If the workbook only needs capital planning, stay in `Planning Review` and `Analysis Hub`.
 
-Do not start with PQ asset evidence sheets. Do not start with `Asset State History`. Asset Finance is advanced and requires classified evidence.
+Do not start with Asset Evidence, Asset State History, or PQ asset sheets. Asset Finance is advanced and requires classified evidence. `LinkedProjectID` is optional and advisory.
+
+tblBudgetInput remains the manual/canonical planning input table for this release because refresh is not surfaced. Asset entry is separate from the planning-source refresh path.
 
 Rerunning this setup recreates the asset workflow tables from their headers. Use it as a starter/reset action on a copy or before live asset data is entered, not as a migration over populated production tables.
 
-For a new workbook, `tools/build_governance_starter_workbook.ps1 -Edition AssetsLite` can generate an asset-enabled starter template with `Asset Hub` visible. Use `-Edition AssetsFull` only when asset evidence finance outputs are in scope. The add-in button remains useful for blank-workbook setup and controlled resets.
+For a new workbook, `tools/build_governance_starter_workbook.ps1 -Edition AssetsLite` can generate an asset-enabled starter template with `Asset Hub` and `Asset Register` visible. Use `-Edition AssetsFull` only when asset evidence finance outputs are in scope. The add-in button remains useful for blank-workbook setup and controlled resets.
 
 ## Created Sheets
 
@@ -37,7 +39,7 @@ Starter TSV files under `samples/` provide public-safe headers and blank starter
 
 ## Asset Table Map
 
-`tblAssets` is the starter asset register. It is the place for durable asset records such as `AssetID`, `AssetName`, `AssetType`, `Site`, `Location`, `Department`, `Owner`, `Status`, `Condition`, `Criticality`, replacement cost, review dates, and optional `LinkedProjectID`.
+`tblAssets` is the starter asset register. It is the canonical simple manual asset-entry table. It is the place for durable asset records such as `AssetID`, `AssetName`, `AssetType`, `Site`, `Location`, `Department`, `Owner`, `Status`, `Condition`, `Criticality`, replacement cost, review dates, and optional `LinkedProjectID`. It is not auto-populated from `tblBudgetInput`, `Planning Table`, or Asset Evidence.
 
 `tblSemanticAssets` is a formula-facing proposal surface. It holds candidate asset IDs and inferred project-to-asset changes for review before promotion.
 
@@ -53,12 +55,19 @@ Starter TSV files under `samples/` provide public-safe headers and blank starter
 
 ## Dropdowns And Relationships
 
-The setup writes static dropdown values to `Validation Lists` for asset status, condition, criticality, change type, asset state, promotion status, mapping status, change status, and `Y/N` apply readiness.
+The setup writes static dropdown values to `Validation Lists` for simple asset type, asset status, condition, criticality, change type, asset state, promotion status, mapping status, change status, and `Y/N` apply readiness.
+
+`tblAssets` uses native Excel validation and input messages:
+
+- `AssetType`: `Equipment`, `Building`, `Vehicle`, `System`, `Space`, `Other`.
+- `Status`, `Condition`, and `Criticality`: dropdown-backed lists.
+- `ReplacementCost` and `UsefulLifeYears`: non-negative numbers with blanks allowed.
+- `LinkedProjectID`: advisory project-key dropdown with blanks and manual IDs allowed.
 
 The setup also adds relationship dropdown sources on `Validation Lists`:
 
 - `Asset ID` spills the distinct asset IDs found across `tblAssets` and workflow tables.
-- `Project Key` spills the distinct project keys found across `tblAssets` and workflow tables.
+- `Project Key` spills current workbook planning keys plus project keys found across `tblAssets` and workflow tables.
 
 Those relationship lists are applied to asset ID and project key columns in the created tables. They are advisory dropdowns: they help keep project-to-asset links coherent, but they allow new IDs while the register and mapping tables are still being built.
 
@@ -67,6 +76,10 @@ Those relationship lists are applied to asset ID and project key columns in the 
 `modules/assets.formula.txt` contains dynamic-array review formulas:
 
 - `Assets.ASSET_START_HERE`
+- `Assets.ASSET_REGISTER_START_HERE`
+- `Assets.ASSET_REGISTER_STATUS`
+- `Assets.ASSET_REGISTER_ISSUES`
+- `Assets.ASSET_REGISTER_FIELD_GUIDE`
 - `Assets.ASSET_WORKFLOW_STATUS`
 - `Assets.ASSET_NEXT_ACTIONS`
 - `Assets.ASSET_TABLE_MAP`

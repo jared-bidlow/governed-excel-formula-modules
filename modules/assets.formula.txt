@@ -1,3 +1,161 @@
+ASSET_REGISTER_START_HERE = VSTACK(
+    {"Step", "Action", "Where", "Notes"},
+    {"1", "Decide whether assets are needed", "Asset Hub", "Use assets only when projects need asset tracking."},
+    {"2", "Enter one simple asset", "Asset Register / tblAssets", "Minimum fields: AssetID, AssetName, AssetType, Status."},
+    {"3", "Use optional fields when helpful", "Asset Register / tblAssets", "Site, Location, Owner, Condition, Criticality, ReplacementCost, UsefulLifeYears, LinkedProjectID."},
+    {"4", "Review register status and issues", "Asset Hub", "Fix missing IDs, duplicate IDs, missing names/statuses, negative values, or advisory project links."},
+    {"5", "Move to mapping only when needed", "Project-to-Asset Map / Asset Setup", "Do not start with Asset Evidence, Asset Finance, Semantic Map, Asset State History, or PQ Asset Evidence."}
+);
+
+ASSET_REGISTER_FIELD_GUIDE = VSTACK(
+    {"Field", "Required?", "Native validation", "Input message"},
+    {"AssetID", "Yes", "Free text", "Enter a stable asset identifier, e.g. AHU-001."},
+    {"AssetName", "Yes", "Free text", "Enter a plain-English asset name."},
+    {"AssetType", "Yes", "Equipment, Building, Vehicle, System, Space, Other", "Choose a simple type such as Equipment, Building, Vehicle, System, Space, or Other."},
+    {"Status", "Yes", "assetStatuses dropdown", "Choose the current lifecycle status."},
+    {"Site", "Optional", "Free text", "Site or campus label."},
+    {"Location", "Optional", "Free text", "Room, area, address, or location detail."},
+    {"Owner", "Optional", "Free text", "Team or person responsible for the asset."},
+    {"Condition", "Optional", "assetConditions dropdown", "Observed or current condition."},
+    {"Criticality", "Optional", "assetCriticalities dropdown", "Operational importance."},
+    {"ReplacementCost", "Optional", "Non-negative number", "Estimated replacement cost; blank is allowed."},
+    {"UsefulLifeYears", "Optional", "Non-negative number", "Expected useful life; blank is allowed."},
+    {"LinkedProjectID", "Optional", "Advisory project-key dropdown", "Optional project/job key from the current workbook planning data. This does not imply external refresh or sync."}
+);
+
+ASSET_REGISTER_STATUS = LET(
+    assetId, TRIM(tblAssets[AssetID] & ""),
+    assetName, TRIM(tblAssets[AssetName] & ""),
+    assetType, TRIM(tblAssets[AssetType] & ""),
+    status, TRIM(tblAssets[Status] & ""),
+    linkedProject, TRIM(tblAssets[LinkedProjectID] & ""),
+    entered, BYROW(
+        HSTACK(
+            assetId,
+            assetName,
+            assetType,
+            TRIM(tblAssets[Site] & ""),
+            TRIM(tblAssets[Location] & ""),
+            TRIM(tblAssets[Department] & ""),
+            TRIM(tblAssets[Owner] & ""),
+            status,
+            TRIM(tblAssets[InServiceDate] & ""),
+            TRIM(tblAssets[Condition] & ""),
+            TRIM(tblAssets[Criticality] & ""),
+            TRIM(tblAssets[ReplacementCost] & ""),
+            TRIM(tblAssets[UsefulLifeYears] & ""),
+            TRIM(tblAssets[LastInspectionDate] & ""),
+            TRIM(tblAssets[NextReviewDate] & ""),
+            linkedProject,
+            TRIM(tblAssets[Notes] & "")
+        ),
+        LAMBDA(r, SUM(--(r <> "")) > 0)
+    ),
+    enteredCount, SUM(--entered),
+    namedCount, SUM(--((assetName <> "") * entered)),
+    typedCount, SUM(--((assetType <> "") * entered)),
+    statusCount, SUM(--((status <> "") * entered)),
+    linkedCount, SUM(--((linkedProject <> "") * entered)),
+    issueRows, IFERROR(DROP(Assets.ASSET_REGISTER_ISSUES, 1), ""),
+    issueCount, IFERROR(SUM(--(TRIM(CHOOSECOLS(issueRows, 6) & "") <> "")), 0),
+    VSTACK(
+        {"Area", "Status", "Count", "Meaning"},
+        HSTACK("Simple asset rows", IF(enteredCount > 0, "Ready", "Empty"), enteredCount, "Rows entered in tblAssets"),
+        HSTACK("Named assets", IF(namedCount = enteredCount, "OK", "Needs review"), namedCount, "Entered rows with AssetName"),
+        HSTACK("Typed assets", IF(typedCount = enteredCount, "OK", "Needs review"), typedCount, "Entered rows with AssetType"),
+        HSTACK("Lifecycle statuses", IF(statusCount = enteredCount, "OK", "Needs review"), statusCount, "Entered rows with Status"),
+        HSTACK("Linked project IDs", IF(linkedCount > 0, "Present", "Optional"), linkedCount, "Optional advisory links to current workbook planning rows"),
+        HSTACK("Register issues", IF(issueCount > 0, "Needs review", "OK"), issueCount, "Missing IDs/names/statuses, duplicates, negative values, or advisory project links")
+    )
+);
+
+ASSET_REGISTER_ISSUES = LET(
+    assetId, TRIM(tblAssets[AssetID] & ""),
+    assetName, TRIM(tblAssets[AssetName] & ""),
+    assetType, TRIM(tblAssets[AssetType] & ""),
+    status, TRIM(tblAssets[Status] & ""),
+    linkedProject, TRIM(tblAssets[LinkedProjectID] & ""),
+    replacementCostText, TRIM(tblAssets[ReplacementCost] & ""),
+    usefulLifeText, TRIM(tblAssets[UsefulLifeYears] & ""),
+    rows, get.GetBudgetDetailRows(),
+    hdr, TAKE(rows, 1),
+    data, DROP(rows, 1),
+    projectKeys, VSTACK(
+        TRIM(CHOOSECOLS(data, XMATCH("Source ID", hdr, 0)) & ""),
+        TRIM(CHOOSECOLS(data, XMATCH("Job ID", hdr, 0)) & ""),
+        TRIM(CHOOSECOLS(data, XMATCH("Project Description", hdr, 0)) & "")
+    ),
+    entered, BYROW(
+        HSTACK(
+            assetId,
+            assetName,
+            assetType,
+            TRIM(tblAssets[Site] & ""),
+            TRIM(tblAssets[Location] & ""),
+            TRIM(tblAssets[Department] & ""),
+            TRIM(tblAssets[Owner] & ""),
+            status,
+            TRIM(tblAssets[InServiceDate] & ""),
+            TRIM(tblAssets[Condition] & ""),
+            TRIM(tblAssets[Criticality] & ""),
+            replacementCostText,
+            usefulLifeText,
+            TRIM(tblAssets[LastInspectionDate] & ""),
+            TRIM(tblAssets[NextReviewDate] & ""),
+            linkedProject,
+            TRIM(tblAssets[Notes] & "")
+        ),
+        LAMBDA(r, SUM(--(r <> "")) > 0)
+    ),
+    duplicateId, IF(assetId = "", FALSE, COUNTIF(assetId, assetId) > 1),
+    costValue, IFERROR(--replacementCostText, 0),
+    usefulLifeValue, IFERROR(--usefulLifeText, 0),
+    linkedProjectKnown, IF(linkedProject = "", TRUE, IFERROR(ISNUMBER(XMATCH(linkedProject, projectKeys, 0)), FALSE)),
+    issue, IF(
+        entered = FALSE,
+        "",
+        IF(
+            assetId = "",
+            "AssetID missing",
+            IF(
+                duplicateId,
+                "Duplicate AssetID",
+                IF(
+                    assetName = "",
+                    "AssetName missing",
+                    IF(
+                        status = "",
+                        "Status missing",
+                        IF(
+                            costValue < 0,
+                            "ReplacementCost negative",
+                            IF(
+                                usefulLifeValue < 0,
+                                "UsefulLifeYears negative",
+                                IF(
+                                    linkedProjectKnown = FALSE,
+                                    "LinkedProjectID not found in current workbook project keys (advisory)",
+                                    ""
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    ),
+    headers, {"SourceTable", "AssetID", "AssetName", "Status", "LinkedProjectID", "Issue"},
+    queue, HSTACK(
+        MAKEARRAY(ROWS(assetId), 1, LAMBDA(r, c, "tblAssets")),
+        assetId,
+        assetName,
+        status,
+        linkedProject,
+        issue
+    ),
+    VSTACK(headers, IFERROR(FILTER(queue, entered * (issue <> "")), MAKEARRAY(1, COLUMNS(headers), LAMBDA(r, c, ""))))
+);
+
 ASSET_START_HERE = VSTACK(
     {"Question", "Recommended path", "Edit this", "Review this", "Next action"},
     {"I only need capital planning", "Off", "Nothing", "Planning Review / Analysis Hub", "Ignore asset workflow"},

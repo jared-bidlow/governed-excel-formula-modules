@@ -30,7 +30,7 @@ The default build is the `Planning` edition. Optional editions can be generated 
 .\tools\build_governance_starter_workbook.ps1 -Edition AssetsFull
 ```
 
-`AssetsLite` writes `Governance_Starter_AssetsLite.xlsx` / `.xltx`. `AssetsFull` writes `Governance_Starter_AssetsFull.xlsx` / `.xltx`.
+`AssetsLite` writes `Governance_Starter_AssetsLite.xlsx` / `.xltx` with visible `Asset Hub` and `Asset Register`. `AssetsFull` writes `Governance_Starter_AssetsFull.xlsx` / `.xltx` with visible `Asset Hub`, `Asset Register`, and `Asset Finance Hub`.
 
 Use `Governance_Starter.xltx` as the Excel template. Use `Governance_Starter.xlsx` for inspection and smoke testing. The generator pulls from source-controlled formula modules, starter TSVs, and M templates, so the workbook artifact can be rebuilt instead of reviewed as source.
 
@@ -60,7 +60,7 @@ The default visible workbook surface is:
 Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
 ```
 
-Asset workflow is optional. `AssetsLite` adds `Asset Hub`; `AssetsFull` adds `Asset Hub` and `Asset Finance Hub`. Start with Asset Hub only when project-to-asset tracking is in scope. Do not start with PQ asset evidence sheets or `Asset State History`.
+Asset workflow is optional. `AssetsLite` adds `Asset Hub` and `Asset Register`; `AssetsFull` adds `Asset Hub`, `Asset Register`, and `Asset Finance Hub`. Start with Asset Hub to decide whether assets are needed. Start with Asset Register to enter a simple asset. Do not start with Asset Evidence, Asset State History, or PQ asset sheets. `LinkedProjectID` is optional and advisory.
 
 Backend/admin sheets such as `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, `Automation Setup`, asset workflow tables, `Asset Finance Setup`, and intermediate asset-evidence Power Query sheets are hidden by default. They are still present for auditability and troubleshooting. Legacy separate output sheet names remain in the manifest as `OptionalLegacy`, but the generated workbook uses the hub sheets instead.
 
@@ -74,7 +74,7 @@ v0.5 moves the formula source boundary to `tblBudgetInput`. The flow is:
 Planning Table or external source -> Power Query adapter -> tblBudgetInput -> formula modules
 ```
 
-`Planning Table` / `tblPlanningTable` remains the manual starter surface. The current-workbook Power Query adapter reads it and shapes the same 64 columns into `tblBudgetInput`. The formulas in `modules/get.formula.txt` read `tblBudgetInput[#All]`, not fixed `Planning Table` coordinates. `qBudget_Source_Selected` chooses the active adapter from `tblBudgetImportParameters`.
+tblBudgetInput remains the manual/canonical planning input table for this release because refresh is not surfaced. `Planning Table` / `tblPlanningTable` remains the manual starter surface and local writeback surface. The current-workbook Power Query adapter reads it and shapes the same 64 columns into `tblBudgetInput`. The formulas in `modules/get.formula.txt` read `tblBudgetInput[#All]`, not fixed `Planning Table` coordinates. `qBudget_Source_Selected` chooses the active adapter from `tblBudgetImportParameters`.
 
 The generated starter creates:
 
@@ -104,7 +104,7 @@ Create these worksheets:
 | `PQ Budget Input` | Hidden canonical `tblBudgetInput` table consumed by formula modules. |
 | `PQ Budget QA` | Hidden import status and issue tables used by `Source` formulas. |
 
-Optional asset setup creates additional worksheets only when `Setup Asset Workflow` is selected:
+Optional asset setup creates additional worksheets only when `Setup Asset Workflow` is selected. Start with Asset Register to enter a simple asset:
 
 - `Asset Register`
 - `Asset Setup`
@@ -265,7 +265,7 @@ The `Asset Finance Hub` sections are generated from `modules/asset_finance.formu
 
 These formulas read `tblAssetEvidence_ModelInputs`, not the raw setup tables. Rows with `PresentWithMappedEvidence = TRUE` remain visible for review, but mapped-only rows do not feed the finance outputs. A row must have `PresentWithClassifiedEvidence = TRUE` to drive depreciation, funding, totals, or chart-ready tables.
 
-`Setup Asset Workflow` is optional. It creates `tblAssets` plus the asset setup, mapping, change, and state-history tables used by `office-scripts/apply_asset_mappings.ts`; it is not part of the default setup path. It also applies dropdowns for asset state/status fields and advisory relationship dropdowns for asset IDs and project keys. Rerunning it recreates those workflow tables from headers, so use it as a starter/reset action before entering real asset rows or against a workbook copy.
+`Setup Asset Workflow` is optional. It creates/shows `Asset Register` / `tblAssets` and `Asset Hub`, then creates the hidden/admin asset setup, mapping, change, and state-history tables used by `office-scripts/apply_asset_mappings.ts`; it is not part of the default setup path. It applies native dropdowns and input messages to `tblAssets`, including `AssetType`, `Status`, `Condition`, `Criticality`, non-negative `ReplacementCost` and `UsefulLifeYears`, and an advisory `LinkedProjectID` dropdown that allows blanks and manual IDs. Rerunning it recreates those workflow tables from headers, so use it as a starter/reset action before entering real asset rows or against a workbook copy.
 
 The task-pane `Setup + Install + Validate + Outputs` button creates the public demo hub sheets as part of the full starter flow. The standalone `Insert Demo Outputs` button remains available for rerunning only the hub output insertion. Before either path writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis Hub sections for `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, `Burndown`, and `Internal Jobs` with `=Ready.InternalJobs_Export()` instead of creating separate output sheets. Each generated hub includes a clickable section table before the stacked outputs.
 
