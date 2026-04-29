@@ -269,6 +269,18 @@ These formulas read `tblAssetEvidence_ModelInputs`, not the raw setup tables. Ro
 
 The task-pane `Setup + Install + Validate + Outputs` button creates the public demo hub sheets as part of the full starter flow. The standalone `Insert Demo Outputs` button remains available for rerunning only the hub output insertion. Before either path writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis Hub sections for `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, `Burndown`, and `Internal Jobs` with `=Ready.InternalJobs_Export()` instead of creating separate output sheets. Each generated hub includes a section index before the stacked outputs.
 
+## SemanticTwin Edition
+
+`SemanticTwin` is an optional generated edition for REC and Brick semantic mapping. It keeps the planning, asset, and finance surfaces from `AssetsFull`, then makes `Semantic Map Hub` visible. `Semantic Map Setup` remains hidden/admin-scoped.
+
+Use REC for buildings, rooms, spaces, real-estate context, and generic facility assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. The starter includes only curated crosswalk TSVs and `modules/ontology.formula.txt`; it is not a full ontology import and does not implement Azure Digital Twins, Fabric graph, RDF, Turtle, or JSON-LD export.
+
+Build the semantic edition with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_governance_starter_workbook.ps1 -Edition SemanticTwin
+```
+
 ## Add-In Option
 
 The `addin/` folder provides an Office.js starter that can create the sheets, paste the starter data, install the named formulas, and validate the workbook contract from a task pane.

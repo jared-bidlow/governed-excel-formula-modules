@@ -336,6 +336,7 @@ These distinctions are intentional and should not be collapsed:
 | Formula modules can surface review queues, but they cannot apply decisions. | Formula outputs are review surfaces. Office Scripts are controlled write actions. |
 | Notes setup is standard, but asset setup is optional. | Notes support the core planning review loop. Asset tracking is an opt-in extension. |
 | `tblAssets` is durable inside the workbook, but not durable inside Git. | The table is a workbook data surface. The repo owns its schema starter and controlled scripts, not live asset rows. |
+| Semantic mapping can support digital-twin readiness, but it is not the default workbook. | `SemanticTwin` is optional and uses curated REC and Brick crosswalk tables instead of full ontology imports. |
 | Relationship dropdowns help coherence, but they are not strict referential integrity. | They are advisory while the register and mapping tables are being built. |
 | Worktrees support concurrent work, but branches still own source history. | Worktrees are working folders. Git commits, PRs, and merges are the durable source-control record. |
 
@@ -345,10 +346,9 @@ The current architecture does not include:
 
 - workbook binaries;
 - production data;
-- RDF export;
+- full RDF, Turtle, JSON-LD, or graph export;
 - SHACL validation;
-- ontology publication;
-- a Power Query bridge;
+- full ontology publication or ontology dumps;
 - a production AppSource package;
 - strict project/asset referential integrity;
 - a dedicated evidence table for asset evidence;
@@ -385,6 +385,15 @@ For asset workflow:
 2. `docs/asset_tracker_next_steps.md`
 3. `modules/assets.formula.txt`
 4. `office-scripts/apply_asset_mappings.ts`
+
+For optional SemanticTwin crosswalk:
+
+1. `docs/semantic_standards_strategy.md`
+2. `modules/ontology.formula.txt`
+3. `samples/ontology_class_map_starter.tsv`
+4. `samples/ontology_relationship_map_starter.tsv`
+
+SemanticTwin is optional. REC is for buildings, rooms, spaces, real-estate context, and generic assets. Brick is for equipment, points, sensors, meters, setpoints, commands, and building systems. This is not a full ontology import.
 
 ## Maintenance Rule
 

@@ -1,3 +1,20 @@
+## 2026-04-29 - Add optional SemanticTwin REC/Brick semantic crosswalk
+
+Semantic change:
+
+- Added `SemanticTwin` as an opt-in generated workbook edition with visible `Semantic Map Hub`.
+- Added hidden/admin `Semantic Map Setup` tables for curated REC/Brick namespace, class, relationship, project mapping, asset mapping, export queue, and issue contracts.
+- Added `modules/ontology.formula.txt` with `ONTOLOGY_START_HERE`, `CLASS_MAP`, `RELATIONSHIP_MAP`, `SEMANTIC_MAPPING_STATUS`, `ONTOLOGY_ISSUES`, `TRIPLE_EXPORT_QUEUE`, and `JSONLD_EXPORT_HELP`.
+- Documented that REC is for buildings, rooms, spaces, real-estate context, and generic assets while Brick is for equipment, points, sensors, meters, setpoints, commands, and building systems.
+- Kept the semantic layer as a curated crosswalk only: no full ontology dumps, no JSON-LD/RDF exporter, no completed Azure Digital Twins or Fabric graph integration.
+
+Visible impact:
+
+- Default `Planning` remains planning-only.
+- `AssetsLite` and `AssetsFull` remain asset/finance editions.
+- `SemanticTwin` visibly adds `Semantic Map Hub`.
+- Main report totals, subtotal flags, cap remaining values, and existing AssetFinance calculations have no intended change.
+
 ## 2026-04-29 - Make asset workflow optional and guided
 
 Semantic change:

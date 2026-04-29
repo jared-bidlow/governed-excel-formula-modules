@@ -96,6 +96,13 @@ ALLOWED_ADDIN_URL_PREFIXES = (
     "https://appsforoffice.microsoft.com/lib/1/hosted/office.js",
 )
 
+ALLOWED_PUBLIC_URLS_BY_PATH = {
+    Path("samples/ontology_namespaces_starter.tsv"): (
+        "https://w3id.org/rec#",
+        "https://brickschema.org/schema/Brick#",
+    ),
+}
+
 PATTERN_DEFINITION_FILES = {
     Path("tools/audit_capex_module.py"),
 }
@@ -162,6 +169,16 @@ SOURCE_PUBLIC_FORMULAS = [
     "SOURCE_RECONCILIATION_QUEUE",
 ]
 
+ONTOLOGY_PUBLIC_FORMULAS = [
+    "ONTOLOGY_START_HERE",
+    "CLASS_MAP",
+    "RELATIONSHIP_MAP",
+    "SEMANTIC_MAPPING_STATUS",
+    "ONTOLOGY_ISSUES",
+    "TRIPLE_EXPORT_QUEUE",
+    "JSONLD_EXPORT_HELP",
+]
+
 REQUIRED_FORMULAS = {
     "modules/controls.formula.txt": [
         "PM_Filter_Dropdowns",
@@ -192,6 +209,7 @@ REQUIRED_FORMULAS = {
     "modules/assets.formula.txt": ASSET_PUBLIC_FORMULAS,
     "modules/asset_finance.formula.txt": ASSET_FINANCE_PUBLIC_FORMULAS,
     "modules/source.formula.txt": SOURCE_PUBLIC_FORMULAS,
+    "modules/ontology.formula.txt": ONTOLOGY_PUBLIC_FORMULAS,
     "modules/ready.formula.txt": [
         "ColumnOrBlank",
         "InternalEligible",
@@ -217,6 +235,7 @@ MODULE_PREFIX_FILES = {
     "Source": "modules/source.formula.txt",
     "Assets": "modules/assets.formula.txt",
     "AssetFinance": "modules/asset_finance.formula.txt",
+    "Ontology": "modules/ontology.formula.txt",
 }
 
 NAMED_FORMULA_BUDGETS = [
@@ -227,6 +246,8 @@ NAMED_FORMULA_BUDGETS = [
     ("modules/asset_finance.formula.txt", name) for name in ASSET_FINANCE_PUBLIC_FORMULAS
 ] + [
     ("modules/source.formula.txt", name) for name in SOURCE_PUBLIC_FORMULAS
+] + [
+    ("modules/ontology.formula.txt", name) for name in ONTOLOGY_PUBLIC_FORMULAS
 ]
 
 
@@ -452,6 +473,18 @@ def audit_public_safety(results: list[Result], files: list[Path]) -> None:
                     "public safety allows only add-in development URLs",
                     "add-in URLs are allowlisted",
                     "Use only the local add-in development host or Office.js CDN URL in add-in files.",
+                )
+                continue
+            if label_name == "URL" and rel_path in ALLOWED_PUBLIC_URLS_BY_PATH:
+                urls = re.findall(r"https?://[^\s\"'<>]+", text, flags=re.I)
+                allowed_prefixes = ALLOWED_PUBLIC_URLS_BY_PATH[rel_path]
+                add(
+                    results,
+                    all(url.startswith(allowed_prefixes) for url in urls),
+                    label,
+                    "public safety allows only approved public namespace URLs",
+                    "public namespace URLs are allowlisted",
+                    "Use only approved public REC/Brick namespace identifiers in ontology starter files.",
                 )
                 continue
             add(
@@ -3122,6 +3155,11 @@ def audit_release_accelerator_contract(results: list[Result]) -> None:
         "asset_editions",
         "asset_guided_start",
         "asset_finance_empty_state",
+        "semantic_twin_edition",
+        "semantic_crosswalk_lite",
+        "semantic_starter_contract",
+        "jsonld_graph_export",
+        "azure_digital_twins_integration",
     ]:
         add(
             results,
@@ -3233,7 +3271,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "samples/workbook_manifest.tsv",
         workbook_manifest,
         "workbook manifest lists planning edition visible surface",
-        r"Start Here.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull.*Source Status.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull.*Data Import Setup.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull.*Planning Table.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull.*Cap Setup.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull.*Planning Review.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull.*Analysis Hub.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull",
+        r"Start Here.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Source Status.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Data Import Setup.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Planning Table.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Cap Setup.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Planning Review.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Analysis Hub.*\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin",
         "Keep the default Planning edition focused on planning surfaces.",
     )
     check_required_regex(
@@ -3241,7 +3279,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "samples/workbook_manifest.tsv",
         workbook_manifest,
         "workbook manifest makes asset hubs opt-in by edition",
-        r"Asset Hub.*\tvisible\tGenerated\tAssetsLite;AssetsFull\tAsset Hub.*Asset Finance Hub.*\tvisible\tGenerated\tAssetsFull\tAsset Finance Hub",
+        r"Asset Hub.*\tvisible\tGenerated\tAssetsLite;AssetsFull;SemanticTwin\tAsset Hub.*Asset Finance Hub.*\tvisible\tGenerated\tAssetsFull;SemanticTwin\tAsset Finance Hub",
         "Keep Asset Hub and Asset Finance Hub out of the default Planning edition.",
     )
     check_required_regex(
@@ -3257,7 +3295,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "samples/workbook_manifest.tsv",
         workbook_manifest,
         "workbook manifest hides legacy separate output sheets",
-        r"BU Cap Scorecard.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull.*Reforecast Queue.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull.*PM Spend Report.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull.*Working Budget.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull.*Burndown.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull.*Asset Depreciation.*\thidden\tOptionalLegacy\tAssetsFull.*Asset Finance Charts.*\thidden\tOptionalLegacy\tAssetsFull",
+        r"BU Cap Scorecard.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Reforecast Queue.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*PM Spend Report.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Working Budget.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Burndown.*\thidden\tOptionalLegacy\tPlanning;AssetsLite;AssetsFull;SemanticTwin.*Asset Depreciation.*\thidden\tOptionalLegacy\tAssetsFull;SemanticTwin.*Asset Finance Charts.*\thidden\tOptionalLegacy\tAssetsFull;SemanticTwin",
         "Keep legacy output sheet names out of the default visible workbook surface.",
     )
 
@@ -3274,7 +3312,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "tools/build_governance_starter_workbook.ps1",
         builder,
         "governance starter builder creates xlsx and xltx artifacts",
-        r"(?=.*ValidateSet\(\"Planning\", \"AssetsLite\", \"AssetsFull\"\))(?=.*Governance_Starter\$artifactSuffix\.xlsx)(?=.*Governance_Starter\$artifactSuffix\.xltx)(?=.*SaveAs\(\$templateWorkbookPath,\s*54\))",
+        r"(?=.*ValidateSet\(\"Planning\", \"AssetsLite\", \"AssetsFull\", \"SemanticTwin\"\))(?=.*Governance_Starter\$artifactSuffix\.xlsx)(?=.*Governance_Starter\$artifactSuffix\.xltx)(?=.*SaveAs\(\$templateWorkbookPath,\s*54\))",
         "Keep the generated starter template build reproducible.",
     )
     check_required_regex(
@@ -3529,7 +3567,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "README.md",
         readme,
         "README documents simplified workbook UX",
-        r"Starter Workbook Editions.*Governance_Starter\.xltx.*planning-only.*Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub",
+        r"Starter Workbook Editions.*Governance_Starter\.xltx.*planning-only.*Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub.*SemanticTwin.*Semantic Map Hub",
         "Document the default visible workbook surface.",
     )
     check_required_regex(
@@ -3561,7 +3599,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter_doc,
         "starter docs document simplified workbook UX",
-        r"(?=.*default build is the `Planning` edition)(?=.*Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub)(?=.*AssetsLite.*Asset Hub)(?=.*AssetsFull.*Asset Hub.*Asset Finance Hub)(?=.*PQ Budget Input)(?=.*Validation Lists)(?=.*Workbook Manifest)(?=.*hidden by default)",
+        r"(?=.*default build is the `Planning` edition)(?=.*Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub)(?=.*AssetsLite.*Asset Hub)(?=.*AssetsFull.*Asset Hub.*Asset Finance Hub)(?=.*SemanticTwin.*Semantic Map Hub)(?=.*PQ Budget Input)(?=.*Validation Lists)(?=.*Workbook Manifest)(?=.*hidden by default)",
         "Document the generated workbook front door and hidden backend sheets.",
     )
     check_required_regex(
@@ -3593,7 +3631,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs point new workbook starts to generated template",
-        r"preferred path is now the generated starter template.*build_governance_starter_workbook\.ps1.*default generated `.xltx` is planning-only.*-Edition AssetsLite.*-Edition AssetsFull",
+        r"preferred path is now the generated starter template.*build_governance_starter_workbook\.ps1.*default generated `.xltx` is planning-only.*-Edition AssetsLite.*-Edition AssetsFull.*-Edition SemanticTwin",
         "Keep the add-in boundary aligned with the generated starter path.",
     )
     check_required_regex(
@@ -3625,7 +3663,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/workbook_left_to_right_map.md",
         workbook_map_doc,
         "workbook map documents simplified visible flow",
-        r"Start Here.*Source Status.*Data Import Setup.*Planning Table.*tblBudgetInput.*Planning Review.*Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub.*hidden backend",
+        r"Start Here.*Source Status.*Data Import Setup.*Planning Table.*tblBudgetInput.*Planning Review.*Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub.*SemanticTwin.*Semantic Map Hub.*hidden backend",
         "Keep the workbook map aligned to the simplified generated template.",
     )
     check_required_regex(
@@ -3758,6 +3796,122 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     )
 
 
+def audit_semantic_crosswalk_contract(results: list[Result]) -> None:
+    builder = read_text(ROOT / "tools" / "build_governance_starter_workbook.ps1")
+    manifest = read_text(ROOT / "samples" / "workbook_manifest.tsv")
+    semantic_doc = read_text(ROOT / "docs" / "semantic_standards_strategy.md")
+    readme = read_text(ROOT / "README.md")
+    starter_doc = read_text(ROOT / "docs" / "starter_workbook.md")
+    workbook_map_doc = read_text(ROOT / "docs" / "workbook_left_to_right_map.md")
+    asset_quick_start = read_text(ROOT / "docs" / "asset_quick_start.md")
+    architecture_doc = read_text(ROOT / "docs" / "reference_architecture_tree.md")
+    changelog = read_text(ROOT / "docs" / "change_log.md")
+    ontology_formula = read_text(ROOT / "modules" / "ontology.formula.txt")
+
+    starter_contracts = {
+        "samples/ontology_namespaces_starter.tsv": r"Prefix\tNamespace\tStandard\tNotes.*rec\thttps://w3id\.org/rec#.*brick\thttps://brickschema\.org/schema/Brick#.*gef\turn:governed-excel-formula-modules:semantic:",
+        "samples/ontology_class_map_starter.tsv": r"UserFacingType\tStandard\tClassIri\tUseWhen\tNotes.*Building\tREC\trec:Building.*Room\tREC\trec:Room.*Equipment\tBrick\tbrick:Equipment.*Sensor\tBrick\tbrick:Sensor",
+        "samples/ontology_relationship_map_starter.tsv": r"UserFacingRelationship\tPredicate\tUseWhen\tNotes.*Located in\trec:locatedIn.*Has point\trec:hasPoint.*Is affected by project\tgef:affectedByProject",
+        "samples/project_semantic_map_starter.tsv": r"ProjectKey\tSubjectId\tSubjectClass\tRelationship\tObjectId\tObjectClass\tSourceTable\tSourceRowKey\tConfidence\tMappingStatus\tNotes",
+        "samples/asset_semantic_map_starter.tsv": r"AssetId\tSubjectId\tSubjectClass\tRelationship\tObjectId\tObjectClass\tSourceTable\tSourceRowKey\tConfidence\tMappingStatus\tNotes",
+        "samples/ontology_export_queue_starter.tsv": r"SubjectId\tPredicate\tObjectId\tSubjectClass\tObjectClass\tSourceTable\tSourceRowKey\tConfidence\tIssueFlag",
+        "samples/ontology_issues_starter.tsv": r"IssueType\tSourceTable\tSourceRowKey\tSubjectId\tRelationship\tObjectId\tDetail",
+    }
+    for file_name, pattern in starter_contracts.items():
+        check_required_regex(
+            results,
+            file_name,
+            read_text(ROOT / file_name),
+            "semantic crosswalk starter has required contract",
+            pattern,
+            "Keep SemanticTwin starter tables public-safe and machine-readable.",
+        )
+
+    check_required_regex(
+        results,
+        "modules/ontology.formula.txt",
+        ontology_formula,
+        "Ontology module exposes semantic crosswalk formulas",
+        r"ONTOLOGY_START_HERE.*CLASS_MAP.*RELATIONSHIP_MAP.*SEMANTIC_MAPPING_STATUS.*ONTOLOGY_ISSUES.*TRIPLE_EXPORT_QUEUE.*JSONLD_EXPORT_HELP",
+        "Keep the optional semantic crosswalk importable as workbook names.",
+    )
+    check_required_regex(
+        results,
+        "modules/ontology.formula.txt",
+        ontology_formula,
+        "Ontology export queue is simple triple-shaped table",
+        r"SubjectId.*Predicate.*ObjectId.*SubjectClass.*ObjectClass.*SourceTable.*SourceRowKey.*Confidence.*IssueFlag",
+        "Keep semantic export reviewable as a flat Subject-Predicate-Object queue.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder supports SemanticTwin edition",
+        r"(?=.*ValidateSet\(\"Planning\", \"AssetsLite\", \"AssetsFull\", \"SemanticTwin\"\))(?=.*Build-SemanticMapSetup)(?=.*Build-SemanticMapHub)(?=.*modules\\ontology\.formula\.txt)",
+        "Keep SemanticTwin as an opt-in edition stacked on the asset editions.",
+    )
+    check_required_regex(
+        results,
+        "samples/workbook_manifest.tsv",
+        manifest,
+        "workbook manifest makes Semantic Map Hub SemanticTwin-only",
+        r"Semantic Map Hub.*\tvisible\tGenerated\tSemanticTwin\tSemantic Map Hub.*Semantic Map Setup.*\thidden\tGenerated\tAssetsFull;SemanticTwin",
+        "Keep semantic mapping out of the default Planning and AssetsLite visible surfaces.",
+    )
+    check_required_regex(
+        results,
+        "docs/semantic_standards_strategy.md",
+        semantic_doc,
+        "semantic strategy documents REC and Brick roles",
+        r"RealEstateCore.*buildings.*rooms.*spaces.*Brick.*equipment.*points.*sensors.*does not import full REC or Brick ontology dumps.*does not implement Azure Digital Twins.*complete integration",
+        "Document the optional REC/Brick boundary without claiming full graph integration.",
+    )
+    for file_name, text in [
+        ("README.md", readme),
+        ("docs/starter_workbook.md", starter_doc),
+        ("docs/workbook_left_to_right_map.md", workbook_map_doc),
+        ("docs/asset_quick_start.md", asset_quick_start),
+        ("docs/reference_architecture_tree.md", architecture_doc),
+    ]:
+        check_required_regex(
+            results,
+            file_name,
+            text,
+            "docs mention optional SemanticTwin crosswalk",
+            r"SemanticTwin.*optional.*REC.*Brick.*not.*full ontology",
+            "Keep public docs clear that semantic mapping is opt-in and limited.",
+        )
+
+    for suffix in [".ttl", ".owl", ".rdf", ".nt", ".jsonld"]:
+        offenders = [rel(path) for path in tracked_files() if path.suffix.lower() == suffix]
+        add(
+            results,
+            not offenders,
+            "semantic crosswalk",
+            f"no full ontology dump files tracked ({suffix})",
+            "no ontology dump files tracked" if not offenders else f"tracked files: {', '.join(offenders[:5])}",
+            "Do not commit full REC/Brick ontology dumps to this public template.",
+        )
+
+    check_required_regex(
+        results,
+        "tools/audit_capex_module.py",
+        read_text(ROOT / "tools" / "audit_capex_module.py"),
+        "audit includes Ontology qualified-reference module",
+        r"\"Ontology\": \"modules/ontology\.formula\.txt\"",
+        "Keep qualified formula reference checks covering the Ontology module.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records SemanticTwin crosswalk",
+        r"Add optional SemanticTwin REC/Brick semantic crosswalk.*Semantic Map Hub.*modules/ontology\.formula\.txt.*TRIPLE_EXPORT_QUEUE",
+        "Record the optional REC/Brick semantic crosswalk change.",
+    )
+
+
 def main() -> int:
     results: list[Result] = []
     files = tracked_files()
@@ -3771,6 +3925,7 @@ def main() -> int:
     audit_asset_evidence_power_query_contract(results)
     audit_budget_input_power_query_contract(results)
     audit_release_accelerator_contract(results)
+    audit_semantic_crosswalk_contract(results)
     audit_reforecast_contract(results)
 
     for result in results:

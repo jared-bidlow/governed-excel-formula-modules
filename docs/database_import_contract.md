@@ -55,6 +55,12 @@ The database-oriented adapters are placeholder templates. They use public-safe p
 
 `qBudget_Source_Selected` reads `tblBudgetImportParameters[ActiveAdapter]` and selects `CurrentWorkbook`, `AzureSQL`, `Dataverse`, or `FabricSqlEndpoint`. `qBudget_Normalized`, `qBudget_Issues`, and `qBudget_Status` use that selected adapter path.
 
+## Semantic Mapping Boundary
+
+SemanticTwin can add optional REC and Brick semantic crosswalk labels after data lands in `tblBudgetInput` and after planning or asset review surfaces are understood. It does not change the canonical budget import contract and it does not make external source mode a graph or digital-twin writeback path.
+
+Use REC for buildings, spaces, rooms, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. The public template does not import full ontologies or claim a completed Azure Digital Twins, Fabric graph, RDF, Turtle, or JSON-LD integration.
+
 ## Operator Flow
 
 1. Open `Governance_Starter.xltx` as a workbook copy. Use `Governance_Starter_AssetsLite.xltx` or `Governance_Starter_AssetsFull.xltx` only when the optional asset workflow is in scope.

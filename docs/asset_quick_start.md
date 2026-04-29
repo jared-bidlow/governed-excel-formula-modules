@@ -49,6 +49,12 @@ Asset Finance is advanced and requires classified evidence.
 
 Rows feed AssetFinance outputs only when `PresentWithClassifiedEvidence = TRUE`.
 
+## SemanticTwin Is Separate
+
+SemanticTwin is optional even when assets are in scope. Use it only when projects or assets need REC and Brick semantic crosswalk labels for future digital-twin-ready review.
+
+Use REC for buildings, spaces, rooms, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. SemanticTwin is not a full ontology import and it does not complete graph, Fabric, or Azure Digital Twins integration.
+
 ## Asset Glossary
 
 | Term | Plain meaning |

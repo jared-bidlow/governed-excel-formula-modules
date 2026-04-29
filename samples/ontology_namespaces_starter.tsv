@@ -1,0 +1,4 @@
+Prefix	Namespace	Standard	Notes
+rec	https://w3id.org/rec#	RealEstateCore	Spaces, buildings, assets, and real-estate context.
+brick	https://brickschema.org/schema/Brick#	Brick	Equipment, points, meters, sensors, and building systems context.
+gef	urn:governed-excel-formula-modules:semantic:	WorkbookExtension	Public-template predicates that connect capital planning rows to semantic objects.

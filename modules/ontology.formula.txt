@@ -1,0 +1,65 @@
+ONTOLOGY_START_HERE = VSTACK(
+    {"Area", "Guidance", "Where"},
+    {"Optional layer", "Use Semantic Map Hub only when planning rows need REC or Brick semantic context.", "SemanticTwin edition"},
+    {"RealEstateCore", "Use REC for buildings, rooms, spaces, real estate context, and generic facility assets.", "tblOntologyClassMap"},
+    {"Brick", "Use Brick for equipment, HVAC, electrical, lighting, fire-safety systems, points, sensors, meters, setpoints, and commands.", "tblOntologyClassMap"},
+    {"Start", "Map ProjectKey or AssetId to a semantic object, class, and relationship before using the export queue.", "tblProjectSemanticMap / tblAssetSemanticMap"},
+    {"Export", "Use the triple export queue as a review table for future graph, Fabric, or digital-twin workflows.", "Ontology.TRIPLE_EXPORT_QUEUE"},
+    {"Boundary", "This workbook does not import full ontologies or complete Azure Digital Twins integration.", "Docs"}
+);
+
+CLASS_MAP = VSTACK(tblOntologyClassMap[#Headers], tblOntologyClassMap[#Data]);
+
+RELATIONSHIP_MAP = VSTACK(tblOntologyRelationshipMap[#Headers], tblOntologyRelationshipMap[#Data]);
+
+SEMANTIC_MAPPING_STATUS = LET(
+    projectRows, IFERROR(SUM(--(TRIM(tblProjectSemanticMap[ProjectKey] & "") <> "")), 0),
+    assetRows, IFERROR(SUM(--(TRIM(tblAssetSemanticMap[AssetId] & "") <> "")), 0),
+    queueRows, LET(q, DROP(Ontology.TRIPLE_EXPORT_QUEUE, 1), IFERROR(SUM(--(TRIM(CHOOSECOLS(q, 1) & "") <> "")), 0)),
+    issueRows, LET(i, DROP(Ontology.ONTOLOGY_ISSUES, 1), IFERROR(SUM(--(TRIM(CHOOSECOLS(i, 1) & "") <> "")), 0)),
+    VSTACK(
+        {"Area", "Status", "Count", "Meaning"},
+        HSTACK("Project semantic map", IF(projectRows > 0, "Mapped", "Empty"), projectRows, "ProjectKey rows with semantic targets"),
+        HSTACK("Asset semantic map", IF(assetRows > 0, "Mapped", "Empty"), assetRows, "AssetId rows with semantic targets"),
+        HSTACK("Triple export queue", IF(queueRows > 0, "Ready to review", "Empty"), queueRows, "Rows shaped as Subject-Predicate-Object"),
+        HSTACK("Ontology issues", IF(issueRows > 0, "Needs review", "OK"), issueRows, "Missing identifiers, classes, predicates, or objects")
+    )
+);
+
+ONTOLOGY_ISSUES = VSTACK(tblOntologyIssues[#Headers], tblOntologyIssues[#Data]);
+
+TRIPLE_EXPORT_QUEUE = LET(
+    classList, FILTER(tblOntologyClassMap[ClassIri], tblOntologyClassMap[ClassIri] <> ""),
+    relList, FILTER(tblOntologyRelationshipMap[Predicate], tblOntologyRelationshipMap[Predicate] <> ""),
+    pSubject, TRIM(tblProjectSemanticMap[SubjectId] & ""),
+    pSubjectClass, TRIM(tblProjectSemanticMap[SubjectClass] & ""),
+    pRelationship, TRIM(tblProjectSemanticMap[Relationship] & ""),
+    pPredicate, XLOOKUP(pRelationship, tblOntologyRelationshipMap[UserFacingRelationship], tblOntologyRelationshipMap[Predicate], pRelationship),
+    pObject, TRIM(tblProjectSemanticMap[ObjectId] & ""),
+    pObjectClass, TRIM(tblProjectSemanticMap[ObjectClass] & ""),
+    pConfidence, tblProjectSemanticMap[Confidence],
+    pIssue, IF((pSubject = "") + (pObject = "") + ISNA(XMATCH(pSubjectClass, classList)) + ISNA(XMATCH(pObjectClass, classList)) + ISNA(XMATCH(pPredicate, relList)) > 0, "Needs review", ""),
+    pRows, HSTACK(pSubject, pPredicate, pObject, pSubjectClass, pObjectClass, "tblProjectSemanticMap", tblProjectSemanticMap[ProjectKey], pConfidence, pIssue),
+    aSubject, TRIM(tblAssetSemanticMap[SubjectId] & ""),
+    aSubjectClass, TRIM(tblAssetSemanticMap[SubjectClass] & ""),
+    aRelationship, TRIM(tblAssetSemanticMap[Relationship] & ""),
+    aPredicate, XLOOKUP(aRelationship, tblOntologyRelationshipMap[UserFacingRelationship], tblOntologyRelationshipMap[Predicate], aRelationship),
+    aObject, TRIM(tblAssetSemanticMap[ObjectId] & ""),
+    aObjectClass, TRIM(tblAssetSemanticMap[ObjectClass] & ""),
+    aConfidence, tblAssetSemanticMap[Confidence],
+    aIssue, IF((aSubject = "") + (aObject = "") + ISNA(XMATCH(aSubjectClass, classList)) + ISNA(XMATCH(aObjectClass, classList)) + ISNA(XMATCH(aPredicate, relList)) > 0, "Needs review", ""),
+    aRows, HSTACK(aSubject, aPredicate, aObject, aSubjectClass, aObjectClass, "tblAssetSemanticMap", tblAssetSemanticMap[AssetId], aConfidence, aIssue),
+    rows, VSTACK(pRows, aRows),
+    VSTACK(
+        {"SubjectId", "Predicate", "ObjectId", "SubjectClass", "ObjectClass", "SourceTable", "SourceRowKey", "Confidence", "IssueFlag"},
+        IFERROR(FILTER(rows, CHOOSECOLS(rows, 1) <> ""), {"", "", "", "", "", "", "", "", ""})
+    )
+);
+
+JSONLD_EXPORT_HELP = VSTACK(
+    {"Topic", "Guidance"},
+    {"Current scope", "Use TRIPLE_EXPORT_QUEUE as the reviewable export contract."},
+    {"JSON-LD", "Not generated in this slice. Convert reviewed triples outside the workbook if needed."},
+    {"Digital twin", "Azure Digital Twins, Fabric graph, and RDF export are future integrations, not complete workbook features."},
+    {"Safety", "Do not add tenant URLs, credentials, private endpoints, or full ontology dumps to this public template."}
+);

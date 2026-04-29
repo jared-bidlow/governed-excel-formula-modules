@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$OutputDirectory = "release_artifacts\governance-starter",
-    [ValidateSet("Planning", "AssetsLite", "AssetsFull")]
+    [ValidateSet("Planning", "AssetsLite", "AssetsFull", "SemanticTwin")]
     [string]$Edition = "Planning"
 )
 
@@ -348,6 +348,8 @@ function Apply-HubColumnWidthTemplate {
         $widths = @(24, 24, 22, 22, 20, 22, 20, 20, 20, 22, 24, 24, 18, 18, 18, 18)
     } elseif ($Template -eq "Asset") {
         $widths = @(26, 24, 36, 22, 22, 22, 22, 22, 22, 24, 24, 18, 18, 18, 18)
+    } elseif ($Template -eq "Semantic") {
+        $widths = @(26, 24, 26, 30, 26, 24, 24, 18, 18, 20, 22, 18, 18, 18, 18)
     } else {
         $widths = @(24, 22, 42, 18, 18, 18, 18, 18, 20, 20, 20, 18, 18, 18, 18)
     }
@@ -720,7 +722,8 @@ function Install-FormulaModules {
         @{ Prefix = "Search"; Path = "modules\search.formula.txt" },
         @{ Prefix = "Source"; Path = "modules\source.formula.txt" },
         @{ Prefix = "Assets"; Path = "modules\assets.formula.txt" },
-        @{ Prefix = "AssetFinance"; Path = "modules\asset_finance.formula.txt" }
+        @{ Prefix = "AssetFinance"; Path = "modules\asset_finance.formula.txt" },
+        @{ Prefix = "Ontology"; Path = "modules\ontology.formula.txt" }
     )
 
     $aliases = @{}
@@ -1374,6 +1377,59 @@ function Build-AssetFinanceHub {
     Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(4, 18, 42, 116, 176, 206) -DefaultHeight 20
 }
 
+function Build-SemanticMapSetup {
+    param([object]$Worksheet)
+
+    $Worksheet.Range("A1:K90").Clear()
+    Format-PageHeader `
+        -Worksheet $Worksheet `
+        -Title "Semantic Map Setup" `
+        -Subtitle "Hidden REC/Brick crosswalk tables for the optional SemanticTwin edition. Do not add private endpoints or full ontology dumps." `
+        -BandRange "A1:K3"
+
+    [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblOntologyNamespaces" -TopLeft "A4" -Rows (Read-TsvMatrix "samples\ontology_namespaces_starter.tsv"))
+    [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblOntologyClassMap" -TopLeft "A10" -Rows (Read-TsvMatrix "samples\ontology_class_map_starter.tsv"))
+    [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblOntologyRelationshipMap" -TopLeft "A28" -Rows (Read-TsvMatrix "samples\ontology_relationship_map_starter.tsv"))
+    [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblProjectSemanticMap" -TopLeft "A40" -Rows (Read-TsvMatrix "samples\project_semantic_map_starter.tsv"))
+    [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblAssetSemanticMap" -TopLeft "A45" -Rows (Read-TsvMatrix "samples\asset_semantic_map_starter.tsv"))
+    [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblOntologyExportQueue" -TopLeft "A50" -Rows (Read-TsvMatrix "samples\ontology_export_queue_starter.tsv"))
+    [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblOntologyIssues" -TopLeft "A55" -Rows (Read-TsvMatrix "samples\ontology_issues_starter.tsv"))
+
+    $Worksheet.Range("A:K").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+    Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "Semantic"
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -DefaultHeight 20
+}
+
+function Build-SemanticMapHub {
+    param([object]$Worksheet)
+
+    Format-HubSheet `
+        -Worksheet $Worksheet `
+        -Title "Semantic Map Hub" `
+        -Note "Optional SemanticTwin crosswalk. Use REC for buildings, rooms, spaces, and real-estate context; use Brick for equipment, systems, points, sensors, meters, setpoints, and commands." `
+        -ClearRange "A1:Z270"
+
+    $sections = @(
+        @{ Cell = "A15"; Title = "Start here"; Note = "Plain-language guidance for the optional REC/Brick crosswalk."; Formula = "=Ontology.ONTOLOGY_START_HERE" },
+        @{ Cell = "A35"; Title = "Semantic mapping status"; Note = "Counts for project mappings, asset mappings, export rows, and ontology issues."; Formula = "=Ontology.SEMANTIC_MAPPING_STATUS" },
+        @{ Cell = "A55"; Title = "Ontology issues"; Note = "Rows missing identifiers, REC/Brick classes, predicates, or objects."; Formula = "=Ontology.ONTOLOGY_ISSUES" },
+        @{ Cell = "A100"; Title = "Triple export queue"; Note = "Reviewable Subject-Predicate-Object rows for future graph, Fabric, or digital-twin workflows."; Formula = "=Ontology.TRIPLE_EXPORT_QUEUE" },
+        @{ Cell = "A150"; Title = "Class map"; Note = "Curated REC and Brick class labels. This is intentionally not a full ontology dump."; Formula = "=Ontology.CLASS_MAP" },
+        @{ Cell = "A190"; Title = "Relationship map"; Note = "Curated relationships for location, composition, feeds, points, and project impact."; Formula = "=Ontology.RELATIONSHIP_MAP" },
+        @{ Cell = "A225"; Title = "JSON-LD and digital twin note"; Note = "Guidance only. This slice does not implement JSON-LD, RDF, Fabric graph, or Azure Digital Twins export."; Formula = "=Ontology.JSONLD_EXPORT_HELP" }
+    )
+    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblSemanticMapHubSections" -Sections $sections -TopLeft "A4")
+    foreach ($section in $sections) {
+        Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
+    }
+
+    $Worksheet.Range("A:Z").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+    Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "Semantic"
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(15, 35, 55, 100, 150, 190, 225) -DefaultHeight 20
+}
+
 function Apply-WorkbookManifestVisibility {
     param(
         [object]$Workbook,
@@ -1524,6 +1580,7 @@ function Build-DemoOutputs {
     Build-AnalysisHub -Worksheet (Add-Worksheet -Workbook $Workbook -Name "Analysis Hub")
     Build-AssetHub -Worksheet (Add-Worksheet -Workbook $Workbook -Name "Asset Hub")
     Build-AssetFinanceHub -Worksheet (Add-Worksheet -Workbook $Workbook -Name "Asset Finance Hub")
+    Build-SemanticMapHub -Worksheet (Add-Worksheet -Workbook $Workbook -Name "Semantic Map Hub")
 }
 
 $excel = $null
@@ -1606,6 +1663,10 @@ try {
 
     Build-AssetWorkflowTables -Workbook $workbook -Excel $excel | Out-Null
     Build-AssetRelationshipLists -Worksheet $validationSheet | Out-Null
+
+    $semanticSetupSheet = Add-Worksheet -Workbook $workbook -Name "Semantic Map Setup"
+    [void](Build-SemanticMapSetup -Worksheet $semanticSetupSheet)
+    [void](Set-FreezeRows -Excel $excel -Worksheet $semanticSetupSheet -Rows 3)
 
     $manifestSheet = Add-Worksheet -Workbook $workbook -Name "Workbook Manifest"
     [void](Build-WorkbookManifest -Worksheet $manifestSheet)
