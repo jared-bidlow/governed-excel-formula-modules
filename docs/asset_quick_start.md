@@ -2,13 +2,15 @@
 
 Asset workflow is optional.
 
-Start with `Planning Review` and `Analysis Hub` unless you explicitly need project-to-asset tracking. Start with `Asset Hub`. Do not start with PQ asset evidence sheets. Do not start with `Asset State History`.
+Start with `Planning Review` and `Analysis Hub` unless you explicitly need project-to-asset tracking. Start with Asset Hub to decide whether assets are needed. Start with Asset Register to enter a simple asset. Do not start with Asset Evidence, Asset State History, or PQ asset sheets.
+
+tblBudgetInput remains the manual/canonical planning input table for this release because refresh is not surfaced. Asset entry is separate from planning-source refresh.
 
 ## Do I Need The Asset Workflow?
 
 Use assets only when you need to connect planning rows to physical or logical assets, review candidate assets, track replacements/upgrades, or prepare classified evidence for finance outputs.
 
-If you only need capital planning, leave `AssetWorkflowMode` set to `Off` and ignore `Asset Hub` and `Asset Finance Hub`.
+If you only need capital planning, leave `AssetWorkflowMode` set to `Off` and ignore `Asset Hub`, `Asset Register`, and `Asset Finance Hub`.
 
 ## Start With Asset Hub
 
@@ -24,10 +26,35 @@ Choose one mode:
 | `Track replacements/upgrades` | Projects replace or improve assets | Pending project-asset changes |
 | `Asset finance from evidence` | You need depreciation or funding outputs | Evidence setup and finance assumptions after mapping works |
 
+## Enter One Simple Asset
+
+To enter one asset, go to `Asset Register`.
+
+Minimum fields:
+
+- `AssetID`
+- `AssetName`
+- `AssetType`
+- `Status`
+
+Helpful optional fields:
+
+- `Site`
+- `Location`
+- `Owner`
+- `Condition`
+- `Criticality`
+- `ReplacementCost`
+- `UsefulLifeYears`
+- `LinkedProjectID`
+
+`LinkedProjectID` is optional and advisory. It can use the current workbook project-key dropdown, but blanks and manual IDs are allowed. Entering an asset does not auto-populate `tblAssets` from `tblBudgetInput`, `Planning Table`, or Asset Evidence.
+
 ## What Not To Edit First
 
 Do not start by editing:
 
+- Asset Evidence,
 - PQ asset evidence sheets,
 - `Asset State History`,
 - `PQ Asset Evidence Model Inputs`,

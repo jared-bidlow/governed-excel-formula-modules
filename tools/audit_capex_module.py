@@ -137,6 +137,10 @@ ANALYSIS_PUBLIC_FORMULAS = [
 ]
 
 ASSET_PUBLIC_FORMULAS = [
+    "ASSET_REGISTER_START_HERE",
+    "ASSET_REGISTER_STATUS",
+    "ASSET_REGISTER_ISSUES",
+    "ASSET_REGISTER_FIELD_GUIDE",
     "ASSET_START_HERE",
     "ASSET_WORKFLOW_STATUS",
     "ASSET_NEXT_ACTIONS",
@@ -1950,7 +1954,7 @@ def audit_docs(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter,
         "starter guide documents asset register setup",
-        r"Asset Register.*Setup Asset Workflow.*tblAssets.*relationship dropdowns.*Rerunning it recreates",
+        r"Setup Asset Workflow.*Asset Register.*tblAssets.*advisory `LinkedProjectID` dropdown.*Rerunning it recreates",
         "Document tblAssets and reset behavior in the starter guide.",
     )
     check_required_regex(
@@ -2302,6 +2306,8 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("creates workbook manifest table", r"Workbook Manifest.*tblWorkbookManifest.*workbook_manifest\.tsv"),
         ("defines workbook visibility rules", r"sheetVisibilityRules.*Start Here.*visible.*PQ Budget Input.*hidden.*Validation Lists.*hidden.*Decision Staging.*hidden"),
         ("uses Office.js sheet visibility enum", r"Excel\.SheetVisibility\.visible.*Excel\.SheetVisibility\.hidden"),
+        ("keeps asset setup opt-in", r"Asset Hub\", visibility: \"hidden\".*Asset Finance Hub\", visibility: \"hidden\".*setupAssetWorkflow.*formatAssetRegisterSheet.*formatAssetHubOnboarding.*showOptionalAssetWorkflowSheets"),
+        ("applies native asset register validation", r"(?=.*assetTypes: \[\"Equipment\", \"Building\", \"Vehicle\", \"System\", \"Space\", \"Other\"\])(?=.*AssetID.*Enter a stable asset identifier, e\.g\. AHU-001\.)(?=.*AssetName.*Enter a plain-English asset name\.)(?=.*AssetType.*Choose a simple type such as Equipment, Building, Vehicle, System, Space, or Other\.)(?=.*Status.*Choose the current lifecycle status\.)(?=.*ReplacementCost\", nonNegative: true)(?=.*UsefulLifeYears\", nonNegative: true)(?=.*LinkedProjectID.*allowUnknown: true.*Optional project/job key from the current workbook planning data\. This does not imply external refresh or sync\.)"),
         ("orders visible sheets by workbook flow", r"sheet\.position\s*=\s*position"),
         ("styles page and section headers", r"formatPageHeader.*#1F4E79.*#2F75B5.*formatSectionHeader.*#E2EFDA.*#F2F2F2"),
         ("defines application data", r"applicationData\s*=\s*\{.*starterTables.*dropdownLists.*visibleControls.*rowValidationRules"),
@@ -2372,7 +2378,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("defines asset relationship lists", r"relationshipLists.*assetIds.*tblAssets\[AssetID\].*projectKeys.*tblAssets\[LinkedProjectID\]"),
         ("defines asset table validation rules", r"tableValidationRules.*tblAssets.*assetStatuses.*relationshipListKey:\s*\"projectKeys\".*tblProjectAssetMap.*relationshipListKey:\s*\"assetIds\""),
         ("applies asset table validation", r"setupAssetWorkflow.*buildAssetRelationshipLists.*applyTableValidationRules.*validationSourceForRelationshipList"),
-        ("keeps relationship validation advisory", r"allowUnknown:\s*Boolean\(rule\.relationshipListKey\).*errorAlert.*showAlert:\s*false"),
+        ("keeps relationship validation advisory", r"allowUnknown:\s*Boolean\(rule\.allowUnknown \|\| rule\.relationshipListKey\).*errorAlert.*showAlert:\s*false"),
         ("sets workflow table header text black", r"getHeaderRowRange\(\).*format\.font\.color\s*=\s*\"#000000\""),
         ("binds notes and asset setup buttons", r'bind\("setupNotesWorkflow",\s*setupNotesWorkflow\).*bind\("setupAssetWorkflow",\s*setupAssetWorkflow\)'),
         ("strips module comments", r"stripBlockComments"),
@@ -2740,7 +2746,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document asset relationship dropdowns",
-        r"asset relationship dropdowns.*Rerunning it recreates.*relationship lists for `Asset ID` and `Project Key`",
+        r"native validation and input messages.*Rerunning it recreates.*advisory relationship lists for `Asset ID` and `Project Key`.*LinkedProjectID.*allows blank or manually typed IDs",
         "Document the optional asset setup dropdown and reset behavior.",
     )
     check_required_regex(
@@ -3261,6 +3267,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     workbook_map_doc = read_text(ROOT / "docs" / "workbook_left_to_right_map.md")
     finance_doc = read_text(ROOT / "docs" / "asset_finance_model_modules.md")
     asset_quick_start = read_text(ROOT / "docs" / "asset_quick_start.md")
+    setup_doc = read_text(ROOT / "docs" / "asset_setup_workflow.md")
     changelog = read_text(ROOT / "docs" / "change_log.md")
     package = read_text(ROOT / "package.json")
     gitignore = read_text(ROOT / ".gitignore")
@@ -3287,8 +3294,8 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "samples/workbook_manifest.tsv",
         workbook_manifest,
         "workbook manifest makes asset hubs opt-in by edition",
-        r"Asset Hub.*\tvisible\tGenerated\tAssetsLite;AssetsFull;SemanticTwin\tAsset Hub.*Asset Finance Hub.*\tvisible\tGenerated\tAssetsFull;SemanticTwin\tAsset Finance Hub",
-        "Keep Asset Hub and Asset Finance Hub out of the default Planning edition.",
+        r"Asset Hub.*\tvisible\tGenerated\tAssetsLite;AssetsFull;SemanticTwin\tAsset Hub.*Asset Finance Hub.*\tvisible\tGenerated\tAssetsFull;SemanticTwin\tAsset Finance Hub.*Asset Register.*\tvisible\tGenerated\tAssetsLite;AssetsFull;SemanticTwin\tAsset Register",
+        "Keep asset surfaces out of the default Planning edition and make Asset Register visible only in asset-enabled editions.",
     )
     check_required_regex(
         results,
@@ -3297,6 +3304,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "workbook manifest hides backend and admin sheets",
         r"PQ Budget Input.*\thidden\t.*PQ Budget QA.*\thidden\t.*Validation Lists.*\thidden\t.*Decision Staging.*\thidden\t.*Automation Setup.*\thidden\t.*Asset Evidence Setup.*\thidden\t.*PQ Asset Evidence Model Inputs.*\thidden\t",
         "Keep governed backend sheets present but hidden by default.",
+    )
+    check_required_regex(
+        results,
+        "samples/workbook_manifest.tsv",
+        workbook_manifest,
+        "workbook manifest keeps advanced asset sheets hidden",
+        r"Semantic Map Setup.*\thidden\tGenerated\tAssetsFull;SemanticTwin.*Asset Setup.*\thidden\tGenerated\tAssetsLite;AssetsFull;SemanticTwin.*Project Asset Map.*\thidden\tGenerated\tAssetsLite;AssetsFull;SemanticTwin.*Asset Changes.*\thidden\tGenerated\tAssetsLite;AssetsFull;SemanticTwin.*Asset State History.*\thidden\tGenerated\tAssetsLite;AssetsFull;SemanticTwin.*Asset Evidence Setup.*\thidden\tGenerated\tAssetsFull;SemanticTwin",
+        "Keep simple asset entry visible while advanced asset, evidence, finance, and semantic setup sheets stay admin-scoped.",
     )
     check_required_regex(
         results,
@@ -3314,6 +3329,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "governance starter builder keeps dropdown values aligned",
         r"statuses = @\(\"Active\", \"Review\".*booleanFlags = @\(\"TRUE\", \"FALSE\"\).*@{ Key = \"booleanFlags\"; Header = \"Boolean Flag\" }.*Apply-TableListValidation -Table \$table -Header \"ApplyReady\" -ListKey \"booleanFlags\"",
         "Keep generated starter dropdown lists aligned with seeded notes and asset values.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder configures simple asset register validation",
+        r"assetTypes = @\(\"Equipment\", \"Building\", \"Vehicle\", \"System\", \"Space\", \"Other\"\).*Apply-AssetRegisterValidation.*AssetID.*Enter a stable asset identifier, e\.g\. AHU-001\..*AssetName.*Enter a plain-English asset name\..*AssetType.*Choose a simple type such as Equipment, Building, Vehicle, System, Space, or Other\..*Status.*Choose the current lifecycle status\..*Apply-TableNonNegativeValidation.*ReplacementCost.*Apply-TableNonNegativeValidation.*UsefulLifeYears.*LinkedProjectID.*AllowUnknown.*Optional project/job key from the current workbook planning data\. This does not imply external refresh or sync\.",
+        "Keep tblAssets as the native Excel entry table for simple manual assets.",
     )
     check_required_regex(
         results,
@@ -3501,8 +3524,8 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "tools/build_governance_starter_workbook.ps1",
         builder,
         "governance starter builder creates guided asset hub",
-        r"tblAssetWorkflowSettings.*assetWorkflowModes.*ASSET_NEXT_ACTIONS.*ASSET_START_HERE.*ASSET_WORKFLOW_STATUS.*ASSET_REVIEW_QUEUE.*ASSET_GLOSSARY.*ASSET_TABLE_MAP",
-        "Keep Asset Hub as onboarding first, technical queues second.",
+        r"tblAssetWorkflowSettings.*assetWorkflowModes.*To enter one asset, go to Asset Register\..*Open Asset Register.*ASSET_REGISTER_FIELD_GUIDE.*ASSET_REGISTER_START_HERE.*ASSET_REGISTER_STATUS.*ASSET_REGISTER_ISSUES.*ASSET_NEXT_ACTIONS.*ASSET_REVIEW_QUEUE.*ASSET_GLOSSARY.*ASSET_TABLE_MAP",
+        "Keep Asset Hub as simple asset entry first, technical queues second.",
     )
     check_required_regex(
         results,
@@ -3719,9 +3742,25 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/asset_quick_start.md",
         asset_quick_start,
         "asset quick start explains optional asset path",
-        r"Asset workflow is optional.*Start with `Asset Hub`.*Do not start with PQ asset evidence sheets.*Do not start with `Asset State History`.*Asset Finance is advanced and requires classified evidence",
+        r"Asset workflow is optional.*Start with Asset Hub to decide whether assets are needed.*Start with Asset Register to enter a simple asset.*Do not start with Asset Evidence, Asset State History, or PQ asset sheets.*LinkedProjectID`? is optional and advisory.*Asset Finance is advanced and requires classified evidence",
         "Keep first-time asset guidance explicit.",
     )
+    for file_name, doc_text in [
+        ("README.md", readme),
+        ("README_FIRST.md", read_text(ROOT / "README_FIRST.md")),
+        ("docs/starter_workbook.md", starter_doc),
+        ("docs/asset_setup_workflow.md", setup_doc),
+        ("docs/workbook_left_to_right_map.md", workbook_map_doc),
+        ("docs/office_addin.md", addin_doc),
+    ]:
+        check_required_regex(
+            results,
+            file_name,
+            doc_text,
+            "docs explain simple asset entry and unchanged budget boundary",
+            r"(?=.*Start with Asset Hub to decide whether assets are needed)(?=.*Start with Asset Register to enter a simple asset)(?=.*Do not start with Asset Evidence, Asset State History, or PQ asset sheets)(?=.*LinkedProjectID`? is optional and advisory)(?=.*tblBudgetInput remains the manual/canonical planning input table for this release because refresh is not surfaced)",
+            "Keep docs aligned to the simple asset-entry path and unchanged budget-source boundary.",
+        )
     check_required_regex(
         results,
         "docs/asset_finance_model_modules.md",
@@ -3809,6 +3848,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "change log records optional guided asset workflow",
         r"Make asset workflow optional and guided.*Planning.*AssetsLite.*AssetsFull.*Asset Hub.*Asset Finance Hub.*ASSET_START_HERE.*FINANCE_START_HERE.*samples/demo/asset_workflow",
         "Record the editioned asset onboarding change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records simple asset entry path",
+        r"(?=.*Make simple asset entry obvious)(?=.*Asset Register)(?=.*AssetsLite)(?=.*AssetsFull)(?=.*SemanticTwin)(?=.*To enter one asset, go to Asset Register\.)(?=.*ASSET_REGISTER_START_HERE)(?=.*ASSET_REGISTER_STATUS)(?=.*ASSET_REGISTER_ISSUES)(?=.*ASSET_REGISTER_FIELD_GUIDE)(?=.*LinkedProjectID)(?=.*tblBudgetInput remains the manual/canonical planning input table)",
+        "Record the asset-register entry path without changing the budget input boundary.",
     )
 
 

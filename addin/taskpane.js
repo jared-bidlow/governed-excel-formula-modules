@@ -59,8 +59,8 @@
       { sheet: "Cap Setup", visibility: "visible" },
       { sheet: "Planning Review", visibility: "visible" },
       { sheet: "Analysis Hub", visibility: "visible" },
-      { sheet: "Asset Hub", visibility: "visible" },
-      { sheet: "Asset Finance Hub", visibility: "visible" },
+      { sheet: "Asset Hub", visibility: "hidden" },
+      { sheet: "Asset Finance Hub", visibility: "hidden" },
       { sheet: "Workbook Manifest", visibility: "hidden" },
       { sheet: "PQ Budget Input", visibility: "hidden" },
       { sheet: "PQ Budget QA", visibility: "hidden" },
@@ -111,7 +111,7 @@
         {
           sheet: "Asset Register",
           tableName: "tblAssets",
-          address: "A1",
+          address: "A6",
           headers: [
             "AssetID",
             "AssetName",
@@ -260,15 +260,20 @@
           key: "projectKeys",
           header: "Project Key",
           formula:
-            '=LET(keys,VSTACK(tblAssets[LinkedProjectID],tblSemanticAssets[ProjectKey],tblAssetPromotionQueue[ProjectKey],tblAssetMappingStaging[ProjectKey],tblProjectAssetMap[ProjectKey],tblAssetChanges[ProjectKey],tblAssetStateHistory[ProjectKey]),IFERROR(SORT(UNIQUE(FILTER(keys,keys<>""))),""))'
+            '=LET(keys,VSTACK(tblPlanningTable[Source ID],tblPlanningTable[Job ID],tblPlanningTable[Project Description],tblAssets[LinkedProjectID],tblSemanticAssets[ProjectKey],tblAssetPromotionQueue[ProjectKey],tblAssetMappingStaging[ProjectKey],tblProjectAssetMap[ProjectKey],tblAssetChanges[ProjectKey],tblAssetStateHistory[ProjectKey]),IFERROR(SORT(UNIQUE(FILTER(keys,keys<>""))),""))'
         }
       ],
       tableValidationRules: {
         tblAssets: [
-          { header: "Status", listKey: "assetStatuses" },
-          { header: "Condition", listKey: "assetConditions" },
-          { header: "Criticality", listKey: "assetCriticalities" },
-          { header: "LinkedProjectID", relationshipListKey: "projectKeys" }
+          { header: "AssetID", promptOnly: true, promptTitle: "AssetID", promptMessage: "Enter a stable asset identifier, e.g. AHU-001." },
+          { header: "AssetName", promptOnly: true, promptTitle: "AssetName", promptMessage: "Enter a plain-English asset name." },
+          { header: "AssetType", inlineListKey: "assetTypes", promptTitle: "AssetType", promptMessage: "Choose a simple type such as Equipment, Building, Vehicle, System, Space, or Other." },
+          { header: "Status", inlineListKey: "assetStatuses", promptTitle: "Status", promptMessage: "Choose the current lifecycle status." },
+          { header: "Condition", inlineListKey: "assetConditions" },
+          { header: "Criticality", inlineListKey: "assetCriticalities" },
+          { header: "ReplacementCost", nonNegative: true },
+          { header: "UsefulLifeYears", nonNegative: true },
+          { header: "LinkedProjectID", relationshipListKey: "projectKeys", allowUnknown: true, promptTitle: "LinkedProjectID", promptMessage: "Optional project/job key from the current workbook planning data. This does not imply external refresh or sync." }
         ],
         tblSemanticAssets: [
           { header: "ProjectKey", relationshipListKey: "projectKeys" },
@@ -342,6 +347,7 @@
       statuses: ["Active", "Review", "Hold", "Closed", "In Service", "Skipping", "Canceled"],
       yesNo: ["Y", "N"],
       booleanFlags: ["TRUE", "FALSE"],
+      assetTypes: ["Equipment", "Building", "Vehicle", "System", "Space", "Other"],
       assetStatuses: ["planned", "active", "in_service", "maintenance", "retired"],
       assetConditions: ["new", "good", "fair", "poor", "critical"],
       assetCriticalities: ["low", "medium", "high", "critical"],
@@ -359,6 +365,7 @@
       { key: "statuses", header: "Status" },
       { key: "yesNo", header: "Yes No" },
       { key: "booleanFlags", header: "Boolean Flag" },
+      { key: "assetTypes", header: "Asset Type" },
       { key: "assetStatuses", header: "Asset Status" },
       { key: "assetConditions", header: "Asset Condition" },
       { key: "assetCriticalities", header: "Asset Criticality" },
@@ -642,7 +649,7 @@
     appendLog("Setting up optional asset workflow...");
 
     await Excel.run(async (context) => {
-      await ensureSheets(context, unique([...assetWorkflow.tables.map((table) => table.sheet), validationSheet]));
+      await ensureSheets(context, unique([...assetWorkflow.tables.map((table) => table.sheet), applicationData.sheets.assetHub, validationSheet]));
       await context.sync();
 
       buildValidationLists(context.workbook.worksheets.getItem(validationSheet));
@@ -650,11 +657,16 @@
       for (const table of assetWorkflow.tables) {
         const sheet = context.workbook.worksheets.getItem(table.sheet);
         const workbookTable = await refreshTableFromHeaders(context, sheet, table.tableName, table.address, table.headers);
-        formatWorkflowSheet(sheet, table.headers.length);
+        if (table.tableName === "tblAssets") {
+          formatAssetRegisterSheet(sheet, table.headers.length);
+        } else {
+          formatWorkflowSheet(sheet, table.headers.length);
+        }
         createdTables.push({ definition: table, workbookTable });
       }
 
       buildAssetRelationshipLists(context.workbook.worksheets.getItem(validationSheet));
+      formatAssetHubOnboarding(context.workbook.worksheets.getItem(applicationData.sheets.assetHub));
       for (const item of createdTables) {
         applyTableValidationRules(
           item.workbookTable,
@@ -663,6 +675,7 @@
       }
 
       await applyWorkbookVisibility(context);
+      showOptionalAssetWorkflowSheets(context);
       await context.sync();
     });
 
@@ -1017,7 +1030,7 @@
     setMergedPanel(
       sheet,
       "F7:M13",
-      "Key source boundary: tblBudgetInput is the canonical formula source. Planning Table is a manual/staging/local writeback surface. If Planning Table changes manually or through ApplyNotes, refresh or re-sync the current-workbook adapter before relying on Planning Review, Analysis Hub, Asset Hub, or Asset Finance Hub outputs.",
+      "Key source boundary: tblBudgetInput is the canonical formula source. Planning Table is a manual/staging/local writeback surface. If Planning Table changes manually or through ApplyNotes, refresh or re-sync the current-workbook adapter before relying on Planning Review, Analysis Hub, Asset Hub, or Asset Finance Hub outputs. Assets are optional. In AssetsLite, start with Asset Hub, then enter simple assets in Asset Register. In Planning, ignore asset sheets. Asset Evidence, Asset Finance, and Semantic Map are advanced paths.",
       "#FFF2CC"
     );
 
@@ -1030,8 +1043,8 @@
       ["Cap Setup", "BU cap limits.", "Review or update caps."],
       ["Planning Review", "Main planning report.", "Run meeting review and enter P:R notes."],
       ["Analysis Hub", "Planning analysis outputs.", "Review scorecards, queues, burndown, and readiness."],
-      ["Asset Hub", "Asset workflow queues.", "Review asset mapping and state issues."],
-      ["Asset Finance Hub", "Asset finance outputs.", "Review depreciation, funding, totals, and chart-ready feeds."]
+      ["Asset Hub", "Optional asset workflow guide.", "AssetsLite users start here, then enter simple assets in Asset Register."],
+      ["Asset Finance Hub", "Advanced asset finance outputs.", "Use only after classified asset evidence exists."]
     ];
     sheet.getRange("A18:C18").format.font.bold = true;
     sheet.getRange("A18:C18").format.fill.color = "#D9EAF7";
@@ -1328,6 +1341,85 @@
     sheet.getRange(`A:${lastColumn}`).format.autofitColumns();
   }
 
+  function formatAssetRegisterSheet(sheet, headerCount) {
+    const lastColumn = columnName(headerCount);
+    sheet.getRange("A1:Q5").clear(Excel.ClearApplyTo.all);
+    formatPageHeader(
+      sheet,
+      "Asset Register",
+      "Start with Asset Register to enter a simple asset. Minimum fields are AssetID, AssetName, AssetType, and Status.",
+      "A1:Q3"
+    );
+    sheet.getRange("A4:Q4").values = [[
+      "You do not need Asset Evidence, Asset Finance, Semantic Map, Asset State History, or PQ Asset Evidence to enter a simple asset.",
+      "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+    ]];
+    sheet.getRange("A4:Q4").format.fill.color = "#FFF2CC";
+    sheet.getRange("A4:Q4").format.wrapText = true;
+    sheet.freezePanes.freezeRows(6);
+    const headerRange = sheet.getRange(`A6:${lastColumn}6`);
+    headerRange.format.font.bold = true;
+    headerRange.format.fill.color = "#D9EAF7";
+    headerRange.format.font.color = "#000000";
+    sheet.getRange(`A:${lastColumn}`).format.autofitColumns();
+    sheet.getRange("A:A").format.columnWidth = 130;
+    sheet.getRange("B:B").format.columnWidth = 190;
+    sheet.getRange("C:C").format.columnWidth = 135;
+    sheet.getRange("H:H").format.columnWidth = 120;
+    sheet.getRange("L:M").format.columnWidth = 115;
+    sheet.getRange("P:P").format.columnWidth = 165;
+  }
+
+  function formatAssetHubOnboarding(sheet) {
+    formatHubShell(
+      sheet,
+      "Asset Hub",
+      "Optional workflow for entering simple assets, then connecting projects to assets only when that extra tracking is in scope."
+    );
+    formatSectionHeader(
+      sheet.getRange("A4"),
+      "Simple asset entry",
+      "To enter one asset, go to Asset Register. Asset Evidence, Asset Finance, Semantic Map, Asset State History, and PQ Asset Evidence are not needed for this."
+    );
+    sheet.getRange("A7").values = [["To enter one asset, go to Asset Register."]];
+    sheet.getRange("A7").format.font.bold = true;
+    setInternalSheetLink(sheet.getRange("D7"), applicationData.sheets.assetRegister, "A1", "Open Asset Register");
+    sheet.getRange("A8").values = [["Minimum fields: AssetID, AssetName, AssetType, Status."]];
+    sheet.getRange("A9").values = [["Helpful optional fields: Site, Location, Owner, Condition, Criticality, ReplacementCost, UsefulLifeYears, LinkedProjectID."]];
+    sheet.getRange("A10").values = [["LinkedProjectID is optional and advisory. Manual IDs are allowed and do not imply external refresh or sync."]];
+    sheet.getRange("A7:H10").format.wrapText = true;
+    formatSectionHeader(sheet.getRange("A14"), "Minimum field guide", "Use these fields for simple manual asset entry.");
+    sheet.getRange("A17:D29").values = [
+      ["Field", "Required?", "Validation", "Message"],
+      ["AssetID", "Yes", "Free text", "Enter a stable asset identifier, e.g. AHU-001."],
+      ["AssetName", "Yes", "Free text", "Enter a plain-English asset name."],
+      ["AssetType", "Yes", "Equipment, Building, Vehicle, System, Space, Other", "Choose a simple type such as Equipment, Building, Vehicle, System, Space, or Other."],
+      ["Status", "Yes", "assetStatuses dropdown", "Choose the current lifecycle status."],
+      ["Site", "Optional", "Free text", "Site or campus label."],
+      ["Location", "Optional", "Free text", "Room, area, address, or location detail."],
+      ["Owner", "Optional", "Free text", "Team or person responsible for the asset."],
+      ["Condition", "Optional", "assetConditions dropdown", "Observed condition."],
+      ["Criticality", "Optional", "assetCriticalities dropdown", "Operational importance."],
+      ["ReplacementCost", "Optional", "Non-negative number", "Estimated replacement cost; blank is allowed."],
+      ["UsefulLifeYears", "Optional", "Non-negative number", "Expected useful life; blank is allowed."],
+      ["LinkedProjectID", "Optional", "Advisory project-key dropdown", "Optional project/job key from the current workbook planning data."]
+    ];
+    sheet.getRange("A17:D17").format.font.bold = true;
+    sheet.getRange("A17:D17").format.fill.color = "#D9EAF7";
+    sheet.getRange("A:D").format.autofitColumns();
+  }
+
+  function showOptionalAssetWorkflowSheets(context) {
+    for (const sheetName of [applicationData.sheets.assetHub, applicationData.sheets.assetRegister]) {
+      const sheet = context.workbook.worksheets.getItem(sheetName);
+      sheet.visibility = Excel.SheetVisibility.visible;
+    }
+    for (const sheetName of [applicationData.sheets.assetFinanceHub]) {
+      const sheet = context.workbook.worksheets.getItemOrNullObject(sheetName);
+      sheet.load("name");
+    }
+  }
+
   function formatPlanningTable(sheet, headers) {
     const table = applicationData.planningTable;
     sheet.freezePanes.freezeRows(table.headerRow);
@@ -1449,9 +1541,19 @@
 
   function applyTableValidationRules(table, rules) {
     for (const rule of rules) {
-      const source = validationSourceForRule(rule);
       const range = table.columns.getItem(rule.header).getDataBodyRange();
-      applyListValidation(range, source, { allowUnknown: Boolean(rule.relationshipListKey) });
+      if (rule.promptOnly) {
+        applyInputPrompt(range, rule);
+      } else if (rule.nonNegative) {
+        applyNonNegativeValidation(range, rule);
+      } else {
+        const source = validationSourceForRule(rule);
+        applyListValidation(range, source, {
+          allowUnknown: Boolean(rule.allowUnknown || rule.relationshipListKey),
+          promptTitle: rule.promptTitle,
+          promptMessage: rule.promptMessage
+        });
+      }
     }
   }
 
@@ -1476,6 +1578,9 @@
   }
 
   function validationSourceForRule(rule) {
+    if (rule.inlineListKey) {
+      return validationLists[rule.inlineListKey].join(",");
+    }
     if (rule.listKey) {
       return validationSourceForList(rule.listKey);
     }
@@ -1502,6 +1607,7 @@
         source
       }
     };
+    applyInputPrompt(range, options);
     if (options.allowUnknown) {
       range.dataValidation.errorAlert = {
         showAlert: false
@@ -1509,7 +1615,18 @@
     }
   }
 
-  function applyNonNegativeValidation(range) {
+  function applyInputPrompt(range, options = {}) {
+    if (!options.promptMessage) {
+      return;
+    }
+    range.dataValidation.prompt = {
+      showPrompt: true,
+      title: options.promptTitle || "",
+      message: options.promptMessage
+    };
+  }
+
+  function applyNonNegativeValidation(range, options = {}) {
     range.dataValidation.clear();
     range.dataValidation.rule = {
       decimal: {
@@ -1517,6 +1634,7 @@
         operator: Excel.DataValidationOperator.greaterThanOrEqualTo
       }
     };
+    applyInputPrompt(range, options);
   }
 
   function applyNumberFormat(range, rowCount, columnCount, format) {

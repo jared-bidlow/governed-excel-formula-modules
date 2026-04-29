@@ -227,12 +227,20 @@ function Add-ValidationList {
     param(
         [object]$Range,
         [string]$Source,
-        [switch]$AllowUnknown
+        [switch]$AllowUnknown,
+        [string]$InputTitle = "",
+        [string]$InputMessage = ""
     )
 
     try {
         [void]$Range.Validation.Delete()
         [void]$Range.Validation.Add(3, 1, 1, $Source)
+        $Range.Validation.IgnoreBlank = $true
+        if ($InputMessage -ne "") {
+            $Range.Validation.ShowInput = $true
+            $Range.Validation.InputTitle = $InputTitle
+            $Range.Validation.InputMessage = $InputMessage
+        }
         if ($AllowUnknown) {
             $Range.Validation.ShowError = $false
         }
@@ -242,13 +250,43 @@ function Add-ValidationList {
 }
 
 function Add-NonNegativeValidation {
-    param([object]$Range)
+    param(
+        [object]$Range,
+        [string]$InputTitle = "",
+        [string]$InputMessage = ""
+    )
 
     try {
         [void]$Range.Validation.Delete()
         [void]$Range.Validation.Add(2, 1, 7, "0")
+        $Range.Validation.IgnoreBlank = $true
+        if ($InputMessage -ne "") {
+            $Range.Validation.ShowInput = $true
+            $Range.Validation.InputTitle = $InputTitle
+            $Range.Validation.InputMessage = $InputMessage
+        }
     } catch {
         Write-Warning "Skipped non-negative validation on $($Range.Address()): $($_.Exception.Message)"
+    }
+}
+
+function Add-InputMessage {
+    param(
+        [object]$Range,
+        [string]$InputTitle,
+        [string]$InputMessage
+    )
+
+    try {
+        [void]$Range.Validation.Delete()
+        [void]$Range.Validation.Add(7, 1, 1, "=TRUE")
+        $Range.Validation.IgnoreBlank = $true
+        $Range.Validation.ShowInput = $true
+        $Range.Validation.InputTitle = $InputTitle
+        $Range.Validation.InputMessage = $InputMessage
+        $Range.Validation.ShowError = $false
+    } catch {
+        Write-Warning "Skipped input message on $($Range.Address()): $($_.Exception.Message)"
     }
 }
 
@@ -773,6 +811,7 @@ $dropdownLists = [ordered]@{
     statuses = @("Active", "Review", "Hold", "Closed", "In Service", "Skipping", "Canceled")
     yesNo = @("Y", "N")
     booleanFlags = @("TRUE", "FALSE")
+    assetTypes = @("Equipment", "Building", "Vehicle", "System", "Space", "Other")
     assetStatuses = @("planned", "active", "in_service", "maintenance", "retired")
     assetConditions = @("new", "good", "fair", "poor", "critical")
     assetCriticalities = @("low", "medium", "high", "critical")
@@ -792,6 +831,7 @@ $validationColumns = @(
     @{ Key = "statuses"; Header = "Status" },
     @{ Key = "yesNo"; Header = "Yes No" },
     @{ Key = "booleanFlags"; Header = "Boolean Flag" },
+    @{ Key = "assetTypes"; Header = "Asset Type" },
     @{ Key = "assetStatuses"; Header = "Asset Status" },
     @{ Key = "assetConditions"; Header = "Asset Condition" },
     @{ Key = "assetCriticalities"; Header = "Asset Criticality" },
@@ -836,12 +876,58 @@ function Apply-TableListValidation {
         [object]$Table,
         [string]$Header,
         [string]$ListKey,
-        [switch]$AllowUnknown
+        [switch]$AllowUnknown,
+        [string]$InputTitle = "",
+        [string]$InputMessage = ""
     )
 
     $range = Get-TableColumnRange -Table $Table -Header $Header
     if ($null -ne $range) {
-        [void](Add-ValidationList -Range $range -Source (Get-ListValidationSource $ListKey) -AllowUnknown:$AllowUnknown)
+        [void](Add-ValidationList -Range $range -Source (Get-ListValidationSource $ListKey) -AllowUnknown:$AllowUnknown -InputTitle $InputTitle -InputMessage $InputMessage)
+    }
+}
+
+function Apply-TableSourceValidation {
+    param(
+        [object]$Table,
+        [string]$Header,
+        [string]$Source,
+        [switch]$AllowUnknown,
+        [string]$InputTitle = "",
+        [string]$InputMessage = ""
+    )
+
+    $range = Get-TableColumnRange -Table $Table -Header $Header
+    if ($null -ne $range) {
+        [void](Add-ValidationList -Range $range -Source $Source -AllowUnknown:$AllowUnknown -InputTitle $InputTitle -InputMessage $InputMessage)
+    }
+}
+
+function Apply-TableInputMessage {
+    param(
+        [object]$Table,
+        [string]$Header,
+        [string]$InputTitle,
+        [string]$InputMessage
+    )
+
+    $range = Get-TableColumnRange -Table $Table -Header $Header
+    if ($null -ne $range) {
+        [void](Add-InputMessage -Range $range -InputTitle $InputTitle -InputMessage $InputMessage)
+    }
+}
+
+function Apply-TableNonNegativeValidation {
+    param(
+        [object]$Table,
+        [string]$Header,
+        [string]$InputTitle = "",
+        [string]$InputMessage = ""
+    )
+
+    $range = Get-TableColumnRange -Table $Table -Header $Header
+    if ($null -ne $range) {
+        [void](Add-NonNegativeValidation -Range $range -InputTitle $InputTitle -InputMessage $InputMessage)
     }
 }
 
@@ -898,13 +984,85 @@ function Build-AssetRelationshipLists {
     $Worksheet.Range("$projectColumn`1").Value2 = "Project Key"
     try {
         [void](Set-RangeFormula -Range $Worksheet.Range("$assetColumn`2") -Formula '=LET(ids,VSTACK(tblAssets[AssetID],tblProjectAssetMap[AssetId],tblAssetChanges[SourceAssetId],tblAssetChanges[TargetAssetId],tblAssetStateHistory[AssetId]),IFERROR(SORT(UNIQUE(FILTER(ids,ids<>""))),""))')
-        [void](Set-RangeFormula -Range $Worksheet.Range("$projectColumn`2") -Formula '=LET(keys,VSTACK(tblAssets[LinkedProjectID],tblSemanticAssets[ProjectKey],tblAssetPromotionQueue[ProjectKey],tblAssetMappingStaging[ProjectKey],tblProjectAssetMap[ProjectKey],tblAssetChanges[ProjectKey],tblAssetStateHistory[ProjectKey]),IFERROR(SORT(UNIQUE(FILTER(keys,keys<>""))),""))')
+        [void](Set-RangeFormula -Range $Worksheet.Range("$projectColumn`2") -Formula '=LET(keys,VSTACK(tblPlanningTable[Source ID],tblPlanningTable[Job ID],tblPlanningTable[Project Description],tblAssets[LinkedProjectID],tblSemanticAssets[ProjectKey],tblAssetPromotionQueue[ProjectKey],tblAssetMappingStaging[ProjectKey],tblProjectAssetMap[ProjectKey],tblAssetChanges[ProjectKey],tblAssetStateHistory[ProjectKey]),IFERROR(SORT(UNIQUE(FILTER(keys,keys<>""))),""))')
     } catch {
         Write-Warning "Skipped asset relationship spill formulas: $($_.Exception.Message)"
     }
     $Worksheet.Range("$assetColumn`1:$projectColumn`1").Font.Bold = $true
     $Worksheet.Range("$assetColumn`1:$projectColumn`1").Interior.Color = 16247773
+    Set-WorkbookName -Workbook $Worksheet.Parent -Name "Asset_ID_Dropdowns" -RefersTo "='Validation Lists'!`$$assetColumn`$2#" -Comment "Advisory asset ID dropdowns for optional asset workflow."
+    Set-WorkbookName -Workbook $Worksheet.Parent -Name "Asset_Project_Key_Dropdowns" -RefersTo "='Validation Lists'!`$$projectColumn`$2#" -Comment "Advisory project key dropdowns for optional asset workflow."
     [void]$Worksheet.Columns.AutoFit()
+}
+
+function Get-AssetRelationshipValidationSource {
+    param([string]$ListKey)
+
+    $indexMap = @{
+        assetIds = 0
+        projectKeys = 1
+    }
+    if (-not $indexMap.ContainsKey($ListKey)) {
+        throw "Unknown asset relationship list: $ListKey"
+    }
+    $column = Column-Name ($validationColumns.Count + 1 + $indexMap[$ListKey])
+    return "='Validation Lists'!`$$column`$2#"
+}
+
+function Apply-AssetRegisterValidation {
+    param([object]$Table)
+
+    Apply-TableInputMessage `
+        -Table $Table `
+        -Header "AssetID" `
+        -InputTitle "AssetID" `
+        -InputMessage "Enter a stable asset identifier, e.g. AHU-001."
+    Apply-TableInputMessage `
+        -Table $Table `
+        -Header "AssetName" `
+        -InputTitle "AssetName" `
+        -InputMessage "Enter a plain-English asset name."
+    Apply-TableSourceValidation `
+        -Table $Table `
+        -Header "AssetType" `
+        -Source ($dropdownLists["assetTypes"] -join ",") `
+        -InputTitle "AssetType" `
+        -InputMessage "Choose a simple type such as Equipment, Building, Vehicle, System, Space, or Other."
+    Apply-TableSourceValidation `
+        -Table $Table `
+        -Header "Status" `
+        -Source ($dropdownLists["assetStatuses"] -join ",") `
+        -InputTitle "Status" `
+        -InputMessage "Choose the current lifecycle status."
+    Apply-TableSourceValidation -Table $Table -Header "Condition" -Source ($dropdownLists["assetConditions"] -join ",")
+    Apply-TableSourceValidation -Table $Table -Header "Criticality" -Source ($dropdownLists["assetCriticalities"] -join ",")
+    Apply-TableNonNegativeValidation `
+        -Table $Table `
+        -Header "ReplacementCost" `
+        -InputTitle "ReplacementCost" `
+        -InputMessage "Enter a non-negative replacement cost, or leave blank."
+    Apply-TableNonNegativeValidation `
+        -Table $Table `
+        -Header "UsefulLifeYears" `
+        -InputTitle "UsefulLifeYears" `
+        -InputMessage "Enter a non-negative useful life in years, or leave blank."
+}
+
+function Apply-AssetRegisterRelationshipValidation {
+    param([object]$Workbook)
+
+    try {
+        $table = $Workbook.Worksheets.Item("Asset Register").ListObjects.Item("tblAssets")
+        Apply-TableSourceValidation `
+            -Table $table `
+            -Header "LinkedProjectID" `
+            -Source "=Asset_Project_Key_Dropdowns" `
+            -AllowUnknown `
+            -InputTitle "LinkedProjectID" `
+            -InputMessage "Optional project/job key from the current workbook planning data. This does not imply external refresh or sync."
+    } catch {
+        Write-Warning "Skipped Asset Register relationship validation: $($_.Exception.Message)"
+    }
 }
 
 function Build-PlanningReview {
@@ -1166,7 +1324,7 @@ function Build-StartHere {
     Set-MergedPanel `
         -Worksheet $Worksheet `
         -Address "F7:M13" `
-        -Text "Key source boundary: tblBudgetInput is the canonical formula source. Planning Table is a manual/staging/local writeback surface. If Planning Table changes manually or through ApplyNotes, refresh or re-sync the current-workbook adapter before relying on Planning Review, Analysis Hub, Asset Hub, or Asset Finance Hub outputs." `
+        -Text "Key source boundary: tblBudgetInput is the canonical formula source. Planning Table is a manual/staging/local writeback surface. If Planning Table changes manually or through ApplyNotes, refresh or re-sync the current-workbook adapter before relying on Planning Review, Analysis Hub, Asset Hub, or Asset Finance Hub outputs. Assets are optional. In AssetsLite, start with Asset Hub, then enter simple assets in Asset Register. In Planning, ignore asset sheets. Asset Evidence, Asset Finance, and Semantic Map are advanced paths." `
         -FillColor 13431551
 
     Format-SectionHeader `
@@ -1181,8 +1339,8 @@ function Build-StartHere {
     $navRows[4] = [object[]]@("Cap Setup", "BU cap limits.", "Review or update caps.")
     $navRows[5] = [object[]]@("Planning Review", "Main planning report.", "Run meeting review and enter P:R notes.")
     $navRows[6] = [object[]]@("Analysis Hub", "Planning analysis outputs.", "Review scorecards, queues, burndown, and readiness.")
-    $navRows[7] = [object[]]@("Asset Hub", "Asset workflow queues.", "Review asset mapping and state issues.")
-    $navRows[8] = [object[]]@("Asset Finance Hub", "Asset finance outputs.", "Review depreciation, funding, totals, and chart-ready feeds.")
+    $navRows[7] = [object[]]@("Asset Hub", "Optional asset workflow guide.", "AssetsLite users start here, then enter simple assets in Asset Register.")
+    $navRows[8] = [object[]]@("Asset Finance Hub", "Advanced asset finance outputs.", "Use only after classified asset evidence exists.")
     $navTable = Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblStartHereNavigation" -TopLeft "A18" -Rows $navRows
     for ($index = 1; $index -le 8; $index++) {
         $sheetName = [string]$navRows[$index][0]
@@ -1271,22 +1429,25 @@ function Build-AssetHub {
     Format-HubSheet `
         -Worksheet $Worksheet `
         -Title "Asset Hub" `
-        -Note "Optional workflow for connecting projects to assets. Start here only when project-to-asset tracking is in scope." `
-        -ClearRange "A1:Z380"
+        -Note "Optional workflow for entering simple assets, then connecting projects to assets only when that extra tracking is in scope." `
+        -ClearRange "A1:Z460"
 
     $sections = @(
         @{ Cell = "D4"; Title = "Asset workflow mode"; Note = "Choose whether optional asset tracking is in scope." },
-        @{ Cell = "A18"; Title = "What should I do first?"; Note = "Mode-aware next action for the asset workflow." },
-        @{ Cell = "A32"; Title = "Asset paths"; Note = "Plain-English paths for map, candidate, change, or finance work." },
-        @{ Cell = "A54"; Title = "Asset workflow status"; Note = "Counts for real asset rows, mappings, candidates, issues, and finance-ready evidence." },
-        @{ Cell = "A76"; Title = "Review queues"; Note = "Friendly overview of asset queues before technical issue sections." },
-        @{ Cell = "A102"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review." },
-        @{ Cell = "A142"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows." },
-        @{ Cell = "A182"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply." },
-        @{ Cell = "A222"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links." },
-        @{ Cell = "A262"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context." },
-        @{ Cell = "A312"; Title = "Asset terms"; Note = "Plain-language glossary for asset workflow terminology." },
-        @{ Cell = "A342"; Title = "Admin / troubleshooting table map"; Note = "Hidden asset tables for intentional administration and troubleshooting." }
+        @{ Cell = "A18"; Title = "Simple asset entry"; Note = "The first asset task is just entering an asset in Asset Register." },
+        @{ Cell = "A30"; Title = "Minimum field guide"; Note = "Minimum and optional fields for tblAssets." },
+        @{ Cell = "A50"; Title = "Asset register start here"; Note = "Short path for entering one simple asset safely." },
+        @{ Cell = "A70"; Title = "Asset register status"; Note = "Counts for entered register rows and required-field readiness." },
+        @{ Cell = "A94"; Title = "Asset register issues"; Note = "Register-level issues and advisory LinkedProjectID checks." },
+        @{ Cell = "A128"; Title = "What should I do next?"; Note = "Mode-aware next action after simple asset entry." },
+        @{ Cell = "A150"; Title = "Review queues"; Note = "Friendly overview of asset queues before technical issue sections." },
+        @{ Cell = "A176"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review." },
+        @{ Cell = "A216"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows." },
+        @{ Cell = "A256"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply." },
+        @{ Cell = "A296"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links." },
+        @{ Cell = "A336"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context." },
+        @{ Cell = "A386"; Title = "Asset terms"; Note = "Plain-language glossary for asset workflow terminology." },
+        @{ Cell = "A416"; Title = "Admin / troubleshooting table map"; Note = "Hidden asset tables for intentional administration and troubleshooting." }
     )
     $toc = Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetHubSections" -Sections $sections -TopLeft "A4"
 
@@ -1301,40 +1462,66 @@ function Build-AssetHub {
         -Rows (Read-TsvMatrix "samples\asset_workflow_settings_starter.tsv")
     [void](Add-ValidationList -Range $settingsTable.DataBodyRange.Cells.Item(1, 2) -Source (Get-ListValidationSource "assetWorkflowModes"))
 
+    Format-SectionHeader `
+        -Anchor $Worksheet.Range("A18") `
+        -Title "Simple asset entry" `
+        -Note "To enter one asset, go to Asset Register. Asset Evidence, Asset Finance, Semantic Map, Asset State History, and PQ Asset Evidence are not needed for this."
+    $Worksheet.Range("A21").Value2 = "To enter one asset, go to Asset Register."
+    $Worksheet.Range("A21").Font.Bold = $true
+    $Worksheet.Range("A22").Value2 = "Minimum fields: AssetID, AssetName, AssetType, Status."
+    $Worksheet.Range("A23").Value2 = "Helpful optional fields: Site, Location, Owner, Condition, Criticality, ReplacementCost, UsefulLifeYears, LinkedProjectID."
+    $Worksheet.Range("A24").Value2 = "LinkedProjectID is optional and advisory. Manual IDs are allowed and do not imply external refresh or sync."
+    Set-InternalWorksheetLink -Range $Worksheet.Range("D21") -SheetName "Asset Register" -DisplayText "Open Asset Register"
+    $Worksheet.Range("A21:H24").WrapText = $true
+
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A18" `
-        -Title "What should I do first?" `
+        -Cell "A30" `
+        -Title "Minimum field guide" `
+        -Note "Native Excel validation supports the fields below; LinkedProjectID is advisory and allows blanks or manual IDs." `
+        -Formula "=Assets.ASSET_REGISTER_FIELD_GUIDE"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A50" `
+        -Title "Asset register start here" `
+        -Note "Enter a simple asset first. Mapping, evidence, finance, and semantic layers are later paths." `
+        -Formula "=Assets.ASSET_REGISTER_START_HERE"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A70" `
+        -Title "Asset register status" `
+        -Note "Shows whether tblAssets has entered rows and whether required fields are ready." `
+        -Formula "=Assets.ASSET_REGISTER_STATUS"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A94" `
+        -Title "Asset register issues" `
+        -Note "Flags missing IDs, duplicate IDs, missing names/statuses, negative values, and advisory project links." `
+        -Formula "=Assets.ASSET_REGISTER_ISSUES"
+
+    Add-HubSection `
+        -Worksheet $Worksheet `
+        -Cell "A128" `
+        -Title "What should I do next?" `
         -Note "The next action responds to the selected asset workflow mode and whether asset data is present." `
         -Formula "=Assets.ASSET_NEXT_ACTIONS"
 
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A32" `
-        -Title "Asset paths" `
-        -Note "Choose the path that matches the work you actually need. Do not start with asset evidence or finance." `
-        -Formula "=Assets.ASSET_START_HERE"
-
-    Add-HubSection `
-        -Worksheet $Worksheet `
-        -Cell "A54" `
-        -Title "Asset workflow status" `
-        -Note "Counts show whether the asset register, mappings, candidates, and finance-ready evidence have real rows." `
-        -Formula "=Assets.ASSET_WORKFLOW_STATUS"
-
-    Add-HubSection `
-        -Worksheet $Worksheet `
-        -Cell "A76" `
+        -Cell "A150" `
         -Title "Review queues" `
         -Note "Friendly map of the technical queues below. Use these only after choosing an asset path." `
         -Formula "=Assets.ASSET_REVIEW_QUEUE"
 
     $technicalSections = @(
-        @{ Cell = "A102"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
-        @{ Cell = "A142"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows."; Formula = "=Assets.PROJECT_PROMOTION_QUEUE" },
-        @{ Cell = "A182"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply."; Formula = "=Assets.ASSET_CHANGE_ISSUES" },
-        @{ Cell = "A222"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links."; Formula = "=Assets.INSTALLED_WITHOUT_EVIDENCE" },
-        @{ Cell = "A262"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context."; Formula = "=Assets.REPLACEMENT_SOURCE_TARGET_ISSUES" }
+        @{ Cell = "A176"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
+        @{ Cell = "A216"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows."; Formula = "=Assets.PROJECT_PROMOTION_QUEUE" },
+        @{ Cell = "A256"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply."; Formula = "=Assets.ASSET_CHANGE_ISSUES" },
+        @{ Cell = "A296"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links."; Formula = "=Assets.INSTALLED_WITHOUT_EVIDENCE" },
+        @{ Cell = "A336"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context."; Formula = "=Assets.REPLACEMENT_SOURCE_TARGET_ISSUES" }
     )
     foreach ($section in $technicalSections) {
         Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
@@ -1342,14 +1529,14 @@ function Build-AssetHub {
 
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A312" `
+        -Cell "A386" `
         -Title "Asset terms" `
         -Note "Plain-language glossary for asset workflow terminology." `
         -Formula "=Assets.ASSET_GLOSSARY"
 
     Add-HubSection `
         -Worksheet $Worksheet `
-        -Cell "A342" `
+        -Cell "A416" `
         -Title "Admin / troubleshooting table map" `
         -Note "Hidden asset tables are still available for operators who intentionally enable the asset workflow." `
         -Formula "=Assets.ASSET_TABLE_MAP"
@@ -1358,7 +1545,7 @@ function Build-AssetHub {
     [void]$Worksheet.Columns.AutoFit()
     Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "Asset"
     Set-HubTableOfContentsColumnWidths -Table $toc
-    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(4, 18, 32, 54, 76, 102, 142, 182, 222, 262, 312, 342) -DefaultHeight 20
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(4, 18, 30, 50, 70, 94, 128, 150, 176, 216, 256, 296, 336, 386, 416) -DefaultHeight 20
 }
 
 function Build-AssetFinanceHub {
@@ -1532,10 +1719,16 @@ function Build-AssetWorkflowTables {
     )
 
     $assetRegisterSheet = Add-Worksheet -Workbook $Workbook -Name "Asset Register"
-    $assetRegister = Add-TableFromMatrix -Worksheet $assetRegisterSheet -TableName "tblAssets" -TopLeft "A1" -Rows (Read-TsvMatrix "samples\asset_register_starter.tsv")
-    [void](Apply-TableListValidation -Table $assetRegister -Header "Status" -ListKey "assetStatuses")
-    [void](Apply-TableListValidation -Table $assetRegister -Header "Condition" -ListKey "assetConditions")
-    [void](Apply-TableListValidation -Table $assetRegister -Header "Criticality" -ListKey "assetCriticalities")
+    Format-PageHeader `
+        -Worksheet $assetRegisterSheet `
+        -Title "Asset Register" `
+        -Subtitle "Start with Asset Register to enter a simple asset. Minimum fields are AssetID, AssetName, AssetType, and Status." `
+        -BandRange "A1:Q3"
+    $assetRegisterSheet.Range("A4").Value2 = "You do not need Asset Evidence, Asset Finance, Semantic Map, Asset State History, or PQ Asset Evidence to enter a simple asset."
+    $assetRegisterSheet.Range("A4:Q4").Interior.Color = 13431551
+    $assetRegisterSheet.Range("A4:Q4").WrapText = $true
+    $assetRegister = Add-TableFromMatrix -Worksheet $assetRegisterSheet -TableName "tblAssets" -TopLeft "A6" -Rows (Read-TsvMatrix "samples\asset_register_starter.tsv")
+    [void](Apply-AssetRegisterValidation -Table $assetRegister)
 
     $semanticSheet = Add-Worksheet -Workbook $Workbook -Name "Semantic Assets"
     [void](Add-TableFromMatrix -Worksheet $semanticSheet -TableName "tblSemanticAssets" -TopLeft "A1" -Rows (Read-TsvMatrix "samples\semantic_assets_starter.tsv"))
@@ -1576,7 +1769,17 @@ function Build-AssetWorkflowTables {
         [void](Apply-TableListValidation -Table $table -Header "ApplyReady" -ListKey "booleanFlags")
     }
 
-    foreach ($sheet in @($assetRegisterSheet, $semanticSheet, $assetSetupSheet, $projectMapSheet, $assetChangesSheet, $assetHistorySheet)) {
+    [void](Set-FreezeRows -Excel $Excel -Worksheet $assetRegisterSheet -Rows 6)
+    [void]$assetRegisterSheet.Columns.AutoFit()
+    $assetRegisterSheet.Columns.Item(1).ColumnWidth = 18
+    $assetRegisterSheet.Columns.Item(2).ColumnWidth = 28
+    $assetRegisterSheet.Columns.Item(3).ColumnWidth = 18
+    $assetRegisterSheet.Columns.Item(8).ColumnWidth = 16
+    $assetRegisterSheet.Columns.Item(12).ColumnWidth = 16
+    $assetRegisterSheet.Columns.Item(13).ColumnWidth = 16
+    $assetRegisterSheet.Columns.Item(16).ColumnWidth = 22
+
+    foreach ($sheet in @($semanticSheet, $assetSetupSheet, $projectMapSheet, $assetChangesSheet, $assetHistorySheet)) {
         [void](Set-FreezeRows -Excel $Excel -Worksheet $sheet -Rows 1)
         [void]$sheet.Columns.AutoFit()
     }
@@ -1676,6 +1879,7 @@ try {
 
     Build-AssetWorkflowTables -Workbook $workbook -Excel $excel | Out-Null
     Build-AssetRelationshipLists -Worksheet $validationSheet | Out-Null
+    Apply-AssetRegisterRelationshipValidation -Workbook $workbook | Out-Null
 
     $semanticSetupSheet = Add-Worksheet -Workbook $workbook -Name "Semantic Map Setup"
     [void](Build-SemanticMapSetup -Worksheet $semanticSetupSheet)

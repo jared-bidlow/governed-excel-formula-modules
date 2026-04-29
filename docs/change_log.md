@@ -1,3 +1,20 @@
+## 2026-04-29 - Make simple asset entry obvious
+
+Semantic change:
+
+- Made `Asset Register` visible in `AssetsLite`, `AssetsFull`, and `SemanticTwin` while keeping it hidden from the default `Planning` edition.
+- Reworked `Asset Hub` so the first instruction is: "To enter one asset, go to Asset Register."
+- Added `Assets.ASSET_REGISTER_START_HERE`, `Assets.ASSET_REGISTER_STATUS`, `Assets.ASSET_REGISTER_ISSUES`, and `Assets.ASSET_REGISTER_FIELD_GUIDE`.
+- Added native Excel validation/input-message support for `tblAssets`, including `AssetType`, required field prompts, non-negative cost/life fields, and advisory `LinkedProjectID` validation.
+- Clarified docs that tblBudgetInput remains the manual/canonical planning input table for this release because refresh is not surfaced, and simple asset entry does not alter budget-source behavior.
+
+Visible impact:
+
+- `AssetsLite`: visible `Asset Hub` and `Asset Register`.
+- `AssetsFull`: visible `Asset Hub`, `Asset Register`, and `Asset Finance Hub`.
+- `SemanticTwin`: visible `Asset Hub`, `Asset Register`, `Asset Finance Hub`, and `Semantic Map Hub`.
+- Main report totals, subtotal flags, cap remaining values, and existing AssetFinance calculations have no intended change.
+
 ## 2026-04-29 - Add clickable hub section navigation
 
 Semantic change:

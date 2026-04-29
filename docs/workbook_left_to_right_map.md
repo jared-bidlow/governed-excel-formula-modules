@@ -8,7 +8,7 @@ Use this file as a generic navigation map for a governed workbook.
 Start Here -> Source Status -> Data Import Setup -> Planning Table -> refresh/re-sync -> tblBudgetInput -> Planning Review -> Analysis Hub
 ```
 
-Asset workflow is optional. `AssetsLite` continues from `Analysis Hub` to `Asset Hub`. `AssetsFull` continues from `Asset Hub` to `Asset Finance Hub`. `SemanticTwin` adds an optional `Semantic Map Hub` after the asset/finance flow for REC and Brick semantic crosswalk review.
+Asset workflow is optional. `AssetsLite` continues from `Analysis Hub` to `Asset Hub` and `Asset Register`. `AssetsFull` continues from `Asset Register` to `Asset Finance Hub`. `SemanticTwin` adds an optional `Semantic Map Hub` after the asset/finance flow for REC and Brick semantic crosswalk review.
 
 ## Workbook Areas
 
@@ -21,7 +21,8 @@ Asset workflow is optional. `AssetsLite` continues from `Analysis Hub` to `Asset
 | tblBudgetInput | Canonical formula source. | Lives on hidden `PQ Budget Input`; formulas read this table through `get`. |
 | Planning Review | Main report and notes-entry surface. | Preserve report totals, subtotal flags, and cap remaining values unless intentional. |
 | Analysis Hub | Scorecards, queues, burndown, working budget, and readiness output. | Includes a clickable `Go to section` table and replaces scattered analysis demo sheets. |
-| Asset Hub | Optional project-to-asset workflow onboarding, mode selection, next actions, and review queues. | Start with Asset Hub only when asset tracking is in scope; backend asset tables stay hidden/admin-scoped by default. |
+| Asset Hub | Optional asset workflow onboarding, simple asset-entry guidance, mode selection, next actions, and review queues. | Start with Asset Hub to decide whether assets are needed; backend asset sheets stay hidden/admin-scoped by default. |
+| Asset Register | Simple manual asset-entry table. | Start with Asset Register to enter a simple asset; `LinkedProjectID` is optional and advisory. |
 | Asset Finance Hub | Optional depreciation, funding, totals, and chart-ready feeds. | Asset Finance is advanced and requires classified evidence; reads classified model inputs only. |
 | Semantic Map Hub | Optional REC/Brick semantic crosswalk and triple export queue. | SemanticTwin only; this is not a full ontology import or completed digital-twin integration. |
 
@@ -39,9 +40,11 @@ Planning Review
 Analysis Hub
 ```
 
-`AssetsLite` makes `Asset Hub` visible. `AssetsFull` makes `Asset Hub` and `Asset Finance Hub` visible. `SemanticTwin` makes `Semantic Map Hub` visible for optional REC and Brick mapping. Do not start with PQ asset evidence sheets. Do not start with `Asset State History`.
+`AssetsLite` makes `Asset Hub` and `Asset Register` visible. `AssetsFull` makes `Asset Hub`, `Asset Register`, and `Asset Finance Hub` visible. `SemanticTwin` makes `Asset Hub`, `Asset Register`, `Asset Finance Hub`, and `Semantic Map Hub` visible for optional REC and Brick mapping. Do not start with Asset Evidence, Asset State History, or PQ asset sheets.
 
-The hidden backend includes `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, `Automation Setup`, asset workflow sheets, `Asset Finance Setup`, `Semantic Map Setup`, `Workbook Manifest`, and intermediate asset-evidence Power Query sheets. They are hidden, not deleted, so the workbook remains auditable. `tblWorkbookManifest[Presence]`, `tblWorkbookManifest[Edition]`, and `tblWorkbookManifest[FriendlyName]` mark generated sheets, edition visibility, user-facing labels, and `OptionalLegacy` sheet names.
+The hidden backend includes `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, `Automation Setup`, advanced asset workflow sheets, `Asset Finance Setup`, `Semantic Map Setup`, `Workbook Manifest`, and intermediate asset-evidence Power Query sheets. They are hidden, not deleted, so the workbook remains auditable. `tblWorkbookManifest[Presence]`, `tblWorkbookManifest[Edition]`, and `tblWorkbookManifest[FriendlyName]` mark generated sheets, edition visibility, user-facing labels, and `OptionalLegacy` sheet names.
+
+tblBudgetInput remains the manual/canonical planning input table for this release because refresh is not surfaced. Simple asset entry does not auto-populate `tblAssets` from `tblBudgetInput`, `Planning Table`, or Asset Evidence.
 
 SemanticTwin is optional. Use REC for buildings, spaces, rooms, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. This is not a full ontology dump and does not claim completed Fabric graph or Azure Digital Twins integration.
 
