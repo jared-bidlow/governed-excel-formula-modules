@@ -21,7 +21,9 @@ The generated `Governance_Starter.xltx` and the Office.js blank-workbook setup c
 | `PQ Budget QA` | `tblBudgetImportStatus` | Refresh and source-status output rows. |
 | `PQ Budget QA` | `tblBudgetImportIssues` | Schema or source review issues. |
 
-`tblBudgetInput` preserves the existing 64-column planning-table shape for this release. The `Planning Table` worksheet remains useful as the manual/starter input surface, but formulas read `tblBudgetInput[#All]` through `modules/get.formula.txt`.
+`tblBudgetInput` preserves the existing 64-column planning-table shape for this release. `tblBudgetInput` is the canonical formula source. The `Planning Table` worksheet remains useful as the manual/starter input and local writeback surface, but formulas read `tblBudgetInput[#All]` through `modules/get.formula.txt`.
+
+The generated starter keeps `PQ Budget Input` and `PQ Budget QA` hidden by default. Operators normally review import health through `Source Status` and use `Data Import Setup` plus `Planning Table` for setup and manual/local writeback.
 
 ## Power Query Templates
 
@@ -37,6 +39,7 @@ The source adapters are:
 - `qBudget_Source_AzureSql`
 - `qBudget_Source_Dataverse`
 - `qBudget_Source_FabricSqlEndpoint`
+- `qBudget_Source_Selected`
 
 The canonical shaping queries are:
 
@@ -48,15 +51,17 @@ The canonical shaping queries are:
 
 The database-oriented adapters are placeholder templates. They use public-safe placeholder names only. Do not commit real server names, tenant names, workspace names, connection strings, credentials, tokens, private URLs, or local workbook paths.
 
+`qBudget_Source_Selected` reads `tblBudgetImportParameters[ActiveAdapter]` and selects `CurrentWorkbook`, `AzureSQL`, `Dataverse`, or `FabricSqlEndpoint`. `qBudget_Normalized`, `qBudget_Issues`, and `qBudget_Status` use that selected adapter path.
+
 ## Operator Flow
 
 1. Open `Governance_Starter.xltx` as a workbook copy.
 2. Use `Planning Table` / `tblPlanningTable` for manual starter data, or import a Power Query adapter.
 3. Refresh Power Query so `qBudget_Input` loads `tblBudgetInput`.
-4. Review `PQ Budget QA` / `tblBudgetImportStatus` and `tblBudgetImportIssues`.
+4. Review `Source Status`; unhide `PQ Budget QA` only when troubleshooting `tblBudgetImportStatus` or `tblBudgetImportIssues`.
 5. Review formula outputs that now consume `tblBudgetInput`.
 
-If `ApplyNotes.ts` writes back to `Planning Table`, refresh the current-workbook budget adapter before relying on formula outputs that read `tblBudgetInput`.
+If `ApplyNotes.ts` writes back to `Planning Table`, or if an operator edits `Planning Table` manually, refresh or re-sync the current-workbook budget adapter before relying on formula outputs that read `tblBudgetInput`.
 
 ## Source Profile Rules
 

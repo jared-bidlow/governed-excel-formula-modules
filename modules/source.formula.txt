@@ -1,14 +1,11 @@
-SOURCE_STATUS = LET(
-    source_mode, IFERROR(INDEX(tblDataSourceProfile[SettingValue], XMATCH("SourceMode", tblDataSourceProfile[Setting], 0)), "not configured"),
-    last_refresh, IFERROR(INDEX(tblBudgetImportStatus[LastRefreshUtc], XMATCH("qBudget_Input", tblBudgetImportStatus[QueryName], 0)), ""),
-    import_status, IFERROR(INDEX(tblBudgetImportStatus[Status], XMATCH("qBudget_Input", tblBudgetImportStatus[QueryName], 0)), "not refreshed"),
+SOURCE_STATUS = LAMBDA(
     VSTACK(
-        {"Metric", "Value"},
+        HSTACK("Metric", "Value"),
         HSTACK("Canonical Table", "tblBudgetInput"),
-        HSTACK("Budget Input Rows", ROWS(tblBudgetInput[#Data])),
-        HSTACK("Source Mode", source_mode),
-        HSTACK("Last Refresh", last_refresh),
-        HSTACK("Import Status", import_status)
+        HSTACK("Budget Input Rows", ROWS(tblBudgetInput)),
+        HSTACK("Source Mode", XLOOKUP("SourceMode", tblDataSourceProfile[Setting], tblDataSourceProfile[SettingValue], "not configured")),
+        HSTACK("Last Refresh", IF(XLOOKUP("qBudget_Input", tblBudgetImportStatus[QueryName], tblBudgetImportStatus[LastRefreshUtc], "") = 0, "", XLOOKUP("qBudget_Input", tblBudgetImportStatus[QueryName], tblBudgetImportStatus[LastRefreshUtc], ""))),
+        HSTACK("Import Status", XLOOKUP("qBudget_Input", tblBudgetImportStatus[QueryName], tblBudgetImportStatus[Status], "not refreshed"))
     )
 );
 

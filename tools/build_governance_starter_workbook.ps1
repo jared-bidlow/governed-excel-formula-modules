@@ -117,6 +117,37 @@ function Add-Worksheet {
     return $sheet
 }
 
+function Get-WorksheetOrNull {
+    param(
+        [object]$Workbook,
+        [string]$Name
+    )
+
+    foreach ($sheet in $Workbook.Worksheets) {
+        if ([string]::Compare($sheet.Name, $Name, $true) -eq 0) {
+            return $sheet
+        }
+    }
+
+    return $null
+}
+
+function Remove-WorkbookTableIfExists {
+    param(
+        [object]$Workbook,
+        [string]$TableName
+    )
+
+    foreach ($sheet in $Workbook.Worksheets) {
+        for ($index = $sheet.ListObjects.Count; $index -ge 1; $index--) {
+            $table = $sheet.ListObjects.Item($index)
+            if ([string]::Compare($table.Name, $TableName, $true) -eq 0) {
+                [void]$table.Delete()
+            }
+        }
+    }
+}
+
 function Add-TableFromMatrix {
     param(
         [object]$Worksheet,
@@ -126,6 +157,7 @@ function Add-TableFromMatrix {
         [string]$Style = "TableStyleMedium2"
     )
 
+    Remove-WorkbookTableIfExists -Workbook $Worksheet.Parent -TableName $TableName
     $range = Write-Matrix -Worksheet $Worksheet -TopLeft $TopLeft -Rows $Rows
     $table = $Worksheet.ListObjects.Add(1, $range, $null, 1)
     $table.Name = $TableName
@@ -208,6 +240,322 @@ function Set-RangeFormula {
     } catch {
         $Range.Formula = $Formula
     }
+}
+
+function Set-InternalWorksheetLink {
+    param(
+        [object]$Range,
+        [string]$SheetName,
+        [string]$DisplayText,
+        [string]$TargetCell = "A1"
+    )
+
+    $safeSheet = $SheetName.Replace("'", "''")
+    $subAddress = "'$safeSheet'!$TargetCell"
+    try {
+        $Range.Hyperlinks.Delete()
+    } catch {
+        # Newly-created cells usually have no existing hyperlinks.
+    }
+    $Range.Value2 = $DisplayText
+    [void]$Range.Worksheet.Hyperlinks.Add($Range, "", $subAddress, "", $DisplayText)
+    $Range.Font.Color = 12611584
+    $Range.Font.Underline = 2
+}
+
+function Set-MergedPanel {
+    param(
+        [object]$Worksheet,
+        [string]$Address,
+        [string]$Text,
+        [int]$FillColor
+    )
+
+    $range = $Worksheet.Range($Address)
+    $range.Merge() | Out-Null
+    $range.Value2 = $Text
+    $range.WrapText = $true
+    $range.VerticalAlignment = -4160
+    $range.Interior.Color = $FillColor
+    $range.Borders.LineStyle = 1
+    $range.Borders.Color = 14277081
+}
+
+function Normalize-GeneratedSheetRows {
+    param(
+        [object]$Worksheet,
+        [int[]]$SectionRows = @(),
+        [int]$DefaultHeight = 20
+    )
+
+    try {
+        $Worksheet.UsedRange.Rows.RowHeight = $DefaultHeight
+        $Worksheet.Rows.Item(1).RowHeight = 28
+        $Worksheet.Rows.Item(2).RowHeight = 34
+        $Worksheet.Rows.Item(3).RowHeight = 8
+        foreach ($row in $SectionRows) {
+            $Worksheet.Rows.Item($row).RowHeight = 24
+            $Worksheet.Rows.Item($row + 1).RowHeight = 30
+        }
+    } catch {
+        Write-Warning "Skipped row-height normalization on $($Worksheet.Name): $($_.Exception.Message)"
+    }
+}
+
+function Apply-HubColumnWidthTemplate {
+    param(
+        [object]$Worksheet,
+        [string]$Template
+    )
+
+    if ($Template -eq "SourceStatus") {
+        $widths = @(24, 34, 18, 18, 18, 18)
+    } elseif ($Template -eq "PlanningReview") {
+        $widths = @(18, 18, 18, 16, 18, 16, 16, 16, 16, 16, 16, 16, 18, 18, 38, 36, 20, 20)
+    } elseif ($Template -eq "AssetFinance") {
+        $widths = @(24, 24, 22, 22, 20, 22, 20, 20, 20, 22, 24, 24, 18, 18, 18, 18)
+    } elseif ($Template -eq "Asset") {
+        $widths = @(26, 24, 36, 22, 22, 22, 22, 22, 22, 24, 24, 18, 18, 18, 18)
+    } else {
+        $widths = @(24, 22, 42, 18, 18, 18, 18, 18, 20, 20, 20, 18, 18, 18, 18)
+    }
+
+    for ($index = 0; $index -lt $widths.Count; $index++) {
+        $Worksheet.Columns.Item($index + 1).ColumnWidth = $widths[$index]
+    }
+}
+
+function Set-DocumentPropertyIfExists {
+    param(
+        [object]$Properties,
+        [string]$Name,
+        [string]$Value
+    )
+
+    try {
+        $Properties.Item($Name).Value = $Value
+    } catch {
+        return
+    }
+}
+
+function Set-PublicWorkbookProperties {
+    param([object]$Workbook)
+
+    $publicName = "Governed Excel Formula Modules"
+    Set-DocumentPropertyIfExists -Properties $Workbook.BuiltinDocumentProperties -Name "Author" -Value $publicName
+    Set-DocumentPropertyIfExists -Properties $Workbook.BuiltinDocumentProperties -Name "Last Author" -Value $publicName
+    Set-DocumentPropertyIfExists -Properties $Workbook.BuiltinDocumentProperties -Name "Company" -Value $publicName
+    Set-DocumentPropertyIfExists -Properties $Workbook.BuiltinDocumentProperties -Name "Manager" -Value ""
+}
+
+function Sanitize-WorkbookPackage {
+    param([string]$Path)
+
+    Add-Type -AssemblyName System.IO.Compression | Out-Null
+    Add-Type -AssemblyName System.IO.Compression.FileSystem | Out-Null
+    $archive = [System.IO.Compression.ZipFile]::Open($Path, [System.IO.Compression.ZipArchiveMode]::Update)
+    try {
+        $entries = @($archive.Entries | Where-Object {
+            $_.FullName.EndsWith(".xml", [System.StringComparison]::OrdinalIgnoreCase) -or
+            $_.FullName.EndsWith(".rels", [System.StringComparison]::OrdinalIgnoreCase)
+        })
+        foreach ($entry in $entries) {
+            $entryName = $entry.FullName
+            $reader = [System.IO.StreamReader]::new($entry.Open(), [System.Text.Encoding]::UTF8)
+            try {
+                $text = $reader.ReadToEnd()
+            } finally {
+                $reader.Close()
+            }
+
+            $clean = [regex]::Replace($text, '(?s)<mc:AlternateContent>.*?<x15ac:absPath\b.*?</mc:AlternateContent>', '')
+            $clean = [regex]::Replace($clean, '<x15ac:absPath\b[^>]*/>', '')
+            $clean = [regex]::Replace($clean, '(?s)<dc:creator>.*?</dc:creator>', '<dc:creator>Governed Excel Formula Modules</dc:creator>')
+            $clean = [regex]::Replace($clean, '(?s)<cp:lastModifiedBy>.*?</cp:lastModifiedBy>', '<cp:lastModifiedBy>Governed Excel Formula Modules</cp:lastModifiedBy>')
+            $clean = [regex]::Replace($clean, '(?s)<Company>.*?</Company>', '<Company>Governed Excel Formula Modules</Company>')
+            $clean = [regex]::Replace($clean, '(?s)<Manager>.*?</Manager>', '<Manager></Manager>')
+
+            if ($clean -ne $text) {
+                $entry.Delete()
+                $newEntry = $archive.CreateEntry($entryName, [System.IO.Compression.CompressionLevel]::Optimal)
+                $writer = [System.IO.StreamWriter]::new($newEntry.Open(), [System.Text.Encoding]::UTF8)
+                try {
+                    $writer.Write($clean)
+                } finally {
+                    $writer.Close()
+                }
+            }
+        }
+    } finally {
+        $archive.Dispose()
+    }
+}
+
+function Assert-WorkbookPackagePublic {
+    param([string]$Path)
+
+    Add-Type -AssemblyName System.IO.Compression | Out-Null
+    Add-Type -AssemblyName System.IO.Compression.FileSystem | Out-Null
+    $forbidden = @(
+        ("C:" + "\Users"),
+        ("/" + "Users/"),
+        ("." + "codex"),
+        ("ja" + "red"),
+        ("C:" + "\Truth"),
+        ("iCloud" + "Drive"),
+        ("One" + "Drive"),
+        ("public" + "-exports"),
+        ("release" + "_artifacts")
+    )
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($Path)
+    try {
+        foreach ($entry in $archive.Entries) {
+            if (-not ($entry.FullName.EndsWith(".xml", [System.StringComparison]::OrdinalIgnoreCase) -or $entry.FullName.EndsWith(".rels", [System.StringComparison]::OrdinalIgnoreCase))) {
+                continue
+            }
+            $reader = [System.IO.StreamReader]::new($entry.Open(), [System.Text.Encoding]::UTF8)
+            try {
+                $text = $reader.ReadToEnd()
+            } finally {
+                $reader.Close()
+            }
+            foreach ($needle in $forbidden) {
+                if ($text.IndexOf($needle, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                    throw "Release artifact contains forbidden metadata '$needle' in $($entry.FullName): $Path"
+                }
+            }
+        }
+    } finally {
+        $archive.Dispose()
+    }
+}
+
+function Assert-NoVisibleWorkbookErrors {
+    param([object]$Workbook)
+
+    $blocked = @("#N/A", "#REF!", "#VALUE!", "#NAME?", "#DIV/0!")
+    foreach ($sheet in $Workbook.Worksheets) {
+        if ($sheet.Visible -ne -1) { continue }
+        $used = $sheet.UsedRange
+        foreach ($cell in $used.Cells) {
+            $text = [string]$cell.Text
+            if ($blocked -contains $text) {
+                throw "Visible workbook error $text at $($sheet.Name)!$($cell.Address($false, $false))"
+            }
+        }
+    }
+}
+
+function Color-Rgb {
+    param(
+        [int]$Red,
+        [int]$Green,
+        [int]$Blue
+    )
+
+    return $Red + ($Green * 256) + ($Blue * 65536)
+}
+
+function Format-PageHeader {
+    param(
+        [object]$Worksheet,
+        [string]$Title,
+        [string]$Subtitle,
+        [string]$BandRange = "A1:I3"
+    )
+
+    $headerFill = Color-Rgb 31 78 121
+    $subtitleFill = Color-Rgb 47 117 181
+    $Worksheet.Cells.Font.Name = "Aptos"
+    $band = $Worksheet.Range($BandRange)
+    $band.Interior.Color = $headerFill
+    $band.Font.Color = 16777215
+    $band.WrapText = $true
+    $Worksheet.Range("A1").Value2 = $Title
+    $Worksheet.Range("A1").Font.Bold = $true
+    $Worksheet.Range("A1").Font.Size = 20
+    $Worksheet.Range("A2").Value2 = $Subtitle
+    $Worksheet.Range("A2").Interior.Color = $subtitleFill
+    $Worksheet.Range("A2").Font.Color = 16777215
+    $Worksheet.Range("A2").Font.Size = 10
+    $Worksheet.Range("A2").WrapText = $true
+    $Worksheet.Rows.Item(1).RowHeight = 28
+    $Worksheet.Rows.Item(2).RowHeight = 34
+    $Worksheet.Rows.Item(3).RowHeight = 8
+}
+
+function Format-SectionHeader {
+    param(
+        [object]$Anchor,
+        [string]$Title,
+        [string]$Note
+    )
+
+    $sectionFill = Color-Rgb 226 239 218
+    $noteFill = Color-Rgb 242 242 242
+    $sectionRange = $Anchor.Resize(1, 8)
+    $noteRange = $Anchor.Offset(1, 0).Resize(1, 8)
+    $sectionRange.Interior.Color = $sectionFill
+    $sectionRange.Font.Color = 0
+    $sectionRange.Font.Bold = $true
+    $sectionRange.Borders.LineStyle = 1
+    $sectionRange.Borders.Color = Color-Rgb 169 208 142
+    $Anchor.Value2 = $Title
+    $noteRange.Interior.Color = $noteFill
+    $noteRange.Font.Italic = $true
+    $noteRange.Font.Color = Color-Rgb 89 89 89
+    $noteRange.WrapText = $true
+    $Anchor.Offset(1, 0).Value2 = $Note
+}
+
+function Add-HubSection {
+    param(
+        [object]$Worksheet,
+        [string]$Cell,
+        [string]$Title,
+        [string]$Note,
+        [string]$Formula
+    )
+
+    $anchor = $Worksheet.Range($Cell)
+    Format-SectionHeader -Anchor $anchor -Title $Title -Note $Note
+    [void](Set-RangeFormula -Range $anchor.Offset(3, 0) -Formula $Formula)
+}
+
+function Add-HubTableOfContents {
+    param(
+        [object]$Worksheet,
+        [string]$TableName,
+        [object[]]$Sections
+    )
+
+    $rows = New-Object 'object[][]' ($Sections.Count + 1)
+    $rows[0] = [object[]]@("Section", "What it shows")
+    for ($index = 0; $index -lt $Sections.Count; $index++) {
+        $rows[$index + 1] = [object[]]@($Sections[$index].Title, $Sections[$index].Note)
+    }
+
+    $table = Add-TableFromMatrix -Worksheet $Worksheet -TableName $TableName -TopLeft "A4" -Rows $rows
+    for ($index = 0; $index -lt $Sections.Count; $index++) {
+        $cell = $table.DataBodyRange.Cells.Item($index + 1, 1)
+        Set-InternalWorksheetLink -Range $cell -SheetName $Worksheet.Name -DisplayText $Sections[$index].Title -TargetCell $Sections[$index].Cell
+    }
+    $Worksheet.Columns.Item(1).ColumnWidth = 28
+    $Worksheet.Columns.Item(2).ColumnWidth = 64
+    return $table
+}
+
+function Format-HubSheet {
+    param(
+        [object]$Worksheet,
+        [string]$Title,
+        [string]$Note,
+        [string]$ClearRange = "A1:Z340"
+    )
+
+    $Worksheet.Range($ClearRange).Clear()
+    Format-PageHeader -Worksheet $Worksheet -Title $Title -Subtitle $Note -BandRange "A1:Z3"
 }
 
 function Set-FreezeRows {
@@ -520,17 +868,17 @@ function Build-PlanningReview {
 
     $Worksheet.Range("A1:N3").Clear()
     $Worksheet.Range("A1").Value2 = "Planning Review"
-    [void](Write-Matrix -Worksheet $Worksheet -TopLeft "B1" -Rows @(
-        ,@("Group", "Future Filter", "Closed Rows", "Burndown Cut Target")
-    ))
-    [void](Write-Matrix -Worksheet $Worksheet -TopLeft "A2" -Rows @(
-        ,@("Controls", "BU", "All", "SHOW", 0)
-    ))
+    $reviewHeaderRows = New-Object 'object[][]' 1
+    $reviewHeaderRows[0] = [object[]]@("Group", "Future Filter", "Closed Rows", "Burndown Cut Target")
+    [void](Write-Matrix -Worksheet $Worksheet -TopLeft "B1" -Rows $reviewHeaderRows)
+    $reviewControlRows = New-Object 'object[][]' 1
+    $reviewControlRows[0] = [object[]]@("Controls", "BU", "All", "SHOW", 0)
+    [void](Write-Matrix -Worksheet $Worksheet -TopLeft "A2" -Rows $reviewControlRows)
     $Worksheet.Range("A3").Value2 = "Main report spill starts at A4. Columns O:R are reserved for notes."
-    [void](Write-Matrix -Worksheet $Worksheet -TopLeft "M1" -Rows @(
-        ,@("Report As Of", "Defer As Of"),
-        ,@("Mar", "Mar")
-    ))
+    $reviewMonthRows = New-Object 'object[][]' 2
+    $reviewMonthRows[0] = [object[]]@("Report As Of Month", "Defer As Of Month")
+    $reviewMonthRows[1] = [object[]]@("Mar", "Mar")
+    [void](Write-Matrix -Worksheet $Worksheet -TopLeft "M1" -Rows $reviewMonthRows)
 
     $Worksheet.Range("A1").Font.Bold = $true
     $Worksheet.Range("A1").Font.Size = 16
@@ -548,19 +896,24 @@ function Build-PlanningReview {
     [void](Add-NonNegativeValidation -Range $Worksheet.Range("E2"))
 
     [void]$Worksheet.Columns.AutoFit()
+    Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "PlanningReview"
 }
 
 function Build-PlanningReviewNotes {
     param([object]$Worksheet)
 
-    [void](Write-Matrix -Worksheet $Worksheet -TopLeft "O1" -Rows @(
-        ,@("ApplyNotes Control", "Run 1: Prepare", "Run 2: Apply", "After Apply"),
-        ,@("Type updates in P:R", "Run ApplyNotes once", "Run ApplyNotes again", "P:R clears"),
-        ,@("Check Decision Staging", "Rows should say Prepared", "Prepared rows write back", "Column O refreshes"),
-        ,@("ExistingMeetingNotes", "NewPlanningNotes", "NewTimeline", "NewStatus")
-    ))
+    $notesFlowRows = New-Object 'object[][]' 3
+    $notesFlowRows[0] = [object[]]@("ApplyNotes Control", "Run 1: Prepare", "Run 2: Apply", "After Apply")
+    $notesFlowRows[1] = [object[]]@("Type updates in P:R", "Run ApplyNotes once", "Run ApplyNotes again", "P:R clears")
+    $notesFlowRows[2] = [object[]]@("Check Decision Staging", "Rows should say Prepared", "Prepared rows write back", "Column O refreshes")
+    [void](Write-Matrix -Worksheet $Worksheet -TopLeft "O1" -Rows $notesFlowRows)
+    $notesHeaderRows = New-Object 'object[][]' 1
+    $notesHeaderRows[0] = [object[]]@("ExistingMeetingNotes", "NewPlanningNotes", "NewTimeline", "NewStatus")
+    [void](Write-Matrix -Worksheet $Worksheet -TopLeft "O4" -Rows $notesHeaderRows)
     $Worksheet.Range("O1:R3").Interior.Color = 14873826
-    $Worksheet.Range("O1:R4").Font.Bold = $true
+    $Worksheet.Range("O4:R4").Interior.Color = 14281447
+    $Worksheet.Range("O1:R1").Font.Bold = $true
+    $Worksheet.Range("O4:R4").Font.Bold = $true
     $Worksheet.Range("O5").Formula2 = '=IFERROR(Notes.Existing,"")'
     $Worksheet.Range("O5:O200").Interior.Color = 16448250
     $Worksheet.Range("P5:R200").Interior.Color = 13431551
@@ -569,17 +922,18 @@ function Build-PlanningReviewNotes {
     ))
     [void](Add-ValidationList -Range $Worksheet.Range("R5:R200") -Source (Get-ListValidationSource "statuses"))
     [void]$Worksheet.Columns.AutoFit()
+    Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "PlanningReview"
 }
 
 function Build-AutomationSetup {
     param([object]$Worksheet)
 
     $Worksheet.Range("A1:F40").Clear()
-    $Worksheet.Range("A1").Value2 = "Automation Setup"
-    $Worksheet.Range("A2").Value2 = "Optional Office Scripts are distributed as source files. Import them into Excel Automate when writeback automation is wanted."
-    $Worksheet.Range("A1").Font.Bold = $true
-    $Worksheet.Range("A1").Font.Size = 16
-    $Worksheet.Range("A2").WrapText = $true
+    Format-PageHeader `
+        -Worksheet $Worksheet `
+        -Title "Automation Setup" `
+        -Subtitle "Optional Office Scripts are distributed as source files. Import them into Excel Automate when writeback automation is wanted." `
+        -BandRange "A1:F3"
 
     $automationRows = New-Object 'object[][]' 7
     $automationRows[0] = [object[]]@("Step", "Action", "Why it matters")
@@ -612,11 +966,11 @@ function Build-AssetFinanceSetup {
     param([object]$Worksheet)
 
     $Worksheet.Range("A1:F40").Clear()
-    $Worksheet.Range("A1").Value2 = "Asset Finance Setup"
-    $Worksheet.Range("A2").Value2 = "Assumptions for AssetFinance formulas. Finance outputs read tblAssetEvidence_ModelInputs and keep mapped-only evidence out of final model outputs."
-    $Worksheet.Range("A1").Font.Bold = $true
-    $Worksheet.Range("A1").Font.Size = 16
-    $Worksheet.Range("A2").WrapText = $true
+    Format-PageHeader `
+        -Worksheet $Worksheet `
+        -Title "Asset Finance Setup" `
+        -Subtitle "Assumptions for AssetFinance formulas. Finance outputs read tblAssetEvidence_ModelInputs and keep mapped-only evidence out of final model outputs." `
+        -BandRange "A1:F3"
 
     [void](Add-TableFromMatrix `
         -Worksheet $Worksheet `
@@ -634,11 +988,11 @@ function Build-DataImportSetup {
     param([object]$Worksheet)
 
     $Worksheet.Range("A1:H100").Clear()
-    $Worksheet.Range("A1").Value2 = "Data Import Setup"
-    $Worksheet.Range("A2").Value2 = "Public-safe source profile and canonical budget import contract. Formulas read tblBudgetInput; Planning Table remains the manual starter source."
-    $Worksheet.Range("A1").Font.Bold = $true
-    $Worksheet.Range("A1").Font.Size = 16
-    $Worksheet.Range("A2").WrapText = $true
+    Format-PageHeader `
+        -Worksheet $Worksheet `
+        -Title "Data Import Setup" `
+        -Subtitle "Public-safe source profile and canonical budget import contract. Formulas read tblBudgetInput; Planning Table remains the manual starter source." `
+        -BandRange "A1:H3"
 
     [void](Add-TableFromMatrix `
         -Worksheet $Worksheet `
@@ -660,6 +1014,16 @@ function Build-DataImportSetup {
 
     $Worksheet.Range("A:H").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
+    $Worksheet.Columns.Item(1).ColumnWidth = 24
+    $Worksheet.Columns.Item(2).ColumnWidth = 34
+    $Worksheet.Columns.Item(3).ColumnWidth = 58
+    $Worksheet.Columns.Item(4).ColumnWidth = 64
+    $Worksheet.Columns.Item(5).ColumnWidth = 24
+    $Worksheet.Columns.Item(6).ColumnWidth = 34
+    $Worksheet.Columns.Item(7).ColumnWidth = 58
+    $Worksheet.Columns.Item(8).ColumnWidth = 18
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @() -DefaultHeight 20
+    $Worksheet.Rows.Item(2).RowHeight = 36
 }
 
 function Build-BudgetInput {
@@ -682,8 +1046,11 @@ function Build-BudgetQA {
     param([object]$Worksheet)
 
     $Worksheet.Range("A1:F80").Clear()
-    $Worksheet.Range("A1").Value2 = "Budget Import Status"
-    $Worksheet.Range("A1").Font.Bold = $true
+    Format-PageHeader `
+        -Worksheet $Worksheet `
+        -Title "Budget Import QA" `
+        -Subtitle "Hidden import status and issue tables surfaced through Source Status." `
+        -BandRange "A1:F2"
     [void](Add-TableFromMatrix `
         -Worksheet $Worksheet `
         -TableName "tblBudgetImportStatus" `
@@ -700,6 +1067,243 @@ function Build-BudgetQA {
 
     $Worksheet.Range("A:F").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
+}
+
+function Build-WorkbookManifest {
+    param([object]$Worksheet)
+
+    $Worksheet.Range("A1:J200").Clear()
+    Format-PageHeader `
+        -Worksheet $Worksheet `
+        -Title "Workbook Manifest" `
+        -Subtitle "Source-controlled sheet/table map used for workbook navigation and visibility." `
+        -BandRange "A1:J3"
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblWorkbookManifest" `
+        -TopLeft "A4" `
+        -Rows (Read-TsvMatrix "samples\workbook_manifest.tsv"))
+    $Worksheet.Range("A:J").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+    $Worksheet.Columns.Item(6).ColumnWidth = 18
+    $Worksheet.Columns.Item(10).ColumnWidth = 52
+}
+
+function Build-StartHere {
+    param([object]$Worksheet)
+
+    $Worksheet.Range("A1:M80").Clear()
+    Format-PageHeader `
+        -Worksheet $Worksheet `
+        -Title "Start Here" `
+        -Subtitle "Use this workbook left to right: check source health, configure imports, refresh the canonical input, review outputs, then use hidden backend sheets only when troubleshooting." `
+        -BandRange "A1:M3"
+
+    Format-SectionHeader `
+        -Anchor $Worksheet.Range("A5") `
+        -Title "Workbook flow" `
+        -Note "The workbook keeps data intake, canonical source rows, formula outputs, review hubs, and optional staged writeback as separate surfaces."
+    $flowRows = New-Object 'object[][]' 7
+    $flowRows[0] = [object[]]@("Step", "From", "To", "Purpose")
+    $flowRows[1] = [object[]]@("1", "Manual source / database / Fabric / Dataverse", "Power Query or current-workbook adapter", "Select and shape incoming planning data.")
+    $flowRows[2] = [object[]]@("2", "Power Query or current-workbook adapter", "tblBudgetInput", "Load the canonical 64-column planning contract.")
+    $flowRows[3] = [object[]]@("3", "tblBudgetInput", "Governed formula modules", "Keep formulas independent of the source system.")
+    $flowRows[4] = [object[]]@("4", "Governed formula modules", "Planning Review / Analysis Hub / Asset Hub / Asset Finance Hub", "Review controlled outputs on a smaller visible sheet set.")
+    $flowRows[5] = [object[]]@("5", "Planning Review P:R", "Decision Staging", "Prepare optional notes/status/timeline writeback.")
+    $flowRows[6] = [object[]]@("6", "Decision Staging", "Planning Table", "Apply reviewed writeback, then refresh or re-sync before relying on outputs.")
+    [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblStartHereFlow" -TopLeft "A7" -Rows $flowRows)
+
+    Format-SectionHeader `
+        -Anchor $Worksheet.Range("F5") `
+        -Title "Key rule" `
+        -Note "tblBudgetInput is the canonical formula source. Planning Table is manual/staging/local writeback. After Planning Table edits or ApplyNotes, refresh or re-sync before relying on formula outputs."
+    Set-MergedPanel `
+        -Worksheet $Worksheet `
+        -Address "F7:M13" `
+        -Text "Key source boundary: tblBudgetInput is the canonical formula source. Planning Table is a manual/staging/local writeback surface. If Planning Table changes manually or through ApplyNotes, refresh or re-sync the current-workbook adapter before relying on Planning Review, Analysis Hub, Asset Hub, or Asset Finance Hub outputs." `
+        -FillColor 13431551
+
+    Format-SectionHeader `
+        -Anchor $Worksheet.Range("A16") `
+        -Title "Go to" `
+        -Note "Use these visible sheets for the normal left-to-right operator flow."
+    $navRows = New-Object 'object[][]' 9
+    $navRows[0] = [object[]]@("Sheet", "Use it for", "Normal action")
+    $navRows[1] = [object[]]@("Source Status", "Check freshness and import issues.", "Review first.")
+    $navRows[2] = [object[]]@("Data Import Setup", "Configure source mode and schema.", "Update source profile and contract.")
+    $navRows[3] = [object[]]@("Planning Table", "Manual starter/local writeback.", "Edit only when using manual/current-workbook mode.")
+    $navRows[4] = [object[]]@("Cap Setup", "BU cap limits.", "Review or update caps.")
+    $navRows[5] = [object[]]@("Planning Review", "Main planning report.", "Run meeting review and enter P:R notes.")
+    $navRows[6] = [object[]]@("Analysis Hub", "Planning analysis outputs.", "Review scorecards, queues, burndown, and readiness.")
+    $navRows[7] = [object[]]@("Asset Hub", "Asset workflow queues.", "Review asset mapping and state issues.")
+    $navRows[8] = [object[]]@("Asset Finance Hub", "Asset finance outputs.", "Review depreciation, funding, totals, and chart-ready feeds.")
+    $navTable = Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblStartHereNavigation" -TopLeft "A18" -Rows $navRows
+    for ($index = 1; $index -le 8; $index++) {
+        $sheetName = [string]$navRows[$index][0]
+        Set-InternalWorksheetLink -Range $navTable.DataBodyRange.Cells.Item($index, 1) -SheetName $sheetName -DisplayText $sheetName
+    }
+
+    Format-SectionHeader `
+        -Anchor $Worksheet.Range("F16") `
+        -Title "Backend/admin sheets" `
+        -Note "Hidden sheets keep the governed backend available without putting every implementation table in the normal operator path."
+    Set-MergedPanel `
+        -Worksheet $Worksheet `
+        -Address "F18:M24" `
+        -Text "Hidden backend/admin sheets are still part of the governed workbook. PQ Budget Input, PQ Budget QA, Validation Lists, Decision Staging, Automation Setup, asset setup tables, Workbook Manifest, and intermediate asset-evidence outputs stay hidden by default. Unhide them only for troubleshooting, administration, or release checks." `
+        -FillColor 16448250
+    $Worksheet.Range("A:M").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+    $Worksheet.Columns.Item(3).ColumnWidth = 42
+    $Worksheet.Columns.Item(4).ColumnWidth = 52
+    $Worksheet.Columns.Item(6).ColumnWidth = 16
+    $Worksheet.Columns.Item(7).ColumnWidth = 18
+    $Worksheet.Columns.Item(8).ColumnWidth = 18
+    $Worksheet.Columns.Item(9).ColumnWidth = 18
+    $Worksheet.Columns.Item(10).ColumnWidth = 18
+    $Worksheet.Columns.Item(11).ColumnWidth = 18
+    $Worksheet.Columns.Item(12).ColumnWidth = 18
+    $Worksheet.Columns.Item(13).ColumnWidth = 18
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(5, 16) -DefaultHeight 20
+    $Worksheet.Rows.Item(7).RowHeight = 24
+    $Worksheet.Rows.Item(8).RowHeight = 24
+    $Worksheet.Rows.Item(9).RowHeight = 24
+    $Worksheet.Rows.Item(10).RowHeight = 24
+    $Worksheet.Rows.Item(11).RowHeight = 24
+    $Worksheet.Rows.Item(12).RowHeight = 24
+    $Worksheet.Rows.Item(13).RowHeight = 24
+    foreach ($row in 18..24) {
+        $Worksheet.Rows.Item($row).RowHeight = 22
+    }
+}
+
+function Build-SourceStatus {
+    param([object]$Worksheet)
+
+    Format-HubSheet `
+        -Worksheet $Worksheet `
+        -Title "Source Status" `
+        -Note "Canonical budget import status and source trust checks." `
+        -ClearRange "A1:Z80"
+    [void](Set-RangeFormula -Range $Worksheet.Range("A4") -Formula "=Source.SOURCE_STATUS()")
+    $Worksheet.Range("A:Z").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+    Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "SourceStatus"
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @() -DefaultHeight 20
+}
+
+function Build-AnalysisHub {
+    param([object]$Worksheet)
+
+    Format-HubSheet `
+        -Worksheet $Worksheet `
+        -Title "Analysis Hub" `
+        -Note "Planning outputs grouped into one review surface instead of separate demo sheets." `
+        -ClearRange "A1:Z360"
+    $sections = @(
+        @{ Cell = "A14"; Title = "BU Cap Scorecard"; Note = "Cap and spend posture by BU."; Formula = "=Analysis.BU_CAP_SCORECARD()" },
+        @{ Cell = "A52"; Title = "Reforecast Queue"; Note = "Grouped action queue for forecast review."; Formula = "=Analysis.REFORECAST_QUEUE()" },
+        @{ Cell = "A114"; Title = "PM Spend Report"; Note = "Existing-work summary and job detail."; Formula = "=Analysis.PM_SPEND_REPORT()" },
+        @{ Cell = "A176"; Title = "Working Budget Screen"; Note = "Current-job screening before budget drafting."; Formula = "=Analysis.WORKING_BUDGET_SCREEN()" },
+        @{ Cell = "A238"; Title = "Burndown Screen"; Note = "Meeting view of remaining burn and drivers."; Formula = "=Analysis.BURNDOWN_SCREEN()" },
+        @{ Cell = "A300"; Title = "Internal Jobs Export"; Note = "Header-driven internal work export for readiness smoke testing."; Formula = "=Ready.InternalJobs_Export()" }
+    )
+    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAnalysisHubSections" -Sections $sections)
+    foreach ($section in $sections) {
+        Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
+    }
+    $Worksheet.Range("A:Z").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+    Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "Analysis"
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(14, 52, 114, 176, 238, 300) -DefaultHeight 20
+}
+
+function Build-AssetHub {
+    param([object]$Worksheet)
+
+    Format-HubSheet `
+        -Worksheet $Worksheet `
+        -Title "Asset Hub" `
+        -Note "Asset workflow review queues; backend asset tables stay hidden unless administration is needed." `
+        -ClearRange "A1:Z230"
+    $sections = @(
+        @{ Cell = "A13"; Title = "Asset Mapping Issues"; Note = "Project-to-asset mapping issues for review."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
+        @{ Cell = "A53"; Title = "Project Promotion Queue"; Note = "Candidate asset promotion rows."; Formula = "=Assets.PROJECT_PROMOTION_QUEUE" },
+        @{ Cell = "A93"; Title = "Asset Change Issues"; Note = "Change staging issues before controlled apply."; Formula = "=Assets.ASSET_CHANGE_ISSUES" },
+        @{ Cell = "A133"; Title = "Installed Without Evidence"; Note = "Installed-state assets missing evidence links."; Formula = "=Assets.INSTALLED_WITHOUT_EVIDENCE" },
+        @{ Cell = "A173"; Title = "Replacement Source/Target Issues"; Note = "Replacement rows missing required source or target asset context."; Formula = "=Assets.REPLACEMENT_SOURCE_TARGET_ISSUES" }
+    )
+    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetHubSections" -Sections $sections)
+    foreach ($section in $sections) {
+        Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
+    }
+    $Worksheet.Range("A:Z").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+    Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "Asset"
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(13, 53, 93, 133, 173) -DefaultHeight 20
+}
+
+function Build-AssetFinanceHub {
+    param([object]$Worksheet)
+
+    Format-HubSheet `
+        -Worksheet $Worksheet `
+        -Title "Asset Finance Hub" `
+        -Note "Classified asset evidence converted into depreciation, funding, total, and chart-ready finance outputs." `
+        -ClearRange "A1:Z220"
+    $sections = @(
+        @{ Cell = "A12"; Title = "Asset Depreciation"; Note = "Classified asset evidence converted to depreciation-ready rows."; Formula = "=AssetFinance.DEPRECIATION_SCHEDULE" },
+        @{ Cell = "A84"; Title = "Asset Funding Requirements"; Note = "Classified asset evidence grouped into funding requirements."; Formula = "=AssetFinance.FUNDING_REQUIREMENTS" },
+        @{ Cell = "A140"; Title = "Asset Finance Totals"; Note = "Asset finance summary totals from classified model inputs."; Formula = "=AssetFinance.FINANCE_TOTALS" },
+        @{ Cell = "A168"; Title = "Asset Finance Charts"; Note = "Chart-ready asset finance feeds; no native chart objects yet."; Formula = "=AssetFinance.CHART_FEEDS" }
+    )
+    [void](Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblAssetFinanceHubSections" -Sections $sections)
+    foreach ($section in $sections) {
+        Add-HubSection -Worksheet $Worksheet -Cell $section.Cell -Title $section.Title -Note $section.Note -Formula $section.Formula
+    }
+    $Worksheet.Range("A:Z").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+    Apply-HubColumnWidthTemplate -Worksheet $Worksheet -Template "AssetFinance"
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(12, 84, 140, 168) -DefaultHeight 20
+}
+
+function Apply-WorkbookManifestVisibility {
+    param([object]$Workbook)
+
+    $visibleValue = -1
+    $hiddenValue = 0
+    $rows = Read-TsvMatrix "samples\workbook_manifest.tsv"
+    $visibleSheetOrder = @()
+    $startSheet = Get-WorksheetOrNull -Workbook $Workbook -Name "Start Here"
+    if ($null -ne $startSheet) {
+        $startSheet.Visible = $visibleValue
+        [void]$startSheet.Activate()
+    }
+
+    for ($index = 1; $index -lt $rows.Count; $index++) {
+        $sheetName = [string]$rows[$index][0]
+        $visibility = ([string]$rows[$index][4]).Trim().ToLowerInvariant()
+        if ([string]::IsNullOrWhiteSpace($sheetName)) { continue }
+
+        $sheet = Get-WorksheetOrNull -Workbook $Workbook -Name $sheetName
+        if ($null -eq $sheet) { continue }
+
+        if ($visibility -eq "visible") {
+            $sheet.Visible = $visibleValue
+            $visibleSheetOrder += $sheetName
+        } elseif ($visibility -eq "hidden") {
+            $sheet.Visible = $hiddenValue
+        } else {
+            throw "Unsupported workbook manifest visibility '$visibility' for sheet '$sheetName'."
+        }
+    }
+
+    for ($index = $visibleSheetOrder.Count - 1; $index -ge 0; $index--) {
+        $sheet = Get-WorksheetOrNull -Workbook $Workbook -Name $visibleSheetOrder[$index]
+        if ($null -ne $sheet) {
+            [void]$sheet.Move($Workbook.Worksheets.Item(1))
+        }
+    }
 }
 
 function Configure-DecisionStagingFormulas {
@@ -786,35 +1390,14 @@ function Build-AssetWorkflowTables {
 function Build-DemoOutputs {
     param([object]$Workbook)
 
-    $outputs = @(
-        @{ Sheet = "Planning Review"; Formula = "=CapitalPlanning.CAPITAL_PLANNING_REPORT()" },
-        @{ Sheet = "BU Cap Scorecard"; Title = "BU Cap Scorecard"; Note = "Cap and spend posture by BU."; Formula = "=Analysis.BU_CAP_SCORECARD()" },
-        @{ Sheet = "Reforecast Queue"; Title = "Reforecast Queue"; Note = "Grouped action queue for forecast review."; Formula = "=Analysis.REFORECAST_QUEUE()" },
-        @{ Sheet = "PM Spend Report"; Title = "PM Spend Report"; Note = "Existing-work summary and job detail."; Formula = "=Analysis.PM_SPEND_REPORT()" },
-        @{ Sheet = "Working Budget"; Title = "Working Budget Screen"; Note = "Current-job screening before budget drafting."; Formula = "=Analysis.WORKING_BUDGET_SCREEN()" },
-        @{ Sheet = "Burndown"; Title = "Burndown Screen"; Note = "Meeting view of remaining burn and drivers."; Formula = "=Analysis.BURNDOWN_SCREEN()" },
-        @{ Sheet = "Internal Jobs"; Title = "Internal Jobs Export"; Note = "Header-driven internal work export for readiness smoke testing."; Formula = "=Ready.InternalJobs_Export()" },
-        @{ Sheet = "Source Status"; Title = "Source Status"; Note = "Canonical budget import status and source trust checks."; Formula = "=Source.SOURCE_STATUS" },
-        @{ Sheet = "Asset Review"; Title = "Asset Review"; Note = "Asset workflow issue queues from source-controlled formula modules."; Formula = "=Assets.ASSET_MAPPING_ISSUES" },
-        @{ Sheet = "Asset Depreciation"; Title = "Asset Depreciation"; Note = "Classified asset evidence converted to depreciation-ready rows."; Formula = "=AssetFinance.DEPRECIATION_SCHEDULE" },
-        @{ Sheet = "Asset Funding Requirements"; Title = "Asset Funding Requirements"; Note = "Classified asset evidence grouped into funding requirements."; Formula = "=AssetFinance.FUNDING_REQUIREMENTS" },
-        @{ Sheet = "Asset Finance Totals"; Title = "Asset Finance Totals"; Note = "Asset finance summary totals from classified model inputs."; Formula = "=AssetFinance.FINANCE_TOTALS" },
-        @{ Sheet = "Asset Finance Charts"; Title = "Asset Finance Charts"; Note = "Chart-ready asset finance feeds; no native chart objects yet."; Formula = "=AssetFinance.CHART_FEEDS" }
-    )
+    $reviewSheet = Add-Worksheet -Workbook $Workbook -Name "Planning Review"
+    [void](Set-RangeFormula -Range $reviewSheet.Range("A4") -Formula "=CapitalPlanning.CAPITAL_PLANNING_REPORT()")
 
-    foreach ($output in $outputs) {
-        $sheet = Add-Worksheet -Workbook $Workbook -Name $output.Sheet
-        if ($output.Sheet -ne "Planning Review") {
-            $sheet.Range("A1:Z300").Clear()
-            $sheet.Range("A1").Value2 = $output.Title
-            $sheet.Range("A2").Value2 = $output.Note
-            $sheet.Range("A1").Font.Bold = $true
-            $sheet.Range("A1").Font.Size = 16
-            $sheet.Range("A2").Font.Italic = $true
-        }
-        [void](Set-RangeFormula -Range $sheet.Range("A4") -Formula $output.Formula)
-        [void]$sheet.Columns.AutoFit()
-    }
+    Build-StartHere -Worksheet (Add-Worksheet -Workbook $Workbook -Name "Start Here")
+    Build-SourceStatus -Worksheet (Add-Worksheet -Workbook $Workbook -Name "Source Status")
+    Build-AnalysisHub -Worksheet (Add-Worksheet -Workbook $Workbook -Name "Analysis Hub")
+    Build-AssetHub -Worksheet (Add-Worksheet -Workbook $Workbook -Name "Asset Hub")
+    Build-AssetFinanceHub -Worksheet (Add-Worksheet -Workbook $Workbook -Name "Asset Finance Hub")
 }
 
 $excel = $null
@@ -830,8 +1413,11 @@ try {
         [void]$workbook.Worksheets.Item($workbook.Worksheets.Count).Delete()
     }
 
-    $planningSheet = $workbook.Worksheets.Item(1)
-    $planningSheet.Name = "Planning Table"
+    $startSheet = $workbook.Worksheets.Item(1)
+    $startSheet.Name = "Start Here"
+    [void](Build-StartHere -Worksheet $startSheet)
+
+    $planningSheet = Add-Worksheet -Workbook $workbook -Name "Planning Table"
     [void](Add-TableFromMatrix -Worksheet $planningSheet -TableName "tblPlanningTable" -TopLeft "A2" -Rows (Read-TsvMatrix "samples\planning_table_starter.tsv"))
     $planningSheet.Range("A2:BL2").Font.Bold = $true
     $planningSheet.Range("A2:BL2").Font.Color = 0
@@ -895,7 +1481,11 @@ try {
     Build-AssetWorkflowTables -Workbook $workbook -Excel $excel | Out-Null
     Build-AssetRelationshipLists -Worksheet $validationSheet | Out-Null
 
-    [void]$reviewSheet.Activate()
+    $manifestSheet = Add-Worksheet -Workbook $workbook -Name "Workbook Manifest"
+    [void](Build-WorkbookManifest -Worksheet $manifestSheet)
+
+    Set-PublicWorkbookProperties -Workbook $workbook
+    [void]$startSheet.Activate()
     [void]$workbook.SaveAs($coreWorkbookPath, 51)
     Write-Host "Built core governance workbook: $coreWorkbookPath"
 } finally {
@@ -926,7 +1516,12 @@ try {
     $workbook = $excel.Workbooks.Open($starterWorkbookPath)
     $installedNames = Install-FormulaModules -Workbook $workbook
     Build-DemoOutputs -Workbook $workbook | Out-Null
-    [void]$workbook.Worksheets.Item("Planning Review").Activate()
+    [void]$workbook.Worksheets.Item("Start Here").Activate()
+    Apply-WorkbookManifestVisibility -Workbook $workbook
+    [void]$workbook.Worksheets.Item("Start Here").Activate()
+    Set-PublicWorkbookProperties -Workbook $workbook
+    [void]$excel.CalculateFull()
+    Assert-NoVisibleWorkbookErrors -Workbook $workbook
     [void]$workbook.Save()
     [void]$workbook.SaveAs($templateWorkbookPath, 54)
     Write-Host "Built governance starter workbook with $installedNames defined names: $starterWorkbookPath"
@@ -942,6 +1537,11 @@ try {
     }
     [System.GC]::Collect()
     [System.GC]::WaitForPendingFinalizers()
+}
+
+foreach ($releasePath in @($starterWorkbookPath, $templateWorkbookPath)) {
+    Sanitize-WorkbookPackage -Path $releasePath
+    Assert-WorkbookPackagePublic -Path $releasePath
 }
 
 if (Test-Path -LiteralPath $scratchDirectory) {

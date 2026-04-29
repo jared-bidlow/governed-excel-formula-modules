@@ -1,3 +1,32 @@
+## 2026-04-28 - Simplify generated workbook UX
+
+Semantic change:
+
+- Added a source-controlled workbook manifest and made `Start Here` the generated workbook front door.
+- Replaced scattered demo output sheets with `Analysis Hub`, `Asset Hub`, and `Asset Finance Hub` surfaces.
+- Kept governed backend sheets generated but hidden by default, including `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, `Automation Setup`, asset backend sheets, and intermediate asset-evidence Power Query outputs.
+- Clarified that `tblBudgetInput` is the canonical formula source, while `Planning Table` is manual/staging/local writeback and must be refreshed or re-synced after edits or `ApplyNotes`.
+- Added consistent page-header and section-header styling to title/subtitle-heavy generated sheets in the workbook builder and add-in setup path.
+- Fixed generated starter layout details for `tblStartHereFlow`, `Source.SOURCE_STATUS`, wider import-contract descriptions, visible Planning Review month-control labels, and the `Planning Review!O1:R4` ApplyNotes flow/header block.
+- Expanded `Start Here` with workbook flow, source-rule, navigation, and backend/admin sections; added hub section indexes; normalized generated row heights; sanitized generated workbook package metadata; and guarded visible release artifacts against cached `#N/A`, `#REF!`, `#VALUE!`, and `#NAME?` errors.
+- Reworked release polish so Start Here uses wide readable panels, generated navigation avoids cached `HYPERLINK()` formulas, Source Status and Data Import Setup use fixed readable widths, hub sheets use fixed column-width templates, workbook package scans block private local path metadata, and `tblWorkbookManifest` includes `Presence` with legacy sheet names marked `OptionalLegacy`.
+
+Minimal diff summary:
+
+- Added `samples/workbook_manifest.tsv`.
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Updated `addin/taskpane.js`.
+- Updated workbook UX and data import documentation.
+- Updated `tools/audit_capex_module.py`.
+
+Visible impact:
+
+- Workbook opens on `Start Here` with a smaller visible sheet set.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- Depreciation, funding, finance total, and chart-ready outputs: no intended calculation change; outputs move to `Asset Finance Hub`.
+
 ## 2026-04-28 - Add v0.5 data import bridge
 
 Semantic change:
@@ -7,6 +36,7 @@ Semantic change:
 - Added `Source` formula outputs for source status, schema status, refresh status, row health, lineage, and reconciliation queue review.
 - Added public-safe budget Power Query templates for current workbook, Azure SQL, Dataverse, and Fabric SQL endpoint adapter paths.
 - Added documentation for the canonical budget import contract, Power Platform/Fabric path, and Copilot review playbook. Copilot remains explanatory; governed numeric calculations stay in native Excel formulas.
+- Follow-up: added `qBudget_Source_Selected`, pointed normalized/status/issues queries at the active adapter selector, and aligned the add-in blank-workbook path to create `tblPlanningTable`.
 
 Minimal diff summary:
 

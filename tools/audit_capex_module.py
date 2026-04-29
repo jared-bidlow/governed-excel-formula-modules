@@ -725,6 +725,14 @@ def audit_formula_files(results: list[Result]) -> None:
         results,
         "modules/source.formula.txt",
         source,
+        "Source status uses direct spill-safe status rows",
+        r"SOURCE_STATUS = LAMBDA.*VSTACK.*Canonical Table.*Budget Input Rows.*Source Mode.*Last Refresh.*Import Status",
+        "Keep Source.SOURCE_STATUS simple enough to spill reliably in the generated starter workbook.",
+    )
+    check_required_regex(
+        results,
+        "modules/source.formula.txt",
+        source,
         "Source module exposes schema and reconciliation outputs",
         r"SOURCE_SCHEMA_STATUS.*MissingRequired.*ExtraInput.*SOURCE_RECONCILIATION_QUEUE",
         "Keep source review outputs visible in workbook formulas.",
@@ -1002,8 +1010,16 @@ def audit_docs(results: list[Result]) -> None:
         "docs/database_import_contract.md",
         database_import,
         "database import contract lists Power Query templates",
-        r"qBudget_Source_CurrentWorkbook.*qBudget_Source_AzureSql.*qBudget_Source_Dataverse.*qBudget_Source_FabricSqlEndpoint.*qBudget_Normalized.*qBudget_WideContract.*qBudget_Input.*qBudget_Status.*qBudget_Issues",
+        r"qBudget_Source_CurrentWorkbook.*qBudget_Source_AzureSql.*qBudget_Source_Dataverse.*qBudget_Source_FabricSqlEndpoint.*qBudget_Source_Selected.*qBudget_Normalized.*qBudget_WideContract.*qBudget_Input.*qBudget_Status.*qBudget_Issues",
         "Document the complete budget-input M template set.",
+    )
+    check_required_regex(
+        results,
+        "docs/database_import_contract.md",
+        database_import,
+        "database import contract documents selected adapter",
+        r"qBudget_Source_Selected.*tblBudgetImportParameters.*ActiveAdapter.*CurrentWorkbook.*AzureSQL.*Dataverse.*FabricSqlEndpoint.*qBudget_Normalized.*qBudget_Issues.*qBudget_Status",
+        "Document the active-adapter selector path for the budget input bridge.",
     )
     check_required_regex(
         results,
@@ -1829,8 +1845,8 @@ def audit_docs(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter,
         "starter guide documents demo outputs",
-        r"Insert Demo Outputs.*BU Cap Scorecard.*Reforecast Queue.*PM Spend Report.*Working Budget.*Burndown.*Internal Jobs.*Ready\.InternalJobs_Export",
-        "Document the optional demo output sheets.",
+        r"Insert Demo Outputs.*Analysis Hub.*BU Cap Scorecard.*Reforecast Queue.*PM Spend Report.*Working Budget.*Burndown.*Internal Jobs.*Ready\.InternalJobs_Export",
+        "Document the optional demo output hubs.",
     )
     check_required_regex(
         results,
@@ -2239,8 +2255,14 @@ def audit_addin_contract(results: list[Result]) -> None:
     taskpane_checks = [
         ("loads Office.js", r"Office\.onReady"),
         ("uses Excel.run", r"Excel\.run"),
-        ("creates starter sheets", r"Planning Table.*Cap Setup.*Planning Review.*Validation Lists"),
+        ("creates starter sheets", r"Start Here.*Planning Table.*Cap Setup.*Planning Review.*Source Status.*Analysis Hub.*Asset Hub.*Asset Finance Hub.*Validation Lists"),
         ("creates data import bridge sheets and tables", r"Data Import Setup.*PQ Budget Input.*PQ Budget QA.*tblDataSourceProfile.*tblBudgetImportParameters.*tblBudgetImportContract.*tblBudgetInput.*tblBudgetImportStatus.*tblBudgetImportIssues"),
+        ("creates Planning Table as table", r"sheet:\s*\"Planning Table\".*tableName:\s*\"tblPlanningTable\".*planning_table_starter\.tsv"),
+        ("creates workbook manifest table", r"Workbook Manifest.*tblWorkbookManifest.*workbook_manifest\.tsv"),
+        ("defines workbook visibility rules", r"sheetVisibilityRules.*Start Here.*visible.*PQ Budget Input.*hidden.*Validation Lists.*hidden.*Decision Staging.*hidden"),
+        ("uses Office.js sheet visibility enum", r"Excel\.SheetVisibility\.visible.*Excel\.SheetVisibility\.hidden"),
+        ("orders visible sheets by workbook flow", r"sheet\.position\s*=\s*position"),
+        ("styles page and section headers", r"formatPageHeader.*#1F4E79.*#2F75B5.*formatSectionHeader.*#E2EFDA.*#F2F2F2"),
         ("defines application data", r"applicationData\s*=\s*\{.*starterTables.*dropdownLists.*visibleControls.*rowValidationRules"),
         ("defines validation lists", r"dropdownLists\s*:\s*\{.*months.*groupFields.*futureFilters.*closedRows.*statuses.*yesNo.*booleanFlags"),
         ("includes review status and boolean flags", r"statuses:\s*\[\"Active\",\s*\"Review\".*booleanFlags:\s*\[\"TRUE\",\s*\"FALSE\"\]"),
@@ -2262,7 +2284,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("validates implemented analysis screens", r"Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN"),
         ("validates Ready helpers", r"Ready\.ColumnOrBlank.*Ready\.InternalEligible.*Ready\.ChargeableFlag.*Ready\.InternalReady3.*Ready\.InternalJobs_Export"),
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
-        ("formats starter workbook", r"formatDataImportSetup.*formatBudgetInput.*formatBudgetQa.*formatPlanningTable.*formatCapSetup.*formatPlanningReview"),
+        ("formats starter workbook", r"formatDataImportSetup.*formatBudgetInput.*formatBudgetQa.*formatPlanningTable.*formatCapSetup.*formatPlanningReview.*formatStartHere.*formatSourceStatus.*formatHubShell"),
+        ("enriches Start Here navigation", r"formatStartHere.*Workbook flow.*Manual source / database / Fabric / Dataverse.*Go to.*Backend/admin sheets.*setMergedPanel"),
+        ("adds hub table of contents", r"formatHubToc.*Section.*What it shows.*#1F4E79"),
+        ("normalizes row heights", r"normalizeSheetRows.*rowHeight"),
+        ("widens Start Here flow text columns", r"formatStartHere.*C:C.*columnWidth.*D:D.*columnWidth"),
+        ("widens import contract description column", r"formatDataImportSetup.*D:D.*columnWidth"),
+        ("labels Planning Review control months", r"formatPlanningReview.*Report As Of Month.*Defer As Of Month.*applyHubColumnWidths\(sheet,\s*\"PlanningReview\"\)"),
+        ("labels and widens Planning Review notes flow", r"formatPlanningReviewNotes.*O4:R4.*notesWorkflow\.noteHeaders.*applyHubColumnWidths\(sheet,\s*\"PlanningReview\"\)"),
         ("applies dropdown validation", r"applyListValidation.*dataValidation\.rule"),
         ("sizes validation list headers dynamically", r"getResizedRange\(0,\s*validationListColumns\.length - 1\)"),
         ("applies row validation by header", r"applyRowValidationRules.*dataRangeForHeader.*validationSourceForList"),
@@ -2276,14 +2305,14 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("validates cap setup rows", r"assertCapRowsAreValid\(capRows\.values\)"),
         ("renders validation summary", r"renderValidationSummary.*Sheets present.*Workbook names installed.*Dropdown lists ready"),
         ("clears stale spill blockers", r'getRange\("J2:K6"\)\.clear'),
-        ("defines demo outputs", r"demoOutputs\s*:\s*\[.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Analysis\.BU_CAP_SCORECARD.*Analysis\.REFORECAST_QUEUE.*Analysis\.PM_SPEND_REPORT.*Analysis\.WORKING_BUDGET_SCREEN.*Analysis\.BURNDOWN_SCREEN.*Ready\.InternalJobs_Export"),
-        ("defines Source demo output", r"Source Status.*Source\.SOURCE_STATUS"),
+        ("defines demo hub outputs", r"(?=.*demoOutputs\s*:\s*\[)(?=.*Planning Review)(?=.*Source Status)(?=.*Analysis Hub)(?=.*CapitalPlanning\.CAPITAL_PLANNING_REPORT)(?=.*Analysis\.BU_CAP_SCORECARD)(?=.*Analysis\.REFORECAST_QUEUE)(?=.*Analysis\.PM_SPEND_REPORT)(?=.*Analysis\.WORKING_BUDGET_SCREEN)(?=.*Analysis\.BURNDOWN_SCREEN)(?=.*Ready\.InternalJobs_Export)"),
+        ("defines Source demo output", r"Source Status.*Source\.SOURCE_STATUS\(\)"),
         ("runs demo outputs from combined setup", r"runAll\(\).*setupWorkbook\(\).*installModules\(\).*validateWorkbook\(\).*insertDemoOutputs\(\{\s*validateFirst:\s*false\s*\}\)"),
         ("binds demo output action", r"bind\(\"insertDemoOutputs\",\s*insertDemoOutputs\)"),
         ("inserts demo output formulas", r"insertDemoOutputs.*validateWorkbook\(\).*placeDemoOutput"),
         ("checks main report spill range", r'getRange\("A4:N200"\).*load\(\["values", "formulas"\]\).*assertMainReportSpillReady'),
         ("reports demo spill blockers", r"assertMainReportSpillReady.*blocks the main report spill"),
-        ("renders demo output summary", r"renderDemoOutputSummary.*Demo outputs inserted"),
+        ("renders demo output summary", r"renderDemoOutputSummary.*Demo hub outputs inserted"),
         ("defines ApplyNotes template path", r'applyNotesScriptPath\s*=\s*"../office-scripts/apply_notes\.ts"'),
         ("binds ApplyNotes copy action", r'bind\("copyApplyNotesScript",\s*copyApplyNotesScript\)'),
         ("loads and displays ApplyNotes script text", r"copyApplyNotesScript.*fetchText\(applyNotesScriptPath\).*showApplyNotesScript\(applyNotesText\)"),
@@ -2317,6 +2346,14 @@ def audit_addin_contract(results: list[Result]) -> None:
             pattern,
             "Keep the add-in as a formula-module installer and validator.",
         )
+    add(
+        results,
+        "HYPERLINK(" not in taskpane.upper(),
+        "addin/taskpane.js",
+        "task pane avoids formula hyperlink navigation",
+        "formula hyperlink navigation absent",
+        "Use plain labels or real worksheet hyperlinks instead of cached HYPERLINK formulas.",
+    )
     run_all_match = re.search(r"async function runAll\(\)\s*\{(?P<body>.*?)\n\s*\}", taskpane, flags=re.S)
     run_all_body = run_all_match.group("body") if run_all_match else ""
     add(
@@ -2582,7 +2619,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document combined setup output action",
-        r"Setup \+ Install \+ Validate \+ Outputs.*creates the starter sheets.*installs formulas.*validates the workbook contract.*inserts the demo output formulas",
+        r"Setup \+ Install \+ Validate \+ Outputs.*creates the starter sheets.*installs formulas.*validates the workbook contract.*inserts the demo hub formulas",
         "Document that the primary add-in action now creates outputs.",
     )
     check_required_regex(
@@ -2590,7 +2627,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document demo outputs",
-        r"Insert Demo Outputs.*Planning Review.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Burndown.*Analysis\.BURNDOWN_SCREEN.*Internal Jobs.*Ready\.InternalJobs_Export",
+        r"Insert Demo Outputs.*Planning Review.*CapitalPlanning\.CAPITAL_PLANNING_REPORT.*Analysis Hub.*Burndown.*Analysis\.BURNDOWN_SCREEN.*Internal Jobs.*Ready\.InternalJobs_Export",
         "Document the output insertion rerun action.",
     )
     check_required_regex(
@@ -2832,6 +2869,15 @@ def audit_reforecast_contract(results: list[Result]) -> None:
             pattern,
             "Keep the public reforecast queue contract intact.",
         )
+    burndown_detail = extract_named_formula(analysis, "BURNDOWN_SCREEN_DETAIL_FROM_AXIS")
+    check_required_regex(
+        results,
+        "modules/analysis.formula.txt",
+        burndown_detail,
+        "BURNDOWN_SCREEN_DETAIL_FROM_AXIS guards Cut Candidate display errors",
+        r"BlankCut,\s*MAKEARRAY\(ROWS\(DetailSorted\),\s*1,\s*LAMBDA\(rw,\s*c,\s*\"\"\)\).*CutMask,\s*IFERROR\(\(CutTarget > 0\) \* \(CumRem <= CutTarget\),\s*0\).*CutDisp,\s*IFERROR\(IF\(CutTarget <= 0,\s*BlankCut,\s*IF\(CutMask,\s*\"Yes\",\s*BlankCut\)\),\s*BlankCut\)",
+        "Keep the generated starter free of visible #N/A values in the burndown Cut Candidate column.",
+    )
 
 
 def audit_asset_evidence_power_query_contract(results: list[Result]) -> None:
@@ -2962,8 +3008,16 @@ def audit_budget_input_power_query_contract(results: list[Result]) -> None:
             r"vBudgetPlanningWorkbookContract",
             r"Sql\.Database",
         ],
-        "qBudget_Normalized.m": [
+        "qBudget_Source_Selected.m": [
+            r"tblBudgetImportParameters",
+            r"ActiveAdapter",
+            r"qBudget_Source_AzureSql",
+            r"qBudget_Source_Dataverse",
+            r"qBudget_Source_FabricSqlEndpoint",
             r"qBudget_Source_CurrentWorkbook",
+        ],
+        "qBudget_Normalized.m": [
+            r"qBudget_Source_Selected",
             r"tblBudgetImportContract",
             r"Table\.SelectColumns\(Source, ContractColumns, MissingField\.UseNull\)",
         ],
@@ -2975,11 +3029,13 @@ def audit_budget_input_power_query_contract(results: list[Result]) -> None:
             r"qBudget_WideContract",
         ],
         "qBudget_Status.m": [
+            r"tblBudgetImportParameters",
+            r"ActiveAdapter",
             r"qBudget_Input",
             r"QueryName.*SourceMode.*LastRefreshUtc.*RowCount.*Status.*Message",
         ],
         "qBudget_Issues.m": [
-            r"qBudget_Source_CurrentWorkbook",
+            r"qBudget_Source_Selected",
             r"tblBudgetImportContract",
             r"MissingColumn.*ExtraColumn.*SchemaOK",
         ],
@@ -3030,10 +3086,46 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
     readme = read_text(ROOT / "README.md")
     starter_doc = read_text(ROOT / "docs" / "starter_workbook.md")
     addin_doc = read_text(ROOT / "docs" / "office_addin.md")
+    database_import = read_text(ROOT / "docs" / "database_import_contract.md")
+    workbook_map_doc = read_text(ROOT / "docs" / "workbook_left_to_right_map.md")
     finance_doc = read_text(ROOT / "docs" / "asset_finance_model_modules.md")
     changelog = read_text(ROOT / "docs" / "change_log.md")
     package = read_text(ROOT / "package.json")
     gitignore = read_text(ROOT / ".gitignore")
+    workbook_manifest = read_text(ROOT / "samples" / "workbook_manifest.tsv")
+
+    check_required_regex(
+        results,
+        "samples/workbook_manifest.tsv",
+        workbook_manifest,
+        "workbook manifest has required columns",
+        r"SheetName\tTableName\tZone\tRole\tVisibility\tPresence\tDataFlowFrom\tDataFlowTo\tOperatorAction\tNotes",
+        "Keep the workbook manifest machine-readable for sheet visibility and navigation.",
+    )
+    check_required_regex(
+        results,
+        "samples/workbook_manifest.tsv",
+        workbook_manifest,
+        "workbook manifest lists visible user surface",
+        r"Start Here.*\tvisible\t.*Source Status.*\tvisible\t.*Data Import Setup.*\tvisible\t.*Planning Table.*\tvisible\t.*Cap Setup.*\tvisible\t.*Planning Review.*\tvisible\t.*Analysis Hub.*\tvisible\t.*Asset Hub.*\tvisible\t.*Asset Finance Hub.*\tvisible\t",
+        "Keep the shareable workbook front door limited to the intended user-facing sheets.",
+    )
+    check_required_regex(
+        results,
+        "samples/workbook_manifest.tsv",
+        workbook_manifest,
+        "workbook manifest hides backend and admin sheets",
+        r"PQ Budget Input.*\thidden\t.*PQ Budget QA.*\thidden\t.*Validation Lists.*\thidden\t.*Decision Staging.*\thidden\t.*Automation Setup.*\thidden\t.*Asset Evidence Setup.*\thidden\t.*PQ Asset Evidence Model Inputs.*\thidden\t",
+        "Keep governed backend sheets present but hidden by default.",
+    )
+    check_required_regex(
+        results,
+        "samples/workbook_manifest.tsv",
+        workbook_manifest,
+        "workbook manifest hides legacy separate output sheets",
+        r"BU Cap Scorecard.*\thidden\tOptionalLegacy\t.*Reforecast Queue.*\thidden\tOptionalLegacy\t.*PM Spend Report.*\thidden\tOptionalLegacy\t.*Working Budget.*\thidden\tOptionalLegacy\t.*Burndown.*\thidden\tOptionalLegacy\t.*Asset Depreciation.*\thidden\tOptionalLegacy\t.*Asset Finance Charts.*\thidden\tOptionalLegacy\t",
+        "Keep legacy output sheet names out of the default visible workbook surface.",
+    )
 
     check_required_regex(
         results,
@@ -3056,8 +3148,45 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "tools/build_governance_starter_workbook.ps1",
         builder,
         "governance starter builder uses source-controlled inputs",
-        r"(?=.*modules\\controls\.formula\.txt)(?=.*modules\\analysis\.formula\.txt)(?=.*modules\\source\.formula\.txt)(?=.*modules\\asset_finance\.formula\.txt)(?=.*samples\\planning_table_starter\.tsv)(?=.*samples\\budget_import_contract_starter\.tsv)(?=.*samples\\asset_register_starter\.tsv)(?=.*samples\\asset_finance_assumptions_starter\.tsv)(?=.*install_asset_evidence_pq_workbook\.ps1)",
+        r"(?=.*modules\\controls\.formula\.txt)(?=.*modules\\analysis\.formula\.txt)(?=.*modules\\source\.formula\.txt)(?=.*modules\\asset_finance\.formula\.txt)(?=.*samples\\planning_table_starter\.tsv)(?=.*samples\\budget_import_contract_starter\.tsv)(?=.*samples\\workbook_manifest\.tsv)(?=.*samples\\asset_register_starter\.tsv)(?=.*samples\\asset_finance_assumptions_starter\.tsv)(?=.*install_asset_evidence_pq_workbook\.ps1)",
         "Keep the workbook artifact generated from tracked text sources.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder creates workbook UX simplification surfaces",
+        r"(?=.*Build-StartHere)(?=.*Build-AnalysisHub)(?=.*Build-AssetHub)(?=.*Build-AssetFinanceHub)(?=.*Build-WorkbookManifest)(?=.*tblWorkbookManifest)(?=.*Start Here)(?=.*Analysis Hub)(?=.*Asset Hub)(?=.*Asset Finance Hub)(?=.*Format-PageHeader)(?=.*Format-SectionHeader)",
+        "Keep workbook navigation and output hubs generated from source-controlled builder code.",
+    )
+    legacy_output_creators = [
+        '@{ Sheet = "BU Cap Scorecard"',
+        '@{ Sheet = "Reforecast Queue"',
+        '@{ Sheet = "PM Spend Report"',
+        '@{ Sheet = "Working Budget"',
+        '@{ Sheet = "Burndown"',
+        '@{ Sheet = "Internal Jobs"',
+        '@{ Sheet = "Asset Review"',
+        '@{ Sheet = "Asset Depreciation"',
+        '@{ Sheet = "Asset Funding Requirements"',
+        '@{ Sheet = "Asset Finance Totals"',
+        '@{ Sheet = "Asset Finance Charts"',
+    ]
+    add(
+        results,
+        not any(needle in builder for needle in legacy_output_creators),
+        "tools/build_governance_starter_workbook.ps1",
+        "governance starter no longer creates separate demo output sheets",
+        "legacy output sheet creators absent",
+        "Route demo outputs through Analysis Hub, Asset Hub, and Asset Finance Hub.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder applies manifest visibility and opens Start Here",
+        r"Apply-WorkbookManifestVisibility.*samples\\workbook_manifest\.tsv.*Start Here.*Visible.*hiddenValue.*visibleSheetOrder.*Move\(\$Workbook\.Worksheets\.Item\(1\)\).*Worksheets\.Item\(\"Start Here\"\)\.Activate\(\)",
+        "Keep backend sheets hidden by default and make Start Here the generated workbook front door.",
     )
     check_required_regex(
         results,
@@ -3087,8 +3216,96 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         results,
         "tools/build_governance_starter_workbook.ps1",
         builder,
+        "governance starter builder keeps Start Here flow table shaped",
+        r"New-Object 'object\[\]\[\]' 7.*Manual source / database / Fabric / Dataverse.*tblStartHereFlow",
+        "Keep tblStartHereFlow as a four-column workbook table instead of a flattened one-column array.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder enriches Start Here navigation",
+        r"(?=.*tblStartHereNavigation)(?=.*Set-InternalWorksheetLink)(?=.*Set-MergedPanel)(?=.*Backend/admin sheets)(?=.*refresh or re-sync before relying on formula outputs)",
+        "Keep Start Here useful as a front-door navigation and source-boundary sheet.",
+    )
+    add(
+        results,
+        "HYPERLINK(" not in builder.upper(),
+        "tools/build_governance_starter_workbook.ps1",
+        "governance starter builder avoids formula hyperlink navigation",
+        "formula hyperlink navigation absent",
+        "Use real worksheet hyperlinks or plain labels instead of cached HYPERLINK formulas.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder adds hub tables of contents",
+        r"Add-HubTableOfContents.*tblAnalysisHubSections.*tblAssetHubSections.*tblAssetFinanceHubSections",
+        "Keep stacked hub sections navigable.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder sanitizes release artifacts",
+        r"(?=.*Set-PublicWorkbookProperties)(?=.*Sanitize-WorkbookPackage)(?=.*Assert-WorkbookPackagePublic)(?=.*x15ac:absPath)(?=.*Governed Excel Formula Modules)(?=.*iCloud)(?=.*One)(?=.*release.*_artifacts)",
+        "Strip local path metadata and public-release document properties from generated workbook packages.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder scans visible sheets for release errors",
+        r"Assert-NoVisibleWorkbookErrors.*#N/A.*#REF!.*#VALUE!.*#NAME\?.*#DIV/0!.*CalculateFull",
+        "Block public release artifacts with visible formula errors on visible sheets.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder normalizes generated row heights",
+        r"Normalize-GeneratedSheetRows.*row-height normalization.*Build-AnalysisHub.*Build-AssetHub.*Build-AssetFinanceHub",
+        "Keep generated starter sheets readable without over-expanded wrapped rows.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder applies fixed column-width templates",
+        r"Apply-HubColumnWidthTemplate.*SourceStatus.*PlanningReview.*AssetFinance.*Template \"Analysis\".*Template \"Asset\".*Template \"AssetFinance\"",
+        "Keep Source Status, Planning Review, and hub sheets readable after formula spills.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder widens import contract description",
+        r"tblBudgetImportContract.*Columns\.Item\(3\)\.ColumnWidth\s*=\s*58.*Columns\.Item\(4\)\.ColumnWidth\s*=\s*64.*Columns\.Item\(6\)\.ColumnWidth\s*=\s*34.*Columns\.Item\(7\)\.ColumnWidth\s*=\s*58",
+        "Keep tblBudgetImportContract[Description] and parameter Value/Description columns readable in the generated workbook.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder labels Planning Review control months",
+        r"Report As Of Month.*Defer As Of Month.*Apply-HubColumnWidthTemplate -Worksheet \$Worksheet -Template \"PlanningReview\"",
+        "Keep Planning Review M2:N2 month controls self-explanatory.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder labels Planning Review notes flow",
+        r"notesHeaderRows.*ExistingMeetingNotes.*TopLeft \"O4\".*O4:R4.*Interior\.Color.*Apply-HubColumnWidthTemplate -Worksheet \$Worksheet -Template \"PlanningReview\"",
+        "Keep Planning Review O1:R4 readable as the ApplyNotes flow and notes input header block.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
         "governance starter builder creates Asset Finance bridge",
-        r"(?=.*Build-AssetFinanceSetup)(?=.*Asset Finance Setup)(?=.*tblAssetFinanceAssumptions)(?=.*AssetFinance)(?=.*Asset Depreciation)(?=.*Asset Funding Requirements)(?=.*Asset Finance Totals)(?=.*Asset Finance Charts)(?=.*tblAssetEvidence_ModelInputs)",
+        r"(?=.*Build-AssetFinanceSetup)(?=.*Build-AssetFinanceHub)(?=.*Asset Finance Setup)(?=.*tblAssetFinanceAssumptions)(?=.*AssetFinance)(?=.*Asset Finance Hub)(?=.*Asset Depreciation)(?=.*Asset Funding Requirements)(?=.*Asset Finance Totals)(?=.*Asset Finance Charts)(?=.*tblAssetEvidence_ModelInputs)",
         "Keep generated asset finance setup and output sheets aligned with the v0.4 bridge.",
     )
     check_required_regex(
@@ -3167,6 +3384,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         results,
         "README.md",
         readme,
+        "README documents simplified workbook UX",
+        r"Start Here.*Source Status.*Data Import Setup.*Planning Table.*Cap Setup.*Planning Review.*Analysis Hub.*Asset Hub.*Asset Finance Hub.*backend.*hidden",
+        "Document the default visible workbook surface.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
         "README documents Automation Setup sheet",
         r"Automation Setup.*ApplyNotes\.ts.*Automate -> New Script.*does not embed or auto-install Office Scripts",
         "Surface the Office Script release-asset boundary in the README.",
@@ -3176,7 +3401,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "README.md",
         readme,
         "README documents v0.4 asset finance bridge",
-        r"Asset Finance Setup.*tblAssetFinanceAssumptions.*AssetFinance.*Asset Depreciation.*Asset Funding Requirements.*Asset Finance Totals.*Asset Finance Charts.*tblAssetEvidence_ModelInputs.*PresentWithClassifiedEvidence = TRUE",
+        r"Asset Finance Setup.*tblAssetFinanceAssumptions.*AssetFinance.*Asset Finance Hub.*depreciation.*funding requirements.*totals.*chart-ready feeds.*tblAssetEvidence_ModelInputs.*PresentWithClassifiedEvidence = TRUE",
         "Surface the asset finance bridge in the README.",
     )
     check_required_regex(
@@ -3186,6 +3411,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "starter docs document generated template contents",
         r"Generated Template.*Governance_Starter\.xltx.*Data Import Setup.*tblBudgetInput.*Automation Setup.*formula-module workbook names.*optional asset workflow starter tables.*asset evidence Power Query setup",
         "Document what the generated starter template contains.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter_doc,
+        "starter docs document simplified workbook UX",
+        r"(?=.*Start Here.*Source Status.*Data Import Setup.*Planning Table.*Cap Setup.*Planning Review.*Analysis Hub.*Asset Hub.*Asset Finance Hub)(?=.*PQ Budget Input)(?=.*Validation Lists)(?=.*Workbook Manifest)(?=.*hidden by default)",
+        "Document the generated workbook front door and hidden backend sheets.",
     )
     check_required_regex(
         results,
@@ -3224,8 +3457,32 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document data import bridge",
-        r"Data Import Setup.*PQ Budget Input.*PQ Budget QA.*tblBudgetInput.*formula modules consume `tblBudgetInput`.*refresh the current-workbook budget adapter",
+        r"Data Import Setup.*PQ Budget Input.*PQ Budget QA.*tblBudgetInput.*formula modules consume `tblBudgetInput`.*refresh or re-sync.*current-workbook budget adapter",
         "Keep blank-workbook add-in setup aligned to the v0.5 canonical import bridge.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "add-in docs document simplified workbook UX",
+        r"Start Here.*hub sheets.*Excel\.SheetVisibility\.visible.*Excel\.SheetVisibility\.hidden.*tblPlanningTable",
+        "Keep blank-workbook add-in setup aligned with the simplified workbook surface.",
+    )
+    check_required_regex(
+        results,
+        "docs/database_import_contract.md",
+        database_import,
+        "database import contract documents canonical source boundary",
+        r"(?=.*tblBudgetInput.*canonical formula source)(?=.*Planning Table.*manual.*local writeback)(?=.*ApplyNotes)(?=.*refresh or re-sync)",
+        "Keep the source boundary explicit for workbook operators.",
+    )
+    check_required_regex(
+        results,
+        "docs/workbook_left_to_right_map.md",
+        workbook_map_doc,
+        "workbook map documents simplified visible flow",
+        r"Start Here.*Source Status.*Data Import Setup.*Planning Table.*tblBudgetInput.*Planning Review.*Analysis Hub.*Asset Hub.*Asset Finance Hub.*hidden backend",
+        "Keep the workbook map aligned to the simplified generated template.",
     )
     check_required_regex(
         results,
@@ -3240,7 +3497,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs document generated asset finance bridge",
-        r"Asset Finance Setup.*tblAssetFinanceAssumptions.*AssetFinance.*Asset Depreciation.*Asset Funding Requirements.*Asset Finance Totals.*Asset Finance Charts.*tblAssetEvidence_ModelInputs",
+        r"Asset Finance Setup.*tblAssetFinanceAssumptions.*AssetFinance.*depreciation.*funding requirements.*totals.*chart-ready feeds.*Asset Finance Hub.*tblAssetEvidence_ModelInputs",
         "Keep add-in docs clear that the generated starter owns the asset finance bridge.",
     )
     check_required_regex(
@@ -3322,6 +3579,14 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "change log records v0.5 data import bridge",
         r"Add v0\.5 data import bridge.*tblBudgetInput.*Data Import Setup.*PQ Budget Input.*PQ Budget QA.*Source.*Power Query templates.*Copilot.*native Excel formulas",
         "Record the canonical budget input source-boundary change.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records workbook UX simplification",
+        r"Simplify generated workbook UX.*workbook manifest.*Start Here.*Analysis Hub.*Asset Hub.*Asset Finance Hub.*hidden by default.*tblBudgetInput.*Planning Table.*page-header.*section-header",
+        "Record the simplified workbook front door and visibility behavior.",
     )
     check_required_regex(
         results,
