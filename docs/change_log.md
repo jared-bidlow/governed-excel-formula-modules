@@ -1,3 +1,145 @@
+## 2026-04-29 - Add clickable hub section navigation
+
+Semantic change:
+
+- Added clickable `Go to section` tables for stacked hub sheets, including top-of-page navigation for `Asset Hub` and `Asset Finance Hub`.
+- Updated Office.js hub navigation to use real internal worksheet hyperlinks when supported, with plain labels as a fallback.
+
+Visible impact:
+
+- Report math, AssetFinance calculations, canonical input behavior, and workbook edition rules are unchanged.
+- Generated hub sheets are easier to navigate because operators can jump down-page to each section instead of scrolling through stacked outputs.
+
+## 2026-04-29 - Add optional SemanticTwin REC/Brick semantic crosswalk
+
+Semantic change:
+
+- Added `SemanticTwin` as an opt-in generated workbook edition with visible `Semantic Map Hub`.
+- Added hidden/admin `Semantic Map Setup` tables for curated REC/Brick namespace, class, relationship, project mapping, asset mapping, export queue, and issue contracts.
+- Added `modules/ontology.formula.txt` with `ONTOLOGY_START_HERE`, `CLASS_MAP`, `RELATIONSHIP_MAP`, `SEMANTIC_MAPPING_STATUS`, `ONTOLOGY_ISSUES`, `TRIPLE_EXPORT_QUEUE`, and `JSONLD_EXPORT_HELP`.
+- Documented that REC is for buildings, rooms, spaces, real-estate context, and generic assets while Brick is for equipment, points, sensors, meters, setpoints, commands, and building systems.
+- Kept the semantic layer as a curated crosswalk only: no full ontology dumps, no JSON-LD/RDF exporter, no completed Azure Digital Twins or Fabric graph integration.
+
+Visible impact:
+
+- Default `Planning` remains planning-only.
+- `AssetsLite` and `AssetsFull` remain asset/finance editions.
+- `SemanticTwin` visibly adds `Semantic Map Hub`.
+- Main report totals, subtotal flags, cap remaining values, and existing AssetFinance calculations have no intended change.
+
+## 2026-04-29 - Make asset workflow optional and guided
+
+Semantic change:
+
+- Added generated workbook editions: `Planning` by default, `AssetsLite` with `Asset Hub`, and `AssetsFull` with `Asset Hub` plus `Asset Finance Hub`.
+- Extended the workbook manifest with `Edition` and `FriendlyName` metadata so visibility is driven by edition without deleting backend sheets.
+- Rebuilt `Asset Hub` around mode selection, next actions, asset paths, workflow status, review queues, glossary, and table map before technical issue outputs.
+- Added friendly asset onboarding formulas in `modules/assets.formula.txt`: `ASSET_START_HERE`, `ASSET_WORKFLOW_STATUS`, `ASSET_NEXT_ACTIONS`, `ASSET_TABLE_MAP`, `ASSET_GLOSSARY`, and `ASSET_REVIEW_QUEUE`.
+- Added `AssetFinance.FINANCE_START_HERE` and `AssetFinance.FINANCE_READINESS_STATUS` guidance without changing existing depreciation, funding, totals, or chart-feed calculations.
+- Moved fake asset demo rows into `samples/demo/asset_workflow/` and left public asset starter TSVs as blank starter tables.
+
+Minimal diff summary:
+
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Updated `samples/workbook_manifest.tsv` and asset starter TSVs.
+- Added `samples/asset_workflow_settings_starter.tsv` and demo asset TSVs.
+- Updated `modules/assets.formula.txt`, `modules/asset_finance.formula.txt`, docs, feature status, and audit checks.
+
+Visible impact:
+
+- Default generated starter shows planning surfaces only.
+- `AssetsLite` visibly adds guided asset workflow onboarding.
+- `AssetsFull` visibly adds guided asset finance onboarding.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- Existing AssetFinance calculation semantics: no intended change.
+- Workbook binaries and generated artifacts remain out of tracked source.
+
+## 2026-04-29 - Add v0.5 release accelerator tooling
+
+Semantic change:
+
+- Added source-controlled feature status evidence so reviewers can see which v0.5 features are built, scaffolded, or intentionally missing.
+- Added a review-packet generator for compact branch handoff without sharing a full repo zip.
+- Added CI validation for audit, formula lint, feature status, and whitespace checks.
+- Added a release-artifact package scanner for public metadata hazards and cached workbook errors without requiring Excel COM.
+- Documented the Codex/ChatGPT final-report contract for built/scaffolded/missing state, validation, changed files, not-changed guarantees, and known limitations.
+
+Minimal diff summary:
+
+- Added `docs/feature_status.tsv`.
+- Added `tools/report_feature_status.py`, `tools/build_review_packet.py`, and `tools/check_release_artifact.py`.
+- Added `.github/workflows/validate.yml`.
+- Updated `package.json`, `AGENTS.md`, `docs/codex_chatgpt_durable_contract.md`, and audit checks.
+
+Visible impact:
+
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- AssetFinance calculations and outputs: no intended calculation change.
+- Workbook binaries and generated artifacts remain out of tracked source.
+
+## 2026-04-28 - Simplify generated workbook UX
+
+Semantic change:
+
+- Added a source-controlled workbook manifest and made `Start Here` the generated workbook front door.
+- Replaced scattered demo output sheets with `Analysis Hub`, `Asset Hub`, and `Asset Finance Hub` surfaces.
+- Kept governed backend sheets generated but hidden by default, including `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, `Automation Setup`, asset backend sheets, and intermediate asset-evidence Power Query outputs.
+- Clarified that `tblBudgetInput` is the canonical formula source, while `Planning Table` is manual/staging/local writeback and must be refreshed or re-synced after edits or `ApplyNotes`.
+- Added consistent page-header and section-header styling to title/subtitle-heavy generated sheets in the workbook builder and add-in setup path.
+- Fixed generated starter layout details for `tblStartHereFlow`, `Source.SOURCE_STATUS`, wider import-contract descriptions, visible Planning Review month-control labels, and the `Planning Review!O1:R4` ApplyNotes flow/header block.
+- Expanded `Start Here` with workbook flow, source-rule, navigation, and backend/admin sections; added hub section indexes; normalized generated row heights; sanitized generated workbook package metadata; and guarded visible release artifacts against cached `#N/A`, `#REF!`, `#VALUE!`, and `#NAME?` errors.
+- Reworked release polish so Start Here uses wide readable panels, generated navigation avoids cached `HYPERLINK()` formulas, Source Status and Data Import Setup use fixed readable widths, hub sheets use fixed column-width templates, workbook package scans block private local path metadata, and `tblWorkbookManifest` includes `Presence` with legacy sheet names marked `OptionalLegacy`.
+
+Minimal diff summary:
+
+- Added `samples/workbook_manifest.tsv`.
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Updated `addin/taskpane.js`.
+- Updated workbook UX and data import documentation.
+- Updated `tools/audit_capex_module.py`.
+
+Visible impact:
+
+- Workbook opens on `Start Here` with a smaller visible sheet set.
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- Depreciation, funding, finance total, and chart-ready outputs: no intended calculation change; outputs move to `Asset Finance Hub`.
+
+## 2026-04-28 - Add v0.5 data import bridge
+
+Semantic change:
+
+- Moved the formula source boundary from direct `Planning Table` range reads to canonical `tblBudgetInput`.
+- Added `Data Import Setup`, `PQ Budget Input`, and `PQ Budget QA` starter surfaces with public-safe source profile, import contract, status, and issue tables.
+- Added `Source` formula outputs for source status, schema status, refresh status, row health, lineage, and reconciliation queue review.
+- Added public-safe budget Power Query templates for current workbook, Azure SQL, Dataverse, and Fabric SQL endpoint adapter paths.
+- Added documentation for the canonical budget import contract, Power Platform/Fabric path, and Copilot review playbook. Copilot remains explanatory; governed numeric calculations stay in native Excel formulas.
+- Follow-up: added `qBudget_Source_Selected`, pointed normalized/status/issues queries at the active adapter selector, and aligned the add-in blank-workbook path to create `tblPlanningTable`.
+
+Minimal diff summary:
+
+- Updated `modules/get.formula.txt`.
+- Added `modules/source.formula.txt`.
+- Added budget import starter TSVs and Copilot prompt cards.
+- Added `samples/power-query/budget-input/*.m`.
+- Updated `tools/build_governance_starter_workbook.ps1`.
+- Updated `addin/taskpane.js`.
+- Added and updated data import documentation.
+- Updated `tools/audit_capex_module.py`.
+
+Visible impact:
+
+- Workbook behavior: formulas now read `tblBudgetInput`, which is seeded from the same 64-column planning starter contract.
+- Main report totals: no intended change when `tblBudgetInput` matches `Planning Table`.
+- Subtotal flags: no intended change when `tblBudgetInput` matches `Planning Table`.
+- Cap remaining values: no intended change when `tblBudgetInput` matches `Planning Table`.
+- Depreciation, funding, finance total, and chart-ready outputs: no intended change.
+
 ## 2026-04-28 - Fix Defer audit reference and dropdown drift
 
 Semantic change:

@@ -1,3 +1,35 @@
+FINANCE_START_HERE = VSTACK(
+    {"Topic", "Guidance"},
+    {"Asset finance is optional", "Use this only when asset evidence has been classified and is ready for finance outputs."},
+    {"Formula source", "AssetFinance outputs read tblAssetEvidence_ModelInputs."},
+    {"Not direct sources", "Outputs do not read Asset Register, Project Asset Map, raw Asset Evidence Source rows, or mapped-only evidence directly."},
+    {"No classified evidence", "If tblAssetEvidence_ModelInputs is empty or not classified, no depreciation or funding output is expected."},
+    {"Where to begin", "Start with Asset Register and Project-to-Asset Map before enabling evidence finance."}
+);
+
+FINANCE_READINESS_STATUS = LET(
+    classifiedRows, IFERROR(DROP(AssetFinance.CLASSIFIED_MODEL_INPUTS, 1), ""),
+    evidenceId, IFERROR(CHOOSECOLS(classifiedRows, 1), ""),
+    amount, IFERROR(CHOOSECOLS(classifiedRows, 7), 0),
+    classifiedCount, IFERROR(SUM(--(TRIM(evidenceId & "") <> "")), 0),
+    totalClassifiedAmount, IFERROR(SUM(amount), 0),
+    depRows, IFERROR(DROP(AssetFinance.DEPRECIATION_SCHEDULE, 1), ""),
+    fundRows, IFERROR(DROP(AssetFinance.FUNDING_REQUIREMENTS, 1), ""),
+    depIssueCount, IFERROR(SUM(--(TRIM(CHOOSECOLS(depRows, 12) & "") <> "")), 0),
+    fundingIssueCount, IFERROR(SUM(--(TRIM(CHOOSECOLS(fundRows, 7) & "") <> "")), 0),
+    annualDepreciation, IFERROR(SUM(CHOOSECOLS(depRows, 9)), 0),
+    fundingAmount, IFERROR(SUM(CHOOSECOLS(fundRows, 6)), 0),
+    VSTACK(
+        {"Metric", "Value", "Meaning"},
+        HSTACK("Finance-ready evidence count", classifiedCount, "Rows with PresentWithClassifiedEvidence = TRUE"),
+        HSTACK("Unsupported depreciation methods", depIssueCount, "Rows with DepreciationIssue text"),
+        HSTACK("Unsupported funding rules", fundingIssueCount, "Rows with FundingIssue text"),
+        HSTACK("Total classified amount", totalClassifiedAmount, "Amount from classified model inputs"),
+        HSTACK("Annual depreciation", annualDepreciation, "Supported straight-line annual depreciation"),
+        HSTACK("Funding requirement amount", fundingAmount, "Supported full grouped classified funding amount")
+    )
+);
+
 CLASSIFIED_MODEL_INPUTS = LET(
     Headers, {
         "EvidenceId",

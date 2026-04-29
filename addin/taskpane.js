@@ -3,9 +3,15 @@
 
   const applicationData = {
     sheets: {
+      startHere: "Start Here",
       planningTable: "Planning Table",
       capSetup: "Cap Setup",
       planningReview: "Planning Review",
+      sourceStatus: "Source Status",
+      analysisHub: "Analysis Hub",
+      assetHub: "Asset Hub",
+      assetFinanceHub: "Asset Finance Hub",
+      workbookManifest: "Workbook Manifest",
       validationLists: "Validation Lists",
       dataImportSetup: "Data Import Setup",
       pqBudgetInput: "PQ Budget Input",
@@ -35,14 +41,37 @@
       capRange: "B3:B100"
     },
     starterTables: [
-      { sheet: "Planning Table", address: "A2", path: "../samples/planning_table_starter.tsv" },
+      { sheet: "Planning Table", address: "A2", tableName: "tblPlanningTable", path: "../samples/planning_table_starter.tsv" },
       { sheet: "Cap Setup", address: "A2", path: "../samples/cap_setup_starter.tsv" },
       { sheet: "Data Import Setup", address: "A4", tableName: "tblDataSourceProfile", path: "../samples/data_source_profile_starter.tsv" },
       { sheet: "Data Import Setup", address: "E4", tableName: "tblBudgetImportParameters", path: "../samples/budget_import_parameters_starter.tsv" },
       { sheet: "Data Import Setup", address: "A16", tableName: "tblBudgetImportContract", path: "../samples/budget_import_contract_starter.tsv" },
       { sheet: "PQ Budget Input", address: "A1", tableName: "tblBudgetInput", path: "../samples/planning_table_starter.tsv" },
       { sheet: "PQ Budget QA", address: "A3", tableName: "tblBudgetImportStatus", path: "../samples/budget_import_status_starter.tsv" },
-      { sheet: "PQ Budget QA", address: "A11", tableName: "tblBudgetImportIssues", path: "../samples/budget_import_issues_starter.tsv" }
+      { sheet: "PQ Budget QA", address: "A11", tableName: "tblBudgetImportIssues", path: "../samples/budget_import_issues_starter.tsv" },
+      { sheet: "Workbook Manifest", address: "A4", tableName: "tblWorkbookManifest", path: "../samples/workbook_manifest.tsv" }
+    ],
+    sheetVisibilityRules: [
+      { sheet: "Start Here", visibility: "visible" },
+      { sheet: "Source Status", visibility: "visible" },
+      { sheet: "Data Import Setup", visibility: "visible" },
+      { sheet: "Planning Table", visibility: "visible" },
+      { sheet: "Cap Setup", visibility: "visible" },
+      { sheet: "Planning Review", visibility: "visible" },
+      { sheet: "Analysis Hub", visibility: "visible" },
+      { sheet: "Asset Hub", visibility: "visible" },
+      { sheet: "Asset Finance Hub", visibility: "visible" },
+      { sheet: "Workbook Manifest", visibility: "hidden" },
+      { sheet: "PQ Budget Input", visibility: "hidden" },
+      { sheet: "PQ Budget QA", visibility: "hidden" },
+      { sheet: "Validation Lists", visibility: "hidden" },
+      { sheet: "Decision Staging", visibility: "hidden" },
+      { sheet: "Asset Register", visibility: "hidden" },
+      { sheet: "Asset Setup", visibility: "hidden" },
+      { sheet: "Project Asset Map", visibility: "hidden" },
+      { sheet: "Semantic Assets", visibility: "hidden" },
+      { sheet: "Asset Changes", visibility: "hidden" },
+      { sheet: "Asset State History", visibility: "hidden" }
     ],
     notesWorkflow: {
       tableName: "tblDecisionStaging",
@@ -360,50 +389,31 @@
       {
         sheet: "Planning Review",
         title: "Capital Planning Report",
-        formula: "=CapitalPlanning.CAPITAL_PLANNING_REPORT()",
-        note: "Main report spill starts at A4."
-      },
-      {
-        sheet: "BU Cap Scorecard",
-        title: "BU Cap Scorecard",
-        formula: "=Analysis.BU_CAP_SCORECARD()",
-        note: "Cap and spend posture by BU."
-      },
-      {
-        sheet: "Reforecast Queue",
-        title: "Reforecast Queue",
-        formula: "=Analysis.REFORECAST_QUEUE()",
-        note: "Grouped action queue for forecast review."
-      },
-      {
-        sheet: "PM Spend Report",
-        title: "PM Spend Report",
-        formula: "=Analysis.PM_SPEND_REPORT()",
-        note: "Existing-work summary and job detail."
-      },
-      {
-        sheet: "Working Budget",
-        title: "Working Budget Screen",
-        formula: "=Analysis.WORKING_BUDGET_SCREEN()",
-        note: "Current-job screening before budget drafting."
-      },
-      {
-        sheet: "Burndown",
-        title: "Burndown Screen",
-        formula: "=Analysis.BURNDOWN_SCREEN()",
-        note: "Meeting view of remaining burn and drivers."
-      },
-      {
-        sheet: "Internal Jobs",
-        title: "Internal Jobs Export",
-        formula: "=Ready.InternalJobs_Export()",
-        note: "Header-driven internal work export for readiness smoke testing."
+        note: "Main report spill starts at A4.",
+        sections: [
+          { anchor: "A4", formula: "=CapitalPlanning.CAPITAL_PLANNING_REPORT()" }
+        ]
       },
       {
         sheet: "Source Status",
         title: "Source Status",
-        formula: "=Source.SOURCE_STATUS",
-        note: "Canonical budget import status and source trust checks."
+        note: "Canonical budget import status and source trust checks.",
+        sections: [
+          { anchor: "A4", formula: "=Source.SOURCE_STATUS()" }
+        ]
+      },
+      {
+        sheet: "Analysis Hub",
+        title: "Analysis Hub",
+        note: "Planning outputs grouped into one review surface instead of separate demo sheets.",
+        sections: [
+          { anchor: "A14", title: "BU Cap Scorecard", note: "Cap and spend posture by BU.", formula: "=Analysis.BU_CAP_SCORECARD()" },
+          { anchor: "A52", title: "Reforecast Queue", note: "Grouped action queue for forecast review.", formula: "=Analysis.REFORECAST_QUEUE()" },
+          { anchor: "A114", title: "PM Spend Report", note: "Existing-work summary and job detail.", formula: "=Analysis.PM_SPEND_REPORT()" },
+          { anchor: "A176", title: "Working Budget Screen", note: "Current-job screening before budget drafting.", formula: "=Analysis.WORKING_BUDGET_SCREEN()" },
+          { anchor: "A238", title: "Burndown Screen", note: "Meeting view of remaining burn and drivers.", formula: "=Analysis.BURNDOWN_SCREEN()" },
+          { anchor: "A300", title: "Internal Jobs Export", note: "Header-driven internal work export for readiness smoke testing.", formula: "=Ready.InternalJobs_Export()" }
+        ]
       }
     ],
     requiredNames: [
@@ -440,16 +450,23 @@
   const reviewSheet = applicationData.sheets.planningReview;
   const validationSheet = applicationData.sheets.validationLists;
   const requiredSheets = [
+    applicationData.sheets.startHere,
     applicationData.sheets.planningTable,
     applicationData.sheets.capSetup,
     applicationData.sheets.dataImportSetup,
     applicationData.sheets.pqBudgetInput,
     applicationData.sheets.pqBudgetQa,
+    applicationData.sheets.sourceStatus,
     applicationData.sheets.planningReview,
-    applicationData.sheets.validationLists
+    applicationData.sheets.analysisHub,
+    applicationData.sheets.assetHub,
+    applicationData.sheets.assetFinanceHub,
+    applicationData.sheets.validationLists,
+    applicationData.sheets.workbookManifest
   ];
   const notesWorkflow = applicationData.notesWorkflow;
   const assetWorkflow = applicationData.assetWorkflow;
+  const sheetVisibilityRules = applicationData.sheetVisibilityRules;
   const validationLists = applicationData.dropdownLists;
   const validationListColumns = applicationData.validationListColumns;
   const visibleControlNames = applicationData.visibleControls;
@@ -561,6 +578,26 @@
       );
       formatCapSetup(context.workbook.worksheets.getItem(applicationData.sheets.capSetup));
       formatPlanningReview(context.workbook.worksheets.getItem(reviewSheet));
+      formatStartHere(context.workbook.worksheets.getItem(applicationData.sheets.startHere));
+      formatSourceStatus(context.workbook.worksheets.getItem(applicationData.sheets.sourceStatus));
+      formatHubShell(
+        context.workbook.worksheets.getItem(applicationData.sheets.analysisHub),
+        "Analysis Hub",
+        "Planning outputs grouped into one review surface instead of separate demo sheets."
+      );
+      formatHubShell(
+        context.workbook.worksheets.getItem(applicationData.sheets.assetHub),
+        "Asset Hub",
+        "Asset workflow review queues; backend asset tables stay hidden unless administration is needed."
+      );
+      formatHubShell(
+        context.workbook.worksheets.getItem(applicationData.sheets.assetFinanceHub),
+        "Asset Finance Hub",
+        "Classified asset evidence converted into depreciation, funding, total, and chart-ready finance outputs."
+      );
+      formatWorkbookManifest(context.workbook.worksheets.getItem(applicationData.sheets.workbookManifest));
+      await applyWorkbookVisibility(context);
+      context.workbook.worksheets.getItem(applicationData.sheets.startHere).activate();
       await context.sync();
     });
 
@@ -594,6 +631,7 @@
       );
       configureDecisionStagingFormulas(stagingTable, notesWorkflow.stagingRowCount);
       formatWorkflowSheet(staging, notesWorkflow.stagingHeaders.length);
+      await applyWorkbookVisibility(context);
       await context.sync();
     });
 
@@ -624,6 +662,7 @@
         );
       }
 
+      await applyWorkbookVisibility(context);
       await context.sync();
     });
 
@@ -789,17 +828,19 @@
       await context.sync();
 
       const mainOutput = demoOutputs.find((output) => output.sheet === reviewSheet);
+      const mainSection = mainOutput.sections[0];
       const review = context.workbook.worksheets.getItem(reviewSheet);
       const mainSpillRange = review.getRange("A4:N200");
       mainSpillRange.load(["values", "formulas"]);
       await context.sync();
-      assertMainReportSpillReady(mainSpillRange.values, mainSpillRange.formulas, mainOutput.formula);
+      assertMainReportSpillReady(mainSpillRange.values, mainSpillRange.formulas, mainSection.formula);
 
       for (const output of demoOutputs) {
-        placeDemoOutput(context.workbook.worksheets.getItem(output.sheet), output);
+        placeDemoOutputSheet(context.workbook.worksheets.getItem(output.sheet), output);
       }
 
-      context.workbook.worksheets.getItem(reviewSheet).activate();
+      await applyWorkbookVisibility(context);
+      context.workbook.worksheets.getItem(applicationData.sheets.startHere).activate();
       await context.sync();
     });
 
@@ -808,6 +849,41 @@
 
   async function ensureRequiredSheets(context) {
     await ensureSheets(context, requiredSheets);
+  }
+
+  async function applyWorkbookVisibility(context) {
+    const visibleSheets = [];
+    for (const rule of sheetVisibilityRules) {
+      const sheet = context.workbook.worksheets.getItemOrNullObject(rule.sheet);
+      sheet.load("name");
+      visibleSheets.push({ rule, sheet });
+    }
+    await context.sync();
+
+    const startHere = context.workbook.worksheets.getItemOrNullObject(applicationData.sheets.startHere);
+    startHere.load("name");
+    await context.sync();
+    if (!startHere.isNullObject) {
+      startHere.visibility = Excel.SheetVisibility.visible;
+      startHere.activate();
+    }
+
+    for (const item of visibleSheets) {
+      if (item.sheet.isNullObject) {
+        continue;
+      }
+      item.sheet.visibility =
+        item.rule.visibility === "visible" ? Excel.SheetVisibility.visible : Excel.SheetVisibility.hidden;
+    }
+
+    let position = 0;
+    for (const item of visibleSheets.filter((entry) => entry.rule.visibility === "visible")) {
+      if (item.sheet.isNullObject) {
+        continue;
+      }
+      item.sheet.position = position;
+      position += 1;
+    }
   }
 
   async function ensureSheets(context, sheetNames) {
@@ -826,20 +902,42 @@
     }
   }
 
-  function placeDemoOutput(sheet, output) {
+  function placeDemoOutputSheet(sheet, output) {
     if (output.sheet === reviewSheet) {
-      sheet.getRange("A4").formulas = [[output.formula]];
+      sheet.getRange(output.sections[0].anchor).formulas = [[output.sections[0].formula]];
       return;
     }
 
-    sheet.getRange("A1:Z300").clear(Excel.ClearApplyTo.all);
-    sheet.getRange("A1").values = [[output.title]];
-    sheet.getRange("A2").values = [[output.note]];
-    sheet.getRange("A4").formulas = [[output.formula]];
-    sheet.getRange("A1").format.font.bold = true;
-    sheet.getRange("A1").format.font.size = 16;
-    sheet.getRange("A2").format.font.italic = true;
+    formatHubShell(sheet, output.title, output.note);
+    const titledSections = output.sections.filter((section) => section.title);
+    if (titledSections.length > 0) {
+      formatHubToc(sheet, output.sheet, titledSections);
+    }
+    for (const section of output.sections) {
+      placeHubSection(sheet, section);
+    }
     sheet.getRange("A:Z").format.autofitColumns();
+    if (output.sheet === applicationData.sheets.analysisHub) {
+      applyHubColumnWidths(sheet, "Analysis");
+    } else if (output.sheet === applicationData.sheets.assetHub) {
+      applyHubColumnWidths(sheet, "Asset");
+    } else if (output.sheet === applicationData.sheets.assetFinanceHub) {
+      applyHubColumnWidths(sheet, "AssetFinance");
+    }
+    normalizeSheetRows(
+      sheet,
+      titledSections.map((section) => Number(section.anchor.replace(/^[A-Z]+/, ""))).filter((row) => Number.isFinite(row))
+    );
+  }
+
+  function placeHubSection(sheet, section) {
+    const anchor = sheet.getRange(section.anchor);
+    if (section.title) {
+      formatSectionHeader(anchor, section.title, section.note || "");
+      anchor.getOffsetRange(3, 0).formulas = [[section.formula]];
+    } else {
+      anchor.formulas = [[section.formula]];
+    }
   }
 
   async function bindVisibleControlNames(context) {
@@ -885,6 +983,225 @@
     }
     const lastColumn = columnName(startColumnIndex + assetWorkflow.relationshipLists.length - 1);
     sheet.getRange(`${columnName(startColumnIndex)}:${lastColumn}`).format.autofitColumns();
+  }
+
+  function formatStartHere(sheet) {
+    sheet.getRange("A1:M80").clear(Excel.ClearApplyTo.all);
+    formatPageHeader(
+      sheet,
+      "A1:M3",
+      "Start Here",
+      "Use this workbook left to right: check source health, configure imports, refresh the canonical input, review outputs, then use hidden backend sheets only when troubleshooting."
+    );
+    formatSectionHeader(
+      sheet.getRange("A5"),
+      "Workbook flow",
+      "The workbook keeps data intake, canonical source rows, formula outputs, review hubs, and optional staged writeback as separate surfaces."
+    );
+    sheet.getRange("A7:D13").values = [
+      ["Step", "From", "To", "Purpose"],
+      ["1", "Manual source / database / Fabric / Dataverse", "Power Query or current-workbook adapter", "Select and shape incoming planning data."],
+      ["2", "Power Query or current-workbook adapter", "tblBudgetInput", "Load the canonical 64-column planning contract."],
+      ["3", "tblBudgetInput", "Governed formula modules", "Keep formulas independent of the source system."],
+      ["4", "Governed formula modules", "Planning Review / Analysis Hub / Asset Hub / Asset Finance Hub", "Review controlled outputs on a smaller visible sheet set."],
+      ["5", "Planning Review P:R", "Decision Staging", "Prepare optional notes/status/timeline writeback."],
+      ["6", "Decision Staging", "Planning Table", "Apply reviewed writeback, then refresh or re-sync before relying on outputs."]
+    ];
+    sheet.getRange("A7:D7").format.font.bold = true;
+    sheet.getRange("A7:D7").format.fill.color = "#D9EAF7";
+    formatSectionHeader(
+      sheet.getRange("F5"),
+      "Key rule",
+      "tblBudgetInput is the canonical formula source. Planning Table is manual/staging/local writeback. After Planning Table edits or ApplyNotes, refresh or re-sync before relying on formula outputs."
+    );
+    setMergedPanel(
+      sheet,
+      "F7:M13",
+      "Key source boundary: tblBudgetInput is the canonical formula source. Planning Table is a manual/staging/local writeback surface. If Planning Table changes manually or through ApplyNotes, refresh or re-sync the current-workbook adapter before relying on Planning Review, Analysis Hub, Asset Hub, or Asset Finance Hub outputs.",
+      "#FFF2CC"
+    );
+
+    formatSectionHeader(sheet.getRange("A16"), "Go to", "Use these visible sheets for the normal left-to-right operator flow.");
+    sheet.getRange("A18:C26").values = [
+      ["Sheet", "Use it for", "Normal action"],
+      ["Source Status", "Check freshness and import issues.", "Review first."],
+      ["Data Import Setup", "Configure source mode and schema.", "Update source profile and contract."],
+      ["Planning Table", "Manual starter/local writeback.", "Edit only when using manual/current-workbook mode."],
+      ["Cap Setup", "BU cap limits.", "Review or update caps."],
+      ["Planning Review", "Main planning report.", "Run meeting review and enter P:R notes."],
+      ["Analysis Hub", "Planning analysis outputs.", "Review scorecards, queues, burndown, and readiness."],
+      ["Asset Hub", "Asset workflow queues.", "Review asset mapping and state issues."],
+      ["Asset Finance Hub", "Asset finance outputs.", "Review depreciation, funding, totals, and chart-ready feeds."]
+    ];
+    sheet.getRange("A18:C18").format.font.bold = true;
+    sheet.getRange("A18:C18").format.fill.color = "#D9EAF7";
+    const navSheets = ["Source Status", "Data Import Setup", "Planning Table", "Cap Setup", "Planning Review", "Analysis Hub", "Asset Hub", "Asset Finance Hub"];
+    for (let index = 0; index < navSheets.length; index += 1) {
+      setInternalSheetLink(sheet.getRange(`A${19 + index}`), navSheets[index], "A1", navSheets[index]);
+    }
+
+    formatSectionHeader(
+      sheet.getRange("F16"),
+      "Backend/admin sheets",
+      "Hidden sheets keep the governed backend available without putting every implementation table in the normal operator path."
+    );
+    setMergedPanel(
+      sheet,
+      "F18:M24",
+      "Hidden backend/admin sheets are still part of the governed workbook. PQ Budget Input, PQ Budget QA, Validation Lists, Decision Staging, Automation Setup, asset setup tables, Workbook Manifest, and intermediate asset-evidence outputs stay hidden by default. Unhide them only for troubleshooting, administration, or release checks.",
+      "#F3F6FA"
+    );
+    sheet.getRange("A:M").format.wrapText = true;
+    sheet.getRange("A:M").format.autofitColumns();
+    sheet.getRange("C:C").format.columnWidth = 260;
+    sheet.getRange("D:D").format.columnWidth = 320;
+    sheet.getRange("F:M").format.columnWidth = 118;
+    normalizeSheetRows(sheet, [5, 16]);
+    for (let row = 7; row <= 13; row += 1) {
+      sheet.getRange(`${row}:${row}`).format.rowHeight = 24;
+    }
+    for (let row = 18; row <= 24; row += 1) {
+      sheet.getRange(`${row}:${row}`).format.rowHeight = 22;
+    }
+  }
+
+  function formatSourceStatus(sheet) {
+    formatHubShell(sheet, "Source Status", "Canonical budget import status and source trust checks.");
+    applyHubColumnWidths(sheet, "SourceStatus");
+  }
+
+  function formatHubShell(sheet, title, note) {
+    sheet.getRange("A1:Z340").clear(Excel.ClearApplyTo.all);
+    formatPageHeader(sheet, "A1:Z3", title, note);
+    sheet.getRange("A:Z").format.wrapText = true;
+  }
+
+  function formatHubToc(sheet, sheetName, sections) {
+    const values = [["Go to section", "What it shows"]];
+    for (const section of sections) {
+      values.push([section.title, section.note || ""]);
+    }
+    const range = sheet.getRange("A4:B4").getResizedRange(values.length - 1, 1);
+    range.values = values;
+    sheet.getRange("A4:B4").format.font.bold = true;
+    sheet.getRange("A4:B4").format.fill.color = "#D9EAF7";
+    for (let index = 0; index < sections.length; index += 1) {
+      const row = 5 + index;
+      setInternalSheetLink(sheet.getRange(`A${row}`), sheetName, sections[index].anchor, sections[index].title);
+    }
+    sheet.getRange("A:B").format.wrapText = true;
+    sheet.getRange("A:A").format.columnWidth = 170;
+    sheet.getRange("B:B").format.columnWidth = 380;
+  }
+
+  function formatWorkbookManifest(sheet) {
+    formatPageHeader(
+      sheet,
+      "A1:J3",
+      "Workbook Manifest",
+      "Source-controlled sheet/table map used for workbook navigation and visibility."
+    );
+    sheet.getRange("A:J").format.wrapText = true;
+    sheet.getRange("A:J").format.autofitColumns();
+    sheet.getRange("F:F").format.columnWidth = 120;
+    sheet.getRange("J:J").format.columnWidth = 340;
+  }
+
+  function formatPageHeader(sheet, bandAddress, title, subtitle) {
+    const band = sheet.getRange(bandAddress);
+    band.format.fill.color = "#1F4E79";
+    band.format.font.color = "#FFFFFF";
+    band.format.wrapText = true;
+    sheet.getRange("A1").values = [[title]];
+    sheet.getRange("A1").format.font.bold = true;
+    sheet.getRange("A1").format.font.size = 20;
+    sheet.getRange("A2").values = [[subtitle]];
+    sheet.getRange("A2").format.fill.color = "#2F75B5";
+    sheet.getRange("A2").format.font.color = "#FFFFFF";
+    sheet.getRange("A2").format.font.size = 10;
+    sheet.getRange("A2").format.wrapText = true;
+    sheet.getRange("1:1").format.rowHeight = 28;
+    sheet.getRange("2:2").format.rowHeight = 34;
+    sheet.getRange("3:3").format.rowHeight = 8;
+  }
+
+  function setMergedPanel(sheet, address, text, fillColor) {
+    const range = sheet.getRange(address);
+    range.merge();
+    range.values = [[text]];
+    range.format.fill.color = fillColor;
+    range.format.wrapText = true;
+    range.format.verticalAlignment = Excel.VerticalAlignment.top;
+    range.format.borders.getItem("EdgeTop").style = Excel.BorderLineStyle.continuous;
+    range.format.borders.getItem("EdgeBottom").style = Excel.BorderLineStyle.continuous;
+    range.format.borders.getItem("EdgeLeft").style = Excel.BorderLineStyle.continuous;
+    range.format.borders.getItem("EdgeRight").style = Excel.BorderLineStyle.continuous;
+  }
+
+  function setInternalSheetLink(range, sheetName, targetCell, displayText) {
+    const safeSheet = sheetName.replace(/'/g, "''");
+    range.values = [[displayText]];
+    try {
+      range.hyperlink = {
+        documentReference: `'${safeSheet}'!${targetCell}`,
+        screenTip: `Go to ${displayText}`,
+        textToDisplay: displayText
+      };
+    } catch (error) {
+      // Older hosts can still use the friendly label even if internal hyperlinks are unavailable.
+    }
+    range.format.font.bold = true;
+    range.format.font.color = "#1F4E79";
+    try {
+      range.format.font.underline = Excel.RangeUnderlineStyle.single;
+    } catch (error) {
+      // Blue bold text still reads as navigation if a host does not expose underline formatting.
+    }
+  }
+
+  function applyHubColumnWidths(sheet, template) {
+    const widthsByTemplate = {
+      SourceStatus: [150, 220, 120, 120, 120, 120],
+      PlanningReview: [110, 120, 120, 120, 125, 105, 105, 105, 105, 105, 105, 105, 120, 120, 260, 250, 145, 145],
+      AssetFinance: [170, 165, 150, 150, 140, 150, 140, 140, 140, 150, 165, 165, 120, 120, 120, 120],
+      Asset: [180, 165, 250, 150, 150, 150, 150, 150, 150, 165, 165, 120, 120, 120, 120],
+      Analysis: [165, 150, 290, 125, 125, 125, 125, 125, 140, 140, 140, 125, 125, 125, 125]
+    };
+    const widths = widthsByTemplate[template] || widthsByTemplate.Analysis;
+    widths.forEach((width, index) => {
+      sheet.getRange(`${columnName(index + 1)}:${columnName(index + 1)}`).format.columnWidth = width;
+    });
+  }
+
+  function normalizeSheetRows(sheet, sectionRows = []) {
+    try {
+      sheet.getUsedRange().format.rowHeight = 20;
+    } catch (error) {
+      // Empty sheets do not need row normalization.
+    }
+    sheet.getRange("1:1").format.rowHeight = 28;
+    sheet.getRange("2:2").format.rowHeight = 34;
+    sheet.getRange("3:3").format.rowHeight = 8;
+    for (const row of sectionRows) {
+      sheet.getRange(`${row}:${row}`).format.rowHeight = 24;
+      sheet.getRange(`${row + 1}:${row + 1}`).format.rowHeight = 30;
+    }
+  }
+
+  function formatSectionHeader(anchor, title, note) {
+    const sectionRange = anchor.getResizedRange(0, 7);
+    const noteRange = anchor.getOffsetRange(1, 0).getResizedRange(0, 7);
+    sectionRange.format.fill.color = "#E2EFDA";
+    sectionRange.format.font.color = "#000000";
+    sectionRange.format.font.bold = true;
+    sectionRange.format.borders.getItem("EdgeBottom").style = Excel.BorderLineStyle.continuous;
+    sectionRange.format.borders.getItem("EdgeBottom").color = "#A9D08E";
+    anchor.values = [[title]];
+    noteRange.format.fill.color = "#F2F2F2";
+    noteRange.format.font.italic = true;
+    noteRange.format.font.color = "#595959";
+    noteRange.format.wrapText = true;
+    anchor.getOffsetRange(1, 0).values = [[note]];
   }
 
   async function refreshTableFromHeaders(context, sheet, tableName, address, headers, dataRows) {
@@ -936,6 +1253,7 @@
       appendLog("Skipped NewStatus dropdown because validation lists are not ready.");
     }
     sheet.getRange("O:R").format.autofitColumns();
+    applyHubColumnWidths(sheet, "PlanningReview");
   }
 
   function configureDecisionStagingFormulas(table, rowCount) {
@@ -1041,15 +1359,25 @@
   }
 
   function formatDataImportSetup(sheet) {
-    sheet.getRange("A1:H2").clear(Excel.ClearApplyTo.all);
-    sheet.getRange("A1").values = [["Data Import Setup"]];
-    sheet.getRange("A2").values = [["Public-safe source profile and canonical budget import contract. Formulas read tblBudgetInput; Planning Table remains the manual starter source."]];
-    sheet.getRange("A1").format.font.bold = true;
-    sheet.getRange("A1").format.font.size = 16;
-    sheet.getRange("A2").format.wrapText = true;
+    sheet.getRange("A1:H3").clear(Excel.ClearApplyTo.all);
+    formatPageHeader(
+      sheet,
+      "A1:H3",
+      "Data Import Setup",
+      "Public-safe source profile and canonical budget import contract. Formulas read tblBudgetInput; Planning Table remains the manual starter source."
+    );
     sheet.freezePanes.freezeRows(16);
     sheet.getRange("A:H").format.wrapText = true;
     sheet.getRange("A:H").format.autofitColumns();
+    sheet.getRange("A:A").format.columnWidth = 155;
+    sheet.getRange("B:B").format.columnWidth = 220;
+    sheet.getRange("C:C").format.columnWidth = 380;
+    sheet.getRange("D:D").format.columnWidth = 360;
+    sheet.getRange("E:E").format.columnWidth = 155;
+    sheet.getRange("F:F").format.columnWidth = 240;
+    sheet.getRange("G:G").format.columnWidth = 380;
+    normalizeSheetRows(sheet);
+    sheet.getRange("2:2").format.rowHeight = 36;
   }
 
   function formatBudgetInput(sheet) {
@@ -1063,9 +1391,13 @@
   }
 
   function formatBudgetQa(sheet) {
-    sheet.getRange("A1:F1").clear(Excel.ClearApplyTo.all);
-    sheet.getRange("A1").values = [["Budget Import Status"]];
-    sheet.getRange("A1").format.font.bold = true;
+    sheet.getRange("A1:F2").clear(Excel.ClearApplyTo.all);
+    formatPageHeader(
+      sheet,
+      "A1:F2",
+      "Budget Import QA",
+      "Hidden import status and issue tables surfaced through Source Status."
+    );
     sheet.getRange("A9").values = [["Budget Import Issues"]];
     sheet.getRange("A9").format.font.bold = true;
     sheet.freezePanes.freezeRows(3);
@@ -1082,7 +1414,7 @@
     sheet.getRange("A2:E2").values = [["Controls", "BU", "All", "SHOW", 0]];
     sheet.getRange("A3").values = [["Main report spill starts at A4. Columns O:R are reserved for notes."]];
     sheet.getRange("M1:N2").values = [
-      ["Report As Of", "Defer As Of"],
+      ["Report As Of Month", "Defer As Of Month"],
       ["Mar", "Mar"]
     ];
 
@@ -1100,6 +1432,7 @@
     applyListValidation(sheet.getRange("M2:N2"), validationSourceForList("months"));
     applyNonNegativeValidation(sheet.getRange("E2"));
     sheet.getRange("A:N").format.autofitColumns();
+    applyHubColumnWidths(sheet, "PlanningReview");
   }
 
   function applyRowValidationRules(sheet, headers) {
@@ -1323,8 +1656,10 @@
 
   function renderDemoOutputSummary() {
     return [
-      "Demo outputs inserted:",
-      ...demoOutputs.map((output) => `- ${output.sheet}: A4 -> ${output.formula}`)
+      "Demo hub outputs inserted:",
+      ...demoOutputs.flatMap((output) =>
+        output.sections.map((section) => `- ${output.sheet}: ${section.anchor} -> ${section.formula}`)
+      )
     ].join("\n");
   }
 

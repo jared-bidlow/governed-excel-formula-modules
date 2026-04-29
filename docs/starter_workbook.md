@@ -23,22 +23,46 @@ Governance_Starter.xlsx
 Governance_Starter.xltx
 ```
 
+The default build is the `Planning` edition. Optional editions can be generated with:
+
+```powershell
+.\tools\build_governance_starter_workbook.ps1 -Edition AssetsLite
+.\tools\build_governance_starter_workbook.ps1 -Edition AssetsFull
+```
+
+`AssetsLite` writes `Governance_Starter_AssetsLite.xlsx` / `.xltx`. `AssetsFull` writes `Governance_Starter_AssetsFull.xlsx` / `.xltx`.
+
 Use `Governance_Starter.xltx` as the Excel template. Use `Governance_Starter.xlsx` for inspection and smoke testing. The generator pulls from source-controlled formula modules, starter TSVs, and M templates, so the workbook artifact can be rebuilt instead of reviewed as source.
 
 The generated starter includes:
 
+- `Start Here` as the active front door,
+- visible planning sheets: `Source Status`, `Data Import Setup`, `Planning Table`, `Cap Setup`, `Planning Review`, and `Analysis Hub`,
 - planning source/cap setup sheets,
 - `Data Import Setup`, `PQ Budget Input`, and `PQ Budget QA`,
 - canonical import tables `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`,
+- hidden `Workbook Manifest` / `tblWorkbookManifest` loaded from `samples/workbook_manifest.tsv`, including `Presence`, `Edition`, and `FriendlyName` fields for generated sheets versus `OptionalLegacy` sheet names,
 - validation lists and visible controls,
-- an `Automation Setup` sheet that explains how to import the optional `ApplyNotes.ts` release asset,
+- a hidden `Automation Setup` sheet that explains how to import the optional `ApplyNotes.ts` release asset,
 - formula-module workbook names,
-- demo planning output sheets,
+- hub-based demo planning outputs,
 - notes staging,
-- optional asset workflow starter tables,
+- optional asset workflow starter tables and `tblAssetWorkflowSettings`,
 - asset evidence Power Query setup and loaded output sheets,
 - `Asset Finance Setup` / `tblAssetFinanceAssumptions`,
-- asset finance output sheets for depreciation, funding requirements, totals, and chart-ready feeds.
+- asset finance hub sections for depreciation, funding requirements, totals, and chart-ready feeds when the `AssetsFull` edition is generated.
+
+`Start Here` is not just a title sheet. It includes a workbook-flow table, the key source rule, navigation links to the visible sheets, and a short explanation of hidden backend/admin sheets. The stacked hub sheets also include clickable `Go to section` tables near the top so operators can jump to the output they need.
+
+The default visible workbook surface is:
+
+```text
+Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
+```
+
+Asset workflow is optional. `AssetsLite` adds `Asset Hub`; `AssetsFull` adds `Asset Hub` and `Asset Finance Hub`. Start with Asset Hub only when project-to-asset tracking is in scope. Do not start with PQ asset evidence sheets or `Asset State History`.
+
+Backend/admin sheets such as `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, `Automation Setup`, asset workflow tables, `Asset Finance Setup`, and intermediate asset-evidence Power Query sheets are hidden by default. They are still present for auditability and troubleshooting. Legacy separate output sheet names remain in the manifest as `OptionalLegacy`, but the generated workbook uses the hub sheets instead.
 
 The fastest no-build path is still a blank workbook with the minimum sheet names and starter table shape.
 
@@ -50,7 +74,7 @@ v0.5 moves the formula source boundary to `tblBudgetInput`. The flow is:
 Planning Table or external source -> Power Query adapter -> tblBudgetInput -> formula modules
 ```
 
-`Planning Table` / `tblPlanningTable` remains the manual starter surface. The current-workbook Power Query adapter reads it and shapes the same 64 columns into `tblBudgetInput`. The formulas in `modules/get.formula.txt` read `tblBudgetInput[#All]`, not fixed `Planning Table` coordinates.
+`Planning Table` / `tblPlanningTable` remains the manual starter surface. The current-workbook Power Query adapter reads it and shapes the same 64 columns into `tblBudgetInput`. The formulas in `modules/get.formula.txt` read `tblBudgetInput[#All]`, not fixed `Planning Table` coordinates. `qBudget_Source_Selected` chooses the active adapter from `tblBudgetImportParameters`.
 
 The generated starter creates:
 
@@ -63,7 +87,7 @@ The generated starter creates:
 | `PQ Budget QA` | `tblBudgetImportStatus` |
 | `PQ Budget QA` | `tblBudgetImportIssues` |
 
-After notes writeback or manual Planning Table edits, refresh the budget Power Query adapter before relying on outputs that read `tblBudgetInput`.
+After notes writeback or manual Planning Table edits, refresh or re-sync the budget Power Query adapter before relying on outputs that read `tblBudgetInput`.
 
 ## Minimum Sheets
 
@@ -77,8 +101,8 @@ Create these worksheets:
 | `Validation Lists` | Dropdown source values used by the starter add-in. |
 | `Decision Staging` | Notes/status/timeline staging table created by the notes workflow. |
 | `Data Import Setup` | Source profile, import parameters, and the 64-column budget input contract. |
-| `PQ Budget Input` | Canonical `tblBudgetInput` table consumed by formula modules. |
-| `PQ Budget QA` | Import status and issue tables used by `Source` formulas. |
+| `PQ Budget Input` | Hidden canonical `tblBudgetInput` table consumed by formula modules. |
+| `PQ Budget QA` | Hidden import status and issue tables used by `Source` formulas. |
 
 Optional asset setup creates additional worksheets only when `Setup Asset Workflow` is selected:
 
@@ -164,7 +188,7 @@ After those spill successfully, the other implemented planning screens are:
 =Analysis.PM_SPEND_REPORT()
 =Analysis.WORKING_BUDGET_SCREEN()
 =Analysis.BURNDOWN_SCREEN()
-=Source.SOURCE_STATUS
+=Source.SOURCE_STATUS()
 ```
 
 ## Starter Layout And Controls
@@ -214,7 +238,7 @@ It also creates or refreshes formula-backed `Decision Staging` / `tblDecisionSta
 
 ## Automation Setup Sheet
 
-The generated template includes an `Automation Setup` sheet because the public `.xltx` does not embed Office Scripts like VBA macros. The sheet points users to the `ApplyNotes.ts` release asset and gives the import sequence:
+The generated template includes a hidden `Automation Setup` sheet because the public `.xltx` does not embed Office Scripts like VBA macros. The sheet points users to the `ApplyNotes.ts` release asset and gives the import sequence:
 
 ```text
 Download ApplyNotes.ts -> Automate > New Script -> paste -> save as ApplyNotes
@@ -224,26 +248,38 @@ This keeps script installation explicit and tenant-controlled. The workbook has 
 
 ## Asset Finance Bridge
 
-The generated `Governance_Starter.xltx` includes `Asset Finance Setup` with `tblAssetFinanceAssumptions`. The minimum assumption fields are:
+The generated `Governance_Starter.xltx` includes hidden `Asset Finance Setup` with `tblAssetFinanceAssumptions`. The minimum assumption fields are:
 
 ```text
 DepreciationClass | UsefulLifeYears | DepreciationMethod | FundingSource | FundingRequirementRule | ChartGroup
 ```
 
-The finance output sheets are generated from `modules/asset_finance.formula.txt`:
+The `Asset Finance Hub` sections are generated from `modules/asset_finance.formula.txt`:
 
-| Sheet | Cell | Formula |
+| Hub section | Cell | Formula |
 |---|---|---|
-| `Asset Depreciation` | `A4` | `=AssetFinance.DEPRECIATION_SCHEDULE` |
-| `Asset Funding Requirements` | `A4` | `=AssetFinance.FUNDING_REQUIREMENTS` |
-| `Asset Finance Totals` | `A4` | `=AssetFinance.FINANCE_TOTALS` |
-| `Asset Finance Charts` | `A4` | `=AssetFinance.CHART_FEEDS` |
+| `Asset Depreciation` | `A12` | `=AssetFinance.DEPRECIATION_SCHEDULE` |
+| `Asset Funding Requirements` | `A84` | `=AssetFinance.FUNDING_REQUIREMENTS` |
+| `Asset Finance Totals` | `A140` | `=AssetFinance.FINANCE_TOTALS` |
+| `Asset Finance Charts` | `A168` | `=AssetFinance.CHART_FEEDS` |
 
 These formulas read `tblAssetEvidence_ModelInputs`, not the raw setup tables. Rows with `PresentWithMappedEvidence = TRUE` remain visible for review, but mapped-only rows do not feed the finance outputs. A row must have `PresentWithClassifiedEvidence = TRUE` to drive depreciation, funding, totals, or chart-ready tables.
 
 `Setup Asset Workflow` is optional. It creates `tblAssets` plus the asset setup, mapping, change, and state-history tables used by `office-scripts/apply_asset_mappings.ts`; it is not part of the default setup path. It also applies dropdowns for asset state/status fields and advisory relationship dropdowns for asset IDs and project keys. Rerunning it recreates those workflow tables from headers, so use it as a starter/reset action before entering real asset rows or against a workbook copy.
 
-The task-pane `Setup + Install + Validate + Outputs` button creates the public demo sheets as part of the full starter flow. The standalone `Insert Demo Outputs` button remains available for rerunning only the output insertion. Before either path writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis screens at `A4` on separate sheets named `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, and `Burndown`. It also creates an `Internal Jobs` sheet at `A4` with `=Ready.InternalJobs_Export()` for readiness smoke testing.
+The task-pane `Setup + Install + Validate + Outputs` button creates the public demo hub sheets as part of the full starter flow. The standalone `Insert Demo Outputs` button remains available for rerunning only the hub output insertion. Before either path writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis Hub sections for `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, `Burndown`, and `Internal Jobs` with `=Ready.InternalJobs_Export()` instead of creating separate output sheets. Each generated hub includes a clickable section table before the stacked outputs.
+
+## SemanticTwin Edition
+
+`SemanticTwin` is an optional generated edition for REC and Brick semantic mapping. It keeps the planning, asset, and finance surfaces from `AssetsFull`, then makes `Semantic Map Hub` visible. `Semantic Map Setup` remains hidden/admin-scoped.
+
+Use REC for buildings, rooms, spaces, real-estate context, and generic facility assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. The starter includes only curated crosswalk TSVs and `modules/ontology.formula.txt`; it is not a full ontology import and does not implement Azure Digital Twins, Fabric graph, RDF, Turtle, or JSON-LD export.
+
+Build the semantic edition with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_governance_starter_workbook.ps1 -Edition SemanticTwin
+```
 
 ## Add-In Option
 

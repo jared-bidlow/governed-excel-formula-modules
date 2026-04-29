@@ -1,0 +1,15 @@
+UserFacingType	Standard	ClassIri	UseWhen	Notes
+Building	REC	rec:Building	Facility or building records	Spatial context for capital work.
+Room	REC	rec:Room	Room or space records	Use when project impact is tied to a room or interior space.
+Space	REC	rec:Space	General space records	Use when room-level specificity is not available.
+Asset	REC	rec:Asset	Generic facility asset records	Use for business/facility asset context.
+Equipment	Brick	brick:Equipment	Building systems or equipment	Use for equipment when a narrower Brick class is not needed.
+HVAC Equipment	Brick	brick:HVAC_Equipment	HVAC equipment	Use for chillers, air handlers, and similar equipment.
+Electrical Equipment	Brick	brick:Electrical_Equipment	Electrical equipment	Use for switchgear, panels, and related systems.
+Lighting Equipment	Brick	brick:Lighting_Equipment	Lighting systems	Use for lighting equipment and fixture systems.
+Fire Safety Equipment	Brick	brick:Fire_Safety_Equipment	Fire and life-safety systems	Use for alarms, suppression, and life-safety equipment.
+Point	Brick	brick:Point	Operational point records	Use for BMS or telemetry points.
+Sensor	Brick	brick:Sensor	Sensor point records	Use for measured points.
+Meter	Brick	brick:Meter	Meter point records	Use for metering points.
+Setpoint	Brick	brick:Setpoint	Setpoint records	Use for controllable target values.
+Command	Brick	brick:Command	Command point records	Use for control command points.

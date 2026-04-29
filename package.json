@@ -14,7 +14,13 @@
     "build:governance-starter": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_governance_starter_workbook.ps1",
     "build:asset-evidence-pq-seed": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_asset_evidence_pq_seed.ps1",
     "install:asset-evidence-pq": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/install_asset_evidence_pq_workbook.ps1",
-    "asset-evidence:pq": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_asset_evidence_pq_installer.ps1"
+    "asset-evidence:pq": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/start_asset_evidence_pq_installer.ps1",
+    "audit": "python -S tools/audit_capex_module.py",
+    "lint:formulas": "python -S tools/lint_formulas.py modules/*.formula.txt",
+    "feature:status": "python -S tools/report_feature_status.py",
+    "review:packet": "python -S tools/build_review_packet.py",
+    "check:release-artifact": "python -S tools/check_release_artifact.py release_artifacts",
+    "validate": "python -S tools/audit_capex_module.py && python -S tools/lint_formulas.py modules/*.formula.txt && python -S tools/report_feature_status.py"
   },
   "devDependencies": {
     "office-addin-debugging": "^6.0.3"

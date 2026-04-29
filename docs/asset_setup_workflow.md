@@ -2,11 +2,13 @@
 
 The asset workflow is optional. It is not part of the default `Setup + Install + Validate + Outputs` path.
 
-Use `Setup Asset Workflow` when a workbook needs asset-mapping review surfaces and controlled asset writeback tables.
+Start with `Asset Hub` when a workbook needs asset-mapping review surfaces and controlled asset writeback tables. If the workbook only needs capital planning, stay in `Planning Review` and `Analysis Hub`.
+
+Do not start with PQ asset evidence sheets. Do not start with `Asset State History`. Asset Finance is advanced and requires classified evidence.
 
 Rerunning this setup recreates the asset workflow tables from their headers. Use it as a starter/reset action on a copy or before live asset data is entered, not as a migration over populated production tables.
 
-For a new workbook, `tools/build_governance_starter_workbook.ps1` can generate `release_artifacts/governance-starter/Governance_Starter.xltx` with these asset workflow tables already present. The add-in button remains useful for blank-workbook setup and controlled resets.
+For a new workbook, `tools/build_governance_starter_workbook.ps1 -Edition AssetsLite` can generate an asset-enabled starter template with `Asset Hub` visible. Use `-Edition AssetsFull` only when asset evidence finance outputs are in scope. The add-in button remains useful for blank-workbook setup and controlled resets.
 
 ## Created Sheets
 
@@ -31,7 +33,7 @@ The add-in creates formatted starter tables aligned to `office-scripts/apply_ass
 - `tblAssetChanges`
 - `tblAssetStateHistory`
 
-Starter TSV files under `samples/` provide public-safe example headers and fake starter rows for the staging, mapping, change, and history tables. `tblAssets` is created directly from the add-in's asset-register header contract.
+Starter TSV files under `samples/` provide public-safe headers and blank starter rows for the staging, mapping, change, and history tables. Demo rows live under `samples/demo/asset_workflow/` so the public starter does not look pre-populated with live assets.
 
 ## Asset Table Map
 
@@ -64,6 +66,12 @@ Those relationship lists are applied to asset ID and project key columns in the 
 
 `modules/assets.formula.txt` contains dynamic-array review formulas:
 
+- `Assets.ASSET_START_HERE`
+- `Assets.ASSET_WORKFLOW_STATUS`
+- `Assets.ASSET_NEXT_ACTIONS`
+- `Assets.ASSET_TABLE_MAP`
+- `Assets.ASSET_GLOSSARY`
+- `Assets.ASSET_REVIEW_QUEUE`
 - `Assets.PROJECT_PROMOTION_QUEUE`
 - `Assets.ASSET_MAPPING_ISSUES`
 - `Assets.ASSET_CHANGE_ISSUES`
@@ -98,4 +106,8 @@ The evidence bridge keeps mapped context and classified evidence separate. Asset
 
 ## Boundary
 
-This release does not include RDF export, SHACL validation, ontology files, or finished asset reports. Asset formulas review workbook state; Office Scripts perform controlled workbook writes; the asset evidence Power Query seed provides setup tables and public-safe M templates only.
+This release keeps asset workflow separate from semantic mapping. Asset formulas review workbook state; Office Scripts perform controlled workbook writes; the asset evidence Power Query seed provides setup tables and public-safe M templates only.
+
+This asset setup slice does not include RDF export, SHACL validation, or finished asset reports. The Power Query seed provides setup tables and evidence M templates only.
+
+`SemanticTwin` is optional and sits after the asset workflow. Use REC for buildings, spaces, rooms, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. The semantic crosswalk is not a full ontology import, not SHACL validation, and not a completed graph or Azure Digital Twins integration.

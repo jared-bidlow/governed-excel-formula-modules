@@ -1870,8 +1870,9 @@ BURNDOWN_SCREEN_DETAIL_FROM_AXIS = LAMBDA(Axis,
             DetBurn / DetProj
         ),
         CumRem, SCAN(0, DetRem, LAMBDA(acc, val, acc + val)),
-        CutMask, (CutTarget > 0) * (CumRem <= CutTarget),
-        CutDisp, IF(CutTarget <= 0, "", IF(CutMask, TRUE, "")),
+        BlankCut, MAKEARRAY(ROWS(DetailSorted), 1, LAMBDA(rw, c, "")),
+        CutMask, IFERROR((CutTarget > 0) * (CumRem <= CutTarget), 0),
+        CutDisp, IFERROR(IF(CutTarget <= 0, BlankCut, IF(CutMask, "Yes", BlankCut)), BlankCut),
         DetailAnn, HSTACK(
             DetailSorted,
             BurnPct,

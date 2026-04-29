@@ -42,6 +42,7 @@ governed-excel-formula-modules/
 |   \-- supporting workbook modules
 +-- docs/
 |   +-- asset_setup_workflow.md
+|   +-- asset_quick_start.md
 |   +-- asset_evidence_power_query.md
 |   +-- copilot_review_playbook.md
 |   +-- database_import_contract.md
@@ -88,9 +89,24 @@ From the repo root:
 ```bash
 python tools/audit_capex_module.py
 python tools/lint_formulas.py modules/*.formula.txt
+python tools/report_feature_status.py
 ```
 
 The audit is intentionally text-only. It does not open Excel, edit workbook binaries, or require workbook data.
+
+For release review, `npm run validate` runs the static audit, formula lint, and feature-status reporter. `npm run review:packet` writes an ignored review packet under `release_artifacts/review_packet/` so reviewers can see what is built, scaffolded, or still missing.
+
+## Starter Workbook Editions
+
+The default generated `Governance_Starter.xltx` is planning-only. Its visible flow is:
+
+```text
+Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
+```
+
+Asset workflow is optional. Start with Asset Hub only when you explicitly need project-to-asset tracking. `AssetsLite` adds `Asset Hub`; `AssetsFull` adds both `Asset Hub` and `Asset Finance Hub`. `SemanticTwin` adds `Semantic Map Hub` for optional REC/Brick semantic crosswalk review.
+
+`tblBudgetInput` is the canonical formula source. `Planning Table` / `tblPlanningTable` is manual/staging/local writeback. After manual Planning Table edits or `ApplyNotes`, refresh or re-sync the current-workbook adapter before relying on formula outputs.
 
 To validate, commit, rebase, and push the public repo in one local command:
 
@@ -163,11 +179,15 @@ Governance_Starter.xltx
 
 The `.xltx` is the user-facing Excel template. The `.xlsx` is kept beside it for inspection and smoke testing. Both are generated from tracked text sources: formula modules in `modules/`, starter TSVs in `samples/`, and M templates in `samples/power-query/`.
 
-The v0.5 data import bridge adds `Data Import Setup`, `PQ Budget Input`, and `PQ Budget QA` sheets. The generated template creates `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`. Formula modules now read the canonical `tblBudgetInput` table; `Planning Table` remains the manual starter source and current-workbook adapter source.
+The generated workbook opens on `Start Here` and keeps the default visible surface small: `Source Status`, `Data Import Setup`, `Planning Table`, `Cap Setup`, `Planning Review`, and `Analysis Hub`. Asset and semantic surfaces are opt-in by edition. `Start Here` includes workbook flow, the `tblBudgetInput` source rule, navigation links, and the hidden-backend explanation. Governed backend sheets such as `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, asset workflow sheets, semantic setup sheets, and intermediate asset-evidence Power Query outputs are still generated, but hidden by default from the source-controlled workbook manifest. The manifest includes a `Presence` field so legacy sheet names can remain documented as `OptionalLegacy` without being created as primary workbook sheets.
 
-The generated starter also includes an `Automation Setup` worksheet. It explains how to import the optional `ApplyNotes.ts` release asset through Excel `Automate -> New Script`; the public template does not embed or auto-install Office Scripts.
+The v0.5 data import bridge adds `Data Import Setup`, hidden `PQ Budget Input`, and hidden `PQ Budget QA` sheets. The generated template creates `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`. Formula modules now read the canonical `tblBudgetInput` table; `Planning Table` remains the manual starter source and current-workbook adapter source.
 
-The generated starter includes the first v0.4 asset finance bridge: `Asset Finance Setup` / `tblAssetFinanceAssumptions`, the `AssetFinance` formula names, and output sheets named `Asset Depreciation`, `Asset Funding Requirements`, `Asset Finance Totals`, and `Asset Finance Charts`. Those outputs read `tblAssetEvidence_ModelInputs`; mapped-only evidence remains reviewable in the Power Query status and mapping queue, but only rows with `PresentWithClassifiedEvidence = TRUE` feed the finance model outputs.
+For v0.5, `Planning Table` is a manual/staging surface and governed report formulas consume `tblBudgetInput`. If `Planning Table` changes, refresh or re-sync the current-workbook adapter before relying on formula outputs.
+
+The generated starter also includes a hidden `Automation Setup` worksheet. It explains how to import the optional `ApplyNotes.ts` release asset through Excel `Automate -> New Script`; the public template does not embed or auto-install Office Scripts.
+
+The generated starter includes the first v0.4 asset finance bridge: hidden `Asset Finance Setup` / `tblAssetFinanceAssumptions`, the `AssetFinance` formula names, and `Asset Finance Hub` sections for depreciation, funding requirements, totals, and chart-ready feeds. The stacked hub sheets include clickable `Go to section` tables near the top so operators can jump down-page to the relevant output without browsing backend sheets. Those outputs read `tblAssetEvidence_ModelInputs`; mapped-only evidence remains reviewable in the Power Query status and mapping queue, but only rows with `PresentWithClassifiedEvidence = TRUE` feed the finance model outputs.
 
 ## Start From A Blank Workbook
 
@@ -242,6 +262,24 @@ The v0.2.0 workflow layer adds a controlled notes/status/timeline apply path and
 - `modules/assets.formula.txt` contains review queues only; Office Scripts perform controlled writes.
 
 See `docs/notes_apply_workflow.md`, `docs/asset_setup_workflow.md`, `docs/asset_evidence_power_query.md`, and `office-scripts/README.md`.
+
+## Optional SemanticTwin Crosswalk
+
+`SemanticTwin` is an opt-in starter edition for digital-twin-readiness review. It adds `Semantic Map Hub` and hidden `Semantic Map Setup` tables without changing the default planning workbook.
+
+The semantic layer is optional. Use REC for buildings, rooms, spaces, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. This is not a full ontology import, not a JSON-LD/RDF exporter, and not a completed Azure Digital Twins or Fabric graph integration.
+
+The first slice is a curated crosswalk:
+
+- `tblOntologyNamespaces`
+- `tblOntologyClassMap`
+- `tblOntologyRelationshipMap`
+- `tblProjectSemanticMap`
+- `tblAssetSemanticMap`
+- `Ontology.TRIPLE_EXPORT_QUEUE`
+- `Ontology.ONTOLOGY_ISSUES`
+
+See `docs/semantic_standards_strategy.md`.
 
 ## Core Pattern
 

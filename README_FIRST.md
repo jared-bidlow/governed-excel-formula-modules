@@ -26,3 +26,13 @@ Install Node.js LTS, close PowerShell, then run `Start-AddIn.ps1` again.
 ## After Setup
 
 Use `Planning Review` as the meeting surface. Type updates in `P:R`, run `ApplyNotes` once to prepare, inspect `Decision Staging`, then run `ApplyNotes` again to apply.
+
+## Assets Are Optional
+
+Start with `Planning Review` and `Analysis Hub` unless you explicitly need project-to-asset tracking.
+
+If you need assets, start with `Asset Hub`. Do not start with PQ asset evidence sheets. Do not start with `Asset State History`. `Asset Finance Hub` is advanced and requires classified evidence before depreciation or funding outputs are expected.
+
+SemanticTwin is optional. Use it only when projects or assets need REC and Brick semantic crosswalk labels; it is not a full ontology import or completed digital-twin integration.
+
+`tblBudgetInput` is the canonical formula source. `Planning Table` is manual/staging/local writeback. After manual Planning Table edits or `ApplyNotes`, refresh or re-sync before relying on formula outputs.

@@ -1,5 +1,6 @@
 let
-    SourceMode = "CurrentWorkbook",
+    Parameters = Excel.CurrentWorkbook(){[Name = "tblBudgetImportParameters"]}[Content],
+    SourceMode = try Parameters{[Parameter = "ActiveAdapter"]}[Value] otherwise "CurrentWorkbook",
     SourceRows = qBudget_Input,
     Status = #table(
         {"QueryName", "SourceMode", "LastRefreshUtc", "RowCount", "Status", "Message"},

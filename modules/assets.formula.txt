@@ -1,3 +1,75 @@
+ASSET_START_HERE = VSTACK(
+    {"Question", "Recommended path", "Edit this", "Review this", "Next action"},
+    {"I only need capital planning", "Off", "Nothing", "Planning Review / Analysis Hub", "Ignore asset workflow"},
+    {"I already know asset IDs", "Map existing assets", "Asset Register; Project-to-Asset Map", "Asset Mapping Issues", "Add assets and links, then review issues"},
+    {"Projects may create assets", "Create candidate assets", "Candidate approval queue; mapping staging", "Promotion Queue", "Accept candidate rows and stage changes"},
+    {"Projects replace or upgrade assets", "Track replacements/upgrades", "Pending project-asset changes", "Replacement/source-target issues", "Fix source/target IDs before apply"},
+    {"I need depreciation or funding", "Asset finance from evidence", "Asset Evidence Setup; Asset Finance Setup", "Asset Finance Hub", "Classify evidence, refresh, review outputs"}
+);
+
+ASSET_WORKFLOW_STATUS = LET(
+    realCount, LAMBDA(values, IFERROR(SUM(--(TRIM(values & "") <> "")), 0)),
+    assetCount, realCount(tblAssets[AssetID]),
+    linkCount, realCount(tblProjectAssetMap[ProjectKey]),
+    candidateCount, realCount(tblSemanticAssets[CandidateAssetId]),
+    pendingCount, realCount(tblAssetMappingStaging[ProjectKey]),
+    mappingIssues, IFERROR(DROP(Assets.ASSET_MAPPING_ISSUES, 1), ""),
+    mappingIssueCount, IFERROR(SUM(--(TRIM(CHOOSECOLS(mappingIssues, 6) & "") <> "")), 0),
+    financeReadyCount, IFERROR(SUM(--(((tblAssetEvidence_ModelInputs[PresentWithClassifiedEvidence] = TRUE) + (UPPER(TRIM(tblAssetEvidence_ModelInputs[PresentWithClassifiedEvidence] & "")) = "TRUE")) > 0)), 0),
+    VSTACK(
+        {"Area", "Status", "Count", "Meaning"},
+        HSTACK("Asset register", IF(assetCount > 0, "Ready", "Empty"), assetCount, "Durable asset records"),
+        HSTACK("Project-to-asset links", IF(linkCount > 0, "Ready", "Empty"), linkCount, "Projects linked to accepted assets"),
+        HSTACK("Candidate assets", IF(candidateCount > 0, "Ready", "Empty"), candidateCount, "Suggested assets needing review"),
+        HSTACK("Pending mapping changes", IF(pendingCount > 0, "Ready", "Empty"), pendingCount, "Rows that may be applied by script"),
+        HSTACK("Mapping issues", IF(mappingIssueCount > 0, "Needs review", "OK"), mappingIssueCount, "Rows with missing or inconsistent asset IDs"),
+        HSTACK("Finance-ready evidence", IF(financeReadyCount > 0, "Ready", "Empty"), financeReadyCount, "Rows that feed AssetFinance outputs")
+    )
+);
+
+ASSET_NEXT_ACTIONS = VSTACK(
+    {"Mode", "Next action", "Where to look", "Do not start with"},
+    {"Off", "No asset action needed. Use Planning Review and Analysis Hub.", "Planning Review / Analysis Hub", "PQ Asset Evidence sheets or Asset State History"},
+    {"Map existing assets", "Add assets to Asset Register and link projects in Project-to-Asset Map, then fix Asset Mapping Issues.", "Asset Hub guidance first", "PQ Asset Evidence sheets"},
+    {"Create candidate assets", "Review Project Promotion Queue, then stage accepted candidates.", "Asset Hub / Candidate Approval Queue", "Asset State History"},
+    {"Track replacements/upgrades", "Fix source/target IDs before applying replacement or upgrade changes.", "Asset Hub / Pending Project-Asset Changes", "Raw script logs"},
+    {"Asset finance from evidence", "Add or classify asset evidence before using Asset Finance Hub.", "Asset Finance Hub", "Mapped-only evidence"}
+);
+
+ASSET_TABLE_MAP = VSTACK(
+    {"User-facing name", "Technical table", "Purpose", "User edits?", "When to use"},
+    {"Asset Register", "tblAssets", "Accepted assets", "Admin", "Existing asset inventory"},
+    {"Asset Candidates", "tblSemanticAssets", "Candidate assets", "Review only", "Project-derived suggestions"},
+    {"Candidate Approval Queue", "tblAssetPromotionQueue", "Accepted candidates", "Yes", "Create new asset links"},
+    {"Pending Project-Asset Changes", "tblAssetMappingStaging", "Staged changes", "Yes", "Controlled writeback"},
+    {"Project-to-Asset Links", "tblProjectAssetMap", "Current links", "Admin", "Manual or script-updated links"},
+    {"Asset Change Log", "tblAssetChanges", "Applied changes", "No", "Audit trail"},
+    {"Asset History", "tblAssetStateHistory", "State events", "No", "Audit trail"},
+    {"Finance-ready Evidence", "tblAssetEvidence_ModelInputs", "Finance model feed", "No", "After Power Query refresh"}
+);
+
+ASSET_GLOSSARY = VSTACK(
+    {"Term", "Plain meaning", "Example"},
+    {"ProjectKey", "The project row identifier", "SRC-001-JOB-001"},
+    {"AssetId", "The accepted asset identifier", "ASSET-001"},
+    {"SourceAssetId", "Existing asset before a change", "OLD-ASSET-01"},
+    {"TargetAssetId", "New or resulting asset after a change", "NEW-ASSET-01"},
+    {"new_asset", "Project creates a new asset", "Install a new durable asset"},
+    {"replace_asset", "Project replaces one asset with another", "Replace an old asset with a new one"},
+    {"upgrade_asset", "Project improves the same asset", "Upgrade an existing asset"},
+    {"EvidenceId", "Proof/source record for an asset claim", "Invoice, inspection, or work order"},
+    {"ApplyReady", "Whether script may apply the row", "TRUE/FALSE"}
+);
+
+ASSET_REVIEW_QUEUE = VSTACK(
+    {"Review area", "Formula or table", "What to check", "When to use"},
+    {"Mapping issues", "Assets.ASSET_MAPPING_ISSUES", "Missing ProjectKey, ChangeType, or asset identity", "Before applying project-to-asset changes"},
+    {"Candidate promotion", "Assets.PROJECT_PROMOTION_QUEUE", "Projects that could become asset candidates", "When projects may create assets"},
+    {"Change issues", "Assets.ASSET_CHANGE_ISSUES", "Invalid change log rows", "When tracking replacements or upgrades"},
+    {"Installed without evidence", "Assets.INSTALLED_WITHOUT_EVIDENCE", "Installed assets missing EvidenceId", "Before finance evidence work"},
+    {"Replacement source/target", "Assets.REPLACEMENT_SOURCE_TARGET_ISSUES", "Replacement and upgrade source/target consistency", "Before running Apply Asset Mappings"}
+);
+
 PROJECT_PROMOTION_QUEUE = LET(
     rows, get.GetBudgetDetailRows(),
     hdr, TAKE(rows, 1),

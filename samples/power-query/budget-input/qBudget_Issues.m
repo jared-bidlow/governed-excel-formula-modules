@@ -1,5 +1,5 @@
 let
-    Source = qBudget_Source_CurrentWorkbook,
+    Source = qBudget_Source_Selected,
     Contract = Excel.CurrentWorkbook(){[Name = "tblBudgetImportContract"]}[Content],
     ExpectedColumns = Table.Column(Contract, "ColumnName"),
     ActualColumns = Table.ColumnNames(Source),

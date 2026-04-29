@@ -1,0 +1,9 @@
+UserFacingRelationship	Predicate	UseWhen	Notes
+Located in	rec:locatedIn	Asset or equipment located in a building, room, or space	REC spatial relation.
+Has part	rec:hasPart	Assembly, component, or parent-child relationship	Use for building, asset, or equipment composition.
+Is part of	rec:isPartOf	Child-to-parent relationship	Inverse of has part.
+Feeds	brick:feeds	System or equipment feeds another system or area	Brick-style systems relation.
+Is fed by	brick:isFedBy	System or area is fed by another system	Inverse of feeds.
+Has point	rec:hasPoint	Equipment has a point, meter, sensor, setpoint, or command	Use for equipment-to-point relationships.
+Is affected by project	gef:affectedByProject	Semantic object is affected by a workbook project	Workbook extension relation.
+Affects	gef:affectsProject	Workbook project affects a semantic object	Workbook extension relation.

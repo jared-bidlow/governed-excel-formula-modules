@@ -1,0 +1,4 @@
+Setting	Value	Description
+AssetWorkflowMode	Off	Off, Map existing assets, Create candidate assets, Track replacements/upgrades, or Asset finance from evidence.
+ShowAssetAdminLinks	TRUE	Show links and table-map guidance for hidden asset setup/admin sheets.
+UseDemoRows	FALSE	Keep FALSE for public starter artifacts; use samples/demo/asset_workflow rows only for demos.
