@@ -1361,9 +1361,9 @@ def audit_docs(results: list[Result]) -> None:
         results,
         "docs/codex_chatgpt_durable_contract.md",
         durable_contract,
-        "durable contract records Task 4 and Task 5 boundary",
-        r"No RDF/export.*Task 4: added starter TSVs and `modules/assets\.formula\.txt` review formulas.*Task 5: docs, README, audit coverage, and release notes",
-        "Keep the handoff note current for the v0.2.0 task sequence.",
+        "durable contract records release handoff format",
+        r"Required Release-Handoff Report.*Feature status:.*Built:.*Scaffolded:.*Missing:.*Validation:.*Known limitations:",
+        "Keep the handoff note current for release readiness and reviewer packet work.",
     )
     check_required_regex(
         results,
@@ -3081,6 +3081,123 @@ def audit_budget_input_power_query_contract(results: list[Result]) -> None:
         )
 
 
+def audit_release_accelerator_contract(results: list[Result]) -> None:
+    feature_status = read_text(ROOT / "docs" / "feature_status.tsv")
+    feature_reporter = read_text(ROOT / "tools" / "report_feature_status.py")
+    review_packet = read_text(ROOT / "tools" / "build_review_packet.py")
+    artifact_scanner = read_text(ROOT / "tools" / "check_release_artifact.py")
+    workflow = read_text(ROOT / ".github" / "workflows" / "validate.yml")
+    package = read_text(ROOT / "package.json")
+    agents = read_text(ROOT / "AGENTS.md")
+    codex_contract = read_text(ROOT / "docs" / "codex_chatgpt_durable_contract.md")
+    changelog = read_text(ROOT / "docs" / "change_log.md")
+
+    check_required_regex(
+        results,
+        "docs/feature_status.tsv",
+        feature_status,
+        "feature status file has required columns",
+        r"FeatureId\tFeatureName\tExpectedStatus\tCategory\tEvidenceType\tEvidencePattern\tNotes",
+        "Keep feature status source-controlled and machine-readable.",
+    )
+    for feature_id in [
+        "canonical_budget_input",
+        "pq_selected_adapter",
+        "source_module",
+        "start_here_hubs",
+        "workbook_manifest",
+        "artifact_sanitization",
+        "release_artifact_scan",
+        "ci_validation",
+        "review_packet",
+        "feature_status_reporter",
+        "asset_editions",
+        "asset_guided_start",
+        "asset_finance_empty_state",
+    ]:
+        add(
+            results,
+            feature_id in feature_status,
+            "docs/feature_status.tsv",
+            f"feature status tracks {feature_id}",
+            "feature row present",
+            f"Track {feature_id} in docs/feature_status.tsv.",
+        )
+    check_required_regex(
+        results,
+        "tools/report_feature_status.py",
+        feature_reporter,
+        "feature status reporter supports expected statuses",
+        r"VALID_STATUSES.*Built.*Scaffolded.*Missing.*Mismatch.*ExpectedStatus.*EvidencePattern",
+        "Keep feature status output explicit about built/scaffolded/missing/mismatch state.",
+    )
+    check_required_regex(
+        results,
+        "tools/report_feature_status.py",
+        feature_reporter,
+        "feature status reporter fails only missing built evidence",
+        r"expected_status == \"Built\".*actual_status == \"Missing\"",
+        "Only block CI when a feature expected to be Built lacks evidence.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_review_packet.py",
+        review_packet,
+        "review packet generator writes ignored packet",
+        r"release_artifacts.*review_packet.*review_packet\.md.*Feature Status.*Workbook Manifest Summary.*Power Query Adapter Summary.*Asset Workflow Status",
+        "Keep review packets useful for branch handoff.",
+    )
+    check_required_regex(
+        results,
+        "tools/check_release_artifact.py",
+        artifact_scanner,
+        "release artifact scanner checks package hazards",
+        r"WORKBOOK_SUFFIXES.*\.xlsx.*\.xltx.*forbidden_needles.*#REF!.*#VALUE!.*#N/A.*#NAME\?.*#DIV/0!.*HYPERLINK\(",
+        "Keep generated workbook artifacts independently scannable without Excel COM.",
+    )
+    check_required_regex(
+        results,
+        ".github/workflows/validate.yml",
+        workflow,
+        "GitHub Actions runs source validation",
+        r"pull_request.*codex/\*\*.*python -S tools/audit_capex_module\.py.*python -S tools/lint_formulas\.py modules/\*\.formula\.txt.*python -S tools/report_feature_status\.py.*git diff --check",
+        "Keep PR and codex branch validation aligned with local checks.",
+    )
+    for script_name in ["validate", "review:packet", "feature:status", "check:release-artifact"]:
+        add(
+            results,
+            f'"{script_name}"' in package,
+            "package.json",
+            f"package script {script_name} exists",
+            "script present",
+            f"Expose npm script {script_name} for local reviewers.",
+        )
+    check_required_regex(
+        results,
+        "AGENTS.md",
+        agents,
+        "agent contract requires built scaffolded missing report",
+        r"Feature status:.*Built:.*Scaffolded:.*Missing:.*Validation:.*Not changed:",
+        "Keep implementation reports reviewer-friendly.",
+    )
+    check_required_regex(
+        results,
+        "docs/codex_chatgpt_durable_contract.md",
+        codex_contract,
+        "durable contract documents review packet and feature status",
+        r"Required Release-Handoff Report.*tools/build_review_packet\.py.*tools/report_feature_status\.py.*Built.*Scaffolded.*Missing",
+        "Keep the Codex/ChatGPT handoff convention documented.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records release accelerator tooling",
+        r"Add v0\.5 release accelerator tooling.*feature status.*review-packet.*CI validation.*release-artifact package scanner",
+        "Record the release accelerator and reviewer handoff tooling.",
+    )
+
+
 def audit_governance_starter_template_contract(results: list[Result]) -> None:
     builder = read_text(ROOT / "tools" / "build_governance_starter_workbook.ps1")
     readme = read_text(ROOT / "README.md")
@@ -3610,6 +3727,7 @@ def main() -> int:
     audit_governance_starter_template_contract(results)
     audit_asset_evidence_power_query_contract(results)
     audit_budget_input_power_query_contract(results)
+    audit_release_accelerator_contract(results)
     audit_reforecast_contract(results)
 
     for result in results:

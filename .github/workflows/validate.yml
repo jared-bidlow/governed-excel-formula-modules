@@ -1,0 +1,25 @@
+name: Validate governed Excel modules
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "codex/**"
+
+jobs:
+  validate-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Audit repo contract
+        run: python -S tools/audit_capex_module.py
+      - name: Lint formula modules
+        run: python -S tools/lint_formulas.py modules/*.formula.txt
+      - name: Report feature status
+        run: python -S tools/report_feature_status.py
+      - name: Whitespace check
+        run: git diff --check

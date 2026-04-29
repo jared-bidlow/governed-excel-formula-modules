@@ -47,3 +47,28 @@ For each behavior change:
 5. Add or update static checks in `tools/audit_capex_module.py`.
 
 Do not add private data, workbook binaries, or generated artifacts.
+
+## Codex Final Report Contract
+
+For release or feature implementation work, include:
+
+1. Feature status:
+   - Built:
+   - Scaffolded:
+   - Missing:
+2. Validation:
+   - audit:
+   - formula lint:
+   - feature status:
+   - review packet, when generated:
+   - `git diff --check`:
+3. Changed files.
+4. Not changed:
+   - main report math,
+   - existing `AssetFinance` calculation semantics,
+   - workbook binaries,
+   - private data,
+   - real database credentials.
+5. Known limitations.
+
+Use `tools/report_feature_status.py` and `tools/build_review_packet.py` when the task concerns release readiness or reviewer handoff.

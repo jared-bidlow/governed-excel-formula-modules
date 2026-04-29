@@ -1,3 +1,28 @@
+## 2026-04-29 - Add v0.5 release accelerator tooling
+
+Semantic change:
+
+- Added source-controlled feature status evidence so reviewers can see which v0.5 features are built, scaffolded, or intentionally missing.
+- Added a review-packet generator for compact branch handoff without sharing a full repo zip.
+- Added CI validation for audit, formula lint, feature status, and whitespace checks.
+- Added a release-artifact package scanner for public metadata hazards and cached workbook errors without requiring Excel COM.
+- Documented the Codex/ChatGPT final-report contract for built/scaffolded/missing state, validation, changed files, not-changed guarantees, and known limitations.
+
+Minimal diff summary:
+
+- Added `docs/feature_status.tsv`.
+- Added `tools/report_feature_status.py`, `tools/build_review_packet.py`, and `tools/check_release_artifact.py`.
+- Added `.github/workflows/validate.yml`.
+- Updated `package.json`, `AGENTS.md`, `docs/codex_chatgpt_durable_contract.md`, and audit checks.
+
+Visible impact:
+
+- Main report totals: no intended change.
+- Subtotal flags: no intended change.
+- Cap remaining values: no intended change.
+- AssetFinance calculations and outputs: no intended calculation change.
+- Workbook binaries and generated artifacts remain out of tracked source.
+
 ## 2026-04-28 - Simplify generated workbook UX
 
 Semantic change:
