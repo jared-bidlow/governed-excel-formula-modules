@@ -107,6 +107,8 @@ Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planni
 
 Integration Bridge is optional. It exports workbook project identity as `Source ID`, `Job ID`, and `ProjectKey`, then imports approved evidence rows as advisory context. It does not create projects, update official status, or use raw file paths as project keys.
 
+In a local three-repo setup, keep the durable operator diagram for this CSV handoff in the integration repo, for example `<LOCAL_INTEGRATION_REPO_V1>\docs\operator_cross_repo_map.md`.
+
 Asset workflow is optional. Start with Asset Hub to decide whether assets are needed. Start with Asset Register to enter a simple asset. `AssetsLite` adds `Asset Hub` and `Asset Register`; `AssetsFull` adds `Asset Finance Hub`; `SemanticTwin` adds `Semantic Map Hub` for optional REC/Brick semantic crosswalk review. Do not start with Asset Evidence, Asset State History, or PQ asset sheets. `LinkedProjectID` is optional and advisory.
 
 tblBudgetInput remains the manual/canonical planning input table for this release because refresh is not surfaced. `Planning Table` / `tblPlanningTable` is manual/staging/local writeback. After manual Planning Table edits or `ApplyNotes`, refresh or re-sync the current-workbook adapter before relying on formula outputs.
