@@ -4,7 +4,7 @@ This optional bridge lets a workbook owner hand project identity to a separate r
 
 The bridge is source-controlled as tables, sample CSV shapes, and Power Query templates. It does not ship workbook binaries, private paths, credentials, or production data.
 
-In a local three-repo setup, keep the durable operator map in the integration repo, for example `<LOCAL_INTEGRATION_REPO_V1>\docs\operator_cross_repo_map.md`. Use that file as the source of truth for the CSV handoff sequence.
+In a local three-repo setup, keep the durable operator map and no-copy handoff command in the integration repo, for example `<LOCAL_INTEGRATION_REPO_V1>\docs\operator_cross_repo_map.md` and `<LOCAL_INTEGRATION_REPO_V1>\scripts\run_operator_handoff.ps1`. Use those files as the source of truth for the CSV handoff sequence.
 
 ## Boundary
 
@@ -76,6 +76,6 @@ Candidate mappings, review decisions, and approved exports should remain separat
 
 1. Refresh or re-sync `tblBudgetInput`.
 2. Review `Integration Bridge` / `tblFinancialProjectRegisterExport`.
-3. Export the project register to the review workspace as `financial_project_register.csv`.
+3. Run the integration repo handoff command to write `tblFinancialProjectRegisterExport` as `financial_project_register.csv`.
 4. Bring approved rows back from `approved_project_evidence.csv` or paste them into `tblApprovedProjectEvidence`.
 5. Treat approved evidence rows as context for review, not as commands to create projects or update status.
