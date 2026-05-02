@@ -1,6 +1,7 @@
 FeatureId	FeatureName	ExpectedStatus	Category	EvidenceType	EvidencePattern	Notes
 canonical_budget_input	tblBudgetInput canonical formula source	Built	Data Import	pattern	contains:modules/get.formula.txt::tblBudgetInput[#All]	get module reads the canonical budget source
 pq_current_workbook_adapter	Current workbook Power Query adapter	Built	Data Import	pattern	contains:samples/power-query/budget-input/qBudget_Source_CurrentWorkbook.m::tblPlanningTable	current workbook/manual Planning Table adapter exists
+integration_bridge	Reviewed evidence integration bridge	Built	Data Import	pattern	contains:samples/workbook_manifest.tsv::Integration Bridge||tblFinancialProjectRegisterExport||tblApprovedProjectEvidence	advisory project-register export and approved evidence import
 pq_selected_adapter	qBudget_Source_Selected adapter selector	Built	Data Import	pattern	contains:samples/power-query/budget-input/qBudget_Source_Selected.m::ActiveAdapter||CurrentWorkbook||AzureSQL||Dataverse||FabricSqlEndpoint	adapter selector scaffold exists
 pq_database_adapters	Database and platform adapter templates	Scaffolded	Data Import	pattern	all_exists:samples/power-query/budget-input/qBudget_Source_AzureSql.m||samples/power-query/budget-input/qBudget_Source_Dataverse.m||samples/power-query/budget-input/qBudget_Source_FabricSqlEndpoint.m	templates only; no tenant-specific connections
 source_module	Source status formula module	Built	Formula	pattern	contains:modules/source.formula.txt::SOURCE_STATUS||SOURCE_SCHEMA_STATUS	source trust surfaced through formulas

@@ -1,3 +1,19 @@
+## 2026-05-02 - Add optional integration bridge handoff
+
+Semantic change:
+
+- Added a visible `Integration Bridge` sheet to the generated starter and Office.js blank-workbook setup.
+- Added `tblFinancialProjectRegisterExport` with bridge `ProjectKey = Source ID & "-" & Job ID`.
+- Added `tblApprovedProjectEvidence` for approved evidence links imported as advisory review context.
+- Added Power Query templates and a contract doc for the project-register export and approved-evidence import.
+- Added audit coverage so the bridge remains public-safe, advisory-only, and separate from official project creation/status updates.
+
+Visible impact:
+
+- Default Planning edition adds one visible operator handoff sheet.
+- Main report totals, subtotal flags, cap remaining values, and existing AssetFinance calculations have no intended change.
+- Workbook binaries, generated artifacts, private paths, and real credentials remain out of tracked source.
+
 ## 2026-04-29 - Make simple asset entry obvious
 
 Semantic change:

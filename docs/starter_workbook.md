@@ -37,10 +37,11 @@ Use `Governance_Starter.xltx` as the Excel template. Use `Governance_Starter.xls
 The generated starter includes:
 
 - `Start Here` as the active front door,
-- visible planning sheets: `Source Status`, `Data Import Setup`, `Planning Table`, `Cap Setup`, `Planning Review`, and `Analysis Hub`,
+- visible planning sheets: `Source Status`, `Data Import Setup`, `Integration Bridge`, `Planning Table`, `Cap Setup`, `Planning Review`, and `Analysis Hub`,
 - planning source/cap setup sheets,
 - `Data Import Setup`, `PQ Budget Input`, and `PQ Budget QA`,
 - canonical import tables `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`,
+- optional reviewed-evidence bridge tables `tblFinancialProjectRegisterExport` and `tblApprovedProjectEvidence`,
 - hidden `Workbook Manifest` / `tblWorkbookManifest` loaded from `samples/workbook_manifest.tsv`, including `Presence`, `Edition`, and `FriendlyName` fields for generated sheets versus `OptionalLegacy` sheet names,
 - validation lists and visible controls,
 - a hidden `Automation Setup` sheet that explains how to import the optional `ApplyNotes.ts` release asset,
@@ -57,8 +58,10 @@ The generated starter includes:
 The default visible workbook surface is:
 
 ```text
-Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
+Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
 ```
+
+Integration Bridge is optional and visible because it is an operator handoff surface. Use it to export a project register shape and paste or load approved evidence rows. Approved evidence remains advisory context; it does not create projects or update official project status.
 
 Asset workflow is optional. `AssetsLite` adds `Asset Hub` and `Asset Register`; `AssetsFull` adds `Asset Hub`, `Asset Register`, and `Asset Finance Hub`. Start with Asset Hub to decide whether assets are needed. Start with Asset Register to enter a simple asset. Do not start with Asset Evidence, Asset State History, or PQ asset sheets. `LinkedProjectID` is optional and advisory.
 
@@ -86,8 +89,12 @@ The generated starter creates:
 | `PQ Budget Input` | `tblBudgetInput` |
 | `PQ Budget QA` | `tblBudgetImportStatus` |
 | `PQ Budget QA` | `tblBudgetImportIssues` |
+| `Integration Bridge` | `tblFinancialProjectRegisterExport` |
+| `Integration Bridge` | `tblApprovedProjectEvidence` |
 
 After notes writeback or manual Planning Table edits, refresh or re-sync the budget Power Query adapter before relying on outputs that read `tblBudgetInput`.
+
+For the bridge, `tblFinancialProjectRegisterExport[ProjectKey]` is derived as `Source ID & "-" & Job ID`. `tblApprovedProjectEvidence` accepts only approved evidence rows for review context. Candidate mappings and review decisions stay outside the generated workbook.
 
 ## Minimum Sheets
 
@@ -101,6 +108,7 @@ Create these worksheets:
 | `Validation Lists` | Dropdown source values used by the starter add-in. |
 | `Decision Staging` | Notes/status/timeline staging table created by the notes workflow. |
 | `Data Import Setup` | Source profile, import parameters, and the 64-column budget input contract. |
+| `Integration Bridge` | Optional project-register export and approved evidence import tables. |
 | `PQ Budget Input` | Hidden canonical `tblBudgetInput` table consumed by formula modules. |
 | `PQ Budget QA` | Hidden import status and issue tables used by `Source` formulas. |
 

@@ -3136,6 +3136,181 @@ def audit_budget_input_power_query_contract(results: list[Result]) -> None:
         )
 
 
+def audit_integration_bridge_contract(results: list[Result]) -> None:
+    builder = read_text(ROOT / "tools" / "build_governance_starter_workbook.ps1")
+    taskpane = read_text(ROOT / "addin" / "taskpane.js")
+    manifest = read_text(ROOT / "samples" / "workbook_manifest.tsv")
+    contract_doc = read_text(ROOT / "docs" / "integration_bridge_contract.md")
+    database_import_doc = read_text(ROOT / "docs" / "database_import_contract.md")
+    starter_doc = read_text(ROOT / "docs" / "starter_workbook.md")
+    addin_doc = read_text(ROOT / "docs" / "office_addin.md")
+    readme = read_text(ROOT / "README.md")
+    changelog = read_text(ROOT / "docs" / "change_log.md")
+    financial_query = read_text(ROOT / "samples" / "power-query" / "integration-bridge" / "qBridge_FinancialProjectRegister.m")
+    approved_query = read_text(ROOT / "samples" / "power-query" / "integration-bridge" / "qBridge_ApprovedProjectEvidence.m")
+
+    expected_financial_headers = [
+        "Source ID",
+        "Job ID",
+        "ProjectKey",
+        "Project Description",
+        "Status",
+        "BU",
+        "Category",
+        "Site",
+        "PM",
+    ]
+    expected_approved_headers = [
+        "ProjectKey",
+        "EvidenceId",
+        "EvidenceType",
+        "EvidencePath",
+        "EvidenceName",
+        "Extension",
+        "DocumentAreaID",
+        "DocumentAreaName",
+        "CategoryID",
+        "CategoryName",
+        "DateModified",
+        "ReviewStatus",
+        "ApprovedOn",
+        "ReviewerNotes",
+        "StatusSignal",
+    ]
+
+    financial_rows = read_tsv_rows("samples/financial_project_register_export_starter.tsv")
+    approved_rows = read_tsv_rows("samples/approved_project_evidence_starter.tsv")
+    add(
+        results,
+        bool(financial_rows) and financial_rows[0] == expected_financial_headers,
+        "samples/financial_project_register_export_starter.tsv",
+        "integration bridge project register headers",
+        "headers match bridge export contract",
+        "Keep the financial project register export shape aligned to the integration bridge contract.",
+    )
+    add(
+        results,
+        bool(approved_rows) and approved_rows[0] == expected_approved_headers,
+        "samples/approved_project_evidence_starter.tsv",
+        "integration bridge approved evidence headers",
+        "headers match approved evidence import contract",
+        "Keep the approved evidence import shape aligned to the integration bridge contract.",
+    )
+
+    check_required_regex(
+        results,
+        "samples/workbook_manifest.tsv",
+        manifest,
+        "workbook manifest exposes Integration Bridge",
+        r"Integration Bridge\ttblFinancialProjectRegisterExport; tblApprovedProjectEvidence\tControl\tReviewed evidence handoff\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin",
+        "Keep the operator bridge visible in generated workbook editions.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder creates Integration Bridge",
+        r"Build-IntegrationBridge.*tblFinancialProjectRegisterExport.*financial_project_register_export_starter\.tsv.*tblApprovedProjectEvidence.*approved_project_evidence_starter\.tsv",
+        "Build the bridge tables from tracked starter TSV files.",
+    )
+    check_required_regex(
+        results,
+        "tools/build_governance_starter_workbook.ps1",
+        builder,
+        "governance starter builder keeps bridge advisory",
+        r"Integration Bridge.*advisory only.*does not create official financial projects.*must not overwrite planning status, create projects, or turn documentation signals into official finance status",
+        "Keep reviewed evidence as context rather than workbook writeback logic.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.js",
+        taskpane,
+        "task pane creates Integration Bridge starter tables",
+        r"integrationBridge: \"Integration Bridge\".*tblFinancialProjectRegisterExport.*financial_project_register_export_starter\.tsv.*tblApprovedProjectEvidence.*approved_project_evidence_starter\.tsv.*formatIntegrationBridge",
+        "Keep the Office.js blank-workbook setup aligned with the generated starter.",
+    )
+    check_required_regex(
+        results,
+        "addin/taskpane.js",
+        taskpane,
+        "task pane keeps Integration Bridge visible and advisory",
+        r"Integration Bridge\", visibility: \"visible\".*ProjectKey is Source ID & \"-\" & Job ID.*Approved evidence is advisory only.*must not overwrite planning status, create projects",
+        "Keep the add-in bridge visible but non-authoritative.",
+    )
+    check_required_regex(
+        results,
+        "samples/power-query/integration-bridge/qBridge_FinancialProjectRegister.m",
+        financial_query,
+        "financial project register query derives ProjectKey",
+        r"tblBudgetInput.*\"Source ID\".*\"Job ID\".*\"ProjectKey\".*SourceId & \"-\" & JobId.*Table\.ReorderColumns",
+        "Keep ProjectKey derived from Source ID and Job ID only.",
+    )
+    check_required_regex(
+        results,
+        "samples/power-query/integration-bridge/qBridge_ApprovedProjectEvidence.m",
+        approved_query,
+        "approved evidence query filters approved rows",
+        r"tblApprovedProjectEvidence.*RequiredColumns.*\"ReviewStatus\".*Text\.Upper.*\"APPROVED\"",
+        "Only approved evidence rows should flow into the advisory import query.",
+    )
+    check_required_regex(
+        results,
+        "docs/integration_bridge_contract.md",
+        contract_doc,
+        "integration bridge contract states refresh safety",
+        r"ProjectKey.*Source ID & \"-\" & Job ID.*ReviewKey = EvidenceId & \"\|\" & CandidateProjectKey.*must not erase manual approval history",
+        "Document the bridge key rules and refresh-safety boundary.",
+    )
+    check_required_regex(
+        results,
+        "docs/integration_bridge_contract.md",
+        contract_doc,
+        "integration bridge contract forbids authoritative side effects",
+        r"does not.*create official financial projects.*update official project status.*use raw file paths as project keys.*treat candidate evidence mappings as approved rows.*overwrite manual review decisions",
+        "Keep the reviewed evidence bridge advisory-only.",
+    )
+    check_required_regex(
+        results,
+        "docs/database_import_contract.md",
+        database_import_doc,
+        "database import doc includes Integration Bridge boundary",
+        r"Integration Bridge Boundary.*tblFinancialProjectRegisterExport.*tblApprovedProjectEvidence.*Source ID & \"-\" & Job ID.*does not auto-create financial projects.*does not update official project status",
+        "Document the optional reviewed-evidence bridge beside the data import contract.",
+    )
+    check_required_regex(
+        results,
+        "docs/starter_workbook.md",
+        starter_doc,
+        "starter workbook doc includes Integration Bridge",
+        r"Integration Bridge.*tblFinancialProjectRegisterExport.*tblApprovedProjectEvidence.*Source ID & \"-\" & Job ID.*Candidate mappings and review decisions stay outside the generated workbook",
+        "Keep starter workbook docs aligned with the bridge tables.",
+    )
+    check_required_regex(
+        results,
+        "docs/office_addin.md",
+        addin_doc,
+        "office add-in doc includes Integration Bridge",
+        r"Integration Bridge.*tblFinancialProjectRegisterExport.*tblApprovedProjectEvidence.*Source ID & \"-\" & Job ID.*advisory context only",
+        "Keep add-in docs aligned with the bridge setup path.",
+    )
+    check_required_regex(
+        results,
+        "README.md",
+        readme,
+        "README mentions optional Integration Bridge",
+        r"Integration Bridge.*Source ID.*Job ID.*ProjectKey.*does not create projects, update official status, or use raw file paths as project keys",
+        "Keep the README clear about the optional bridge boundary.",
+    )
+    check_required_regex(
+        results,
+        "docs/change_log.md",
+        changelog,
+        "change log records optional integration bridge",
+        r"Add optional integration bridge handoff.*tblFinancialProjectRegisterExport.*ProjectKey = Source ID & \"-\" & Job ID.*tblApprovedProjectEvidence.*advisory-only",
+        "Record the visible bridge sheet and advisory behavior change.",
+    )
+
+
 def audit_release_accelerator_contract(results: list[Result]) -> None:
     feature_status = read_text(ROOT / "docs" / "feature_status.tsv")
     feature_reporter = read_text(ROOT / "tools" / "report_feature_status.py")
@@ -3157,6 +3332,7 @@ def audit_release_accelerator_contract(results: list[Result]) -> None:
     )
     for feature_id in [
         "canonical_budget_input",
+        "integration_bridge",
         "pq_selected_adapter",
         "source_module",
         "start_here_hubs",
@@ -3606,7 +3782,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "README.md",
         readme,
         "README documents simplified workbook UX",
-        r"Starter Workbook Editions.*Governance_Starter\.xltx.*planning-only.*Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub.*SemanticTwin.*Semantic Map Hub",
+        r"Starter Workbook Editions.*Governance_Starter\.xltx.*planning-only.*Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub.*SemanticTwin.*Semantic Map Hub",
         "Document the default visible workbook surface.",
     )
     check_required_regex(
@@ -3638,7 +3814,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter_doc,
         "starter docs document simplified workbook UX",
-        r"(?=.*default build is the `Planning` edition)(?=.*Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub)(?=.*AssetsLite.*Asset Hub)(?=.*AssetsFull.*Asset Hub.*Asset Finance Hub)(?=.*SemanticTwin.*Semantic Map Hub)(?=.*PQ Budget Input)(?=.*Validation Lists)(?=.*Workbook Manifest)(?=.*hidden by default)",
+        r"(?=.*default build is the `Planning` edition)(?=.*Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub)(?=.*AssetsLite.*Asset Hub)(?=.*AssetsFull.*Asset Hub.*Asset Finance Hub)(?=.*SemanticTwin.*Semantic Map Hub)(?=.*PQ Budget Input)(?=.*Validation Lists)(?=.*Workbook Manifest)(?=.*hidden by default)",
         "Document the generated workbook front door and hidden backend sheets.",
     )
     check_required_regex(
@@ -3987,6 +4163,7 @@ def main() -> int:
     audit_governance_starter_template_contract(results)
     audit_asset_evidence_power_query_contract(results)
     audit_budget_input_power_query_contract(results)
+    audit_integration_bridge_contract(results)
     audit_release_accelerator_contract(results)
     audit_semantic_crosswalk_contract(results)
     audit_reforecast_contract(results)

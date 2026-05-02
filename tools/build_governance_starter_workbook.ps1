@@ -1271,6 +1271,62 @@ function Build-BudgetQA {
     [void]$Worksheet.Columns.AutoFit()
 }
 
+function Build-IntegrationBridge {
+    param([object]$Worksheet)
+
+    $Worksheet.Range("A1:O120").Clear()
+    Format-PageHeader `
+        -Worksheet $Worksheet `
+        -Title "Integration Bridge" `
+        -Subtitle 'Optional reviewed-evidence handoff. ProjectKey is Source ID & "-" & Job ID. Approved evidence is advisory only.' `
+        -BandRange "A1:O3"
+
+    Format-SectionHeader `
+        -Anchor $Worksheet.Range("A5") `
+        -Title "Financial project register export" `
+        -Note 'Export this reviewed project identity shape to the evidence review workspace. It does not create official financial projects.'
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblFinancialProjectRegisterExport" `
+        -TopLeft "A7" `
+        -Rows (Read-TsvMatrix "samples\financial_project_register_export_starter.tsv"))
+
+    Set-MergedPanel `
+        -Worksheet $Worksheet `
+        -Address "J7:O13" `
+        -Text 'ProjectKey is derived for the bridge as Source ID & "-" & Job ID. Raw file paths are evidence context, not project identity. The bridge exports workbook project identity for review; it does not make new financial projects.' `
+        -FillColor 13431551
+
+    Format-SectionHeader `
+        -Anchor $Worksheet.Range("A17") `
+        -Title "Approved evidence import" `
+        -Note "Paste or load approved evidence rows only. These links are advisory context for review, not workbook status updates."
+    Set-MergedPanel `
+        -Worksheet $Worksheet `
+        -Address "A19:O23" `
+        -Text "Approved evidence remains separate from generated candidates and manual review decisions. It may support review, but it must not overwrite planning status, create projects, or turn documentation signals into official finance status." `
+        -FillColor 16448250
+
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblApprovedProjectEvidence" `
+        -TopLeft "A26" `
+        -Rows (Read-TsvMatrix "samples\approved_project_evidence_starter.tsv"))
+
+    $Worksheet.Range("A:O").WrapText = $true
+    [void]$Worksheet.Columns.AutoFit()
+    $Worksheet.Columns.Item(1).ColumnWidth = 18
+    $Worksheet.Columns.Item(3).ColumnWidth = 22
+    $Worksheet.Columns.Item(4).ColumnWidth = 28
+    $Worksheet.Columns.Item(9).ColumnWidth = 18
+    $Worksheet.Columns.Item(10).ColumnWidth = 24
+    $Worksheet.Columns.Item(11).ColumnWidth = 18
+    $Worksheet.Columns.Item(12).ColumnWidth = 18
+    $Worksheet.Columns.Item(14).ColumnWidth = 30
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(5, 17) -DefaultHeight 20
+    $Worksheet.Rows.Item(2).RowHeight = 36
+}
+
 function Build-WorkbookManifest {
     param([object]$Worksheet)
 
@@ -1307,7 +1363,7 @@ function Build-StartHere {
         -Anchor $Worksheet.Range("A5") `
         -Title "Workbook flow" `
         -Note "The workbook keeps data intake, canonical source rows, formula outputs, review hubs, and optional staged writeback as separate surfaces."
-    $flowRows = New-Object 'object[][]' 7
+    $flowRows = New-Object 'object[][]' 8
     $flowRows[0] = [object[]]@("Step", "From", "To", "Purpose")
     $flowRows[1] = [object[]]@("1", "Manual source / database / Fabric / Dataverse", "Power Query or current-workbook adapter", "Select and shape incoming planning data.")
     $flowRows[2] = [object[]]@("2", "Power Query or current-workbook adapter", "tblBudgetInput", "Load the canonical 64-column planning contract.")
@@ -1315,6 +1371,7 @@ function Build-StartHere {
     $flowRows[4] = [object[]]@("4", "Governed formula modules", "Planning Review / Analysis Hub / Asset Hub / Asset Finance Hub", "Review controlled outputs on a smaller visible sheet set.")
     $flowRows[5] = [object[]]@("5", "Planning Review P:R", "Decision Staging", "Prepare optional notes/status/timeline writeback.")
     $flowRows[6] = [object[]]@("6", "Decision Staging", "Planning Table", "Apply reviewed writeback, then refresh or re-sync before relying on outputs.")
+    $flowRows[7] = [object[]]@("7", "tblBudgetInput and approved evidence rows", "Integration Bridge", "Exchange reviewed evidence mappings as advisory context only.")
     [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblStartHereFlow" -TopLeft "A7" -Rows $flowRows)
 
     Format-SectionHeader `
@@ -1331,18 +1388,19 @@ function Build-StartHere {
         -Anchor $Worksheet.Range("A16") `
         -Title "Go to" `
         -Note "Use these visible sheets for the normal left-to-right operator flow."
-    $navRows = New-Object 'object[][]' 9
+    $navRows = New-Object 'object[][]' 10
     $navRows[0] = [object[]]@("Sheet", "Use it for", "Normal action")
     $navRows[1] = [object[]]@("Source Status", "Check freshness and import issues.", "Review first.")
     $navRows[2] = [object[]]@("Data Import Setup", "Configure source mode and schema.", "Update source profile and contract.")
-    $navRows[3] = [object[]]@("Planning Table", "Manual starter/local writeback.", "Edit only when using manual/current-workbook mode.")
-    $navRows[4] = [object[]]@("Cap Setup", "BU cap limits.", "Review or update caps.")
-    $navRows[5] = [object[]]@("Planning Review", "Main planning report.", "Run meeting review and enter P:R notes.")
-    $navRows[6] = [object[]]@("Analysis Hub", "Planning analysis outputs.", "Review scorecards, queues, burndown, and readiness.")
-    $navRows[7] = [object[]]@("Asset Hub", "Optional asset workflow guide.", "AssetsLite users start here, then enter simple assets in Asset Register.")
-    $navRows[8] = [object[]]@("Asset Finance Hub", "Advanced asset finance outputs.", "Use only after classified asset evidence exists.")
+    $navRows[3] = [object[]]@("Integration Bridge", "Reviewed evidence handoff.", "Export project keys or paste approved evidence.")
+    $navRows[4] = [object[]]@("Planning Table", "Manual starter/local writeback.", "Edit only when using manual/current-workbook mode.")
+    $navRows[5] = [object[]]@("Cap Setup", "BU cap limits.", "Review or update caps.")
+    $navRows[6] = [object[]]@("Planning Review", "Main planning report.", "Run meeting review and enter P:R notes.")
+    $navRows[7] = [object[]]@("Analysis Hub", "Planning analysis outputs.", "Review scorecards, queues, burndown, and readiness.")
+    $navRows[8] = [object[]]@("Asset Hub", "Optional asset workflow guide.", "AssetsLite users start here, then enter simple assets in Asset Register.")
+    $navRows[9] = [object[]]@("Asset Finance Hub", "Advanced asset finance outputs.", "Use only after classified asset evidence exists.")
     $navTable = Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblStartHereNavigation" -TopLeft "A18" -Rows $navRows
-    for ($index = 1; $index -le 8; $index++) {
+    for ($index = 1; $index -le 9; $index++) {
         $sheetName = [string]$navRows[$index][0]
         Set-InternalWorksheetLink -Range $navTable.DataBodyRange.Cells.Item($index, 1) -SheetName $sheetName -DisplayText $sheetName
     }
@@ -1354,7 +1412,7 @@ function Build-StartHere {
     Set-MergedPanel `
         -Worksheet $Worksheet `
         -Address "F18:M24" `
-        -Text "Hidden backend/admin sheets are still part of the governed workbook. PQ Budget Input, PQ Budget QA, Validation Lists, Decision Staging, Automation Setup, asset setup tables, Workbook Manifest, and intermediate asset-evidence outputs stay hidden by default. Unhide them only for troubleshooting, administration, or release checks." `
+        -Text "Hidden backend/admin sheets are still part of the governed workbook. PQ Budget Input, PQ Budget QA, Validation Lists, Decision Staging, Automation Setup, asset setup tables, Workbook Manifest, and intermediate asset-evidence outputs stay hidden by default. Integration Bridge is visible because it is an operator handoff surface. Unhide backend sheets only for troubleshooting, administration, or release checks." `
         -FillColor 16448250
     $Worksheet.Range("A:M").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
@@ -1850,6 +1908,10 @@ try {
     $budgetQaSheet = Add-Worksheet -Workbook $workbook -Name "PQ Budget QA"
     [void](Build-BudgetQA -Worksheet $budgetQaSheet)
     [void](Set-FreezeRows -Excel $excel -Worksheet $budgetQaSheet -Rows 3)
+
+    $integrationBridgeSheet = Add-Worksheet -Workbook $workbook -Name "Integration Bridge"
+    [void](Build-IntegrationBridge -Worksheet $integrationBridgeSheet)
+    [void](Set-FreezeRows -Excel $excel -Worksheet $integrationBridgeSheet -Rows 7)
 
     $validationSheet = Add-Worksheet -Workbook $workbook -Name "Validation Lists"
     [void](Build-ValidationLists -Worksheet $validationSheet)

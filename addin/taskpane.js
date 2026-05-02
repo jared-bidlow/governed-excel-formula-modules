@@ -14,6 +14,7 @@
       workbookManifest: "Workbook Manifest",
       validationLists: "Validation Lists",
       dataImportSetup: "Data Import Setup",
+      integrationBridge: "Integration Bridge",
       pqBudgetInput: "PQ Budget Input",
       pqBudgetQa: "PQ Budget QA",
       notesStaging: "Decision Staging",
@@ -46,6 +47,8 @@
       { sheet: "Data Import Setup", address: "A4", tableName: "tblDataSourceProfile", path: "../samples/data_source_profile_starter.tsv" },
       { sheet: "Data Import Setup", address: "E4", tableName: "tblBudgetImportParameters", path: "../samples/budget_import_parameters_starter.tsv" },
       { sheet: "Data Import Setup", address: "A16", tableName: "tblBudgetImportContract", path: "../samples/budget_import_contract_starter.tsv" },
+      { sheet: "Integration Bridge", address: "A7", tableName: "tblFinancialProjectRegisterExport", path: "../samples/financial_project_register_export_starter.tsv" },
+      { sheet: "Integration Bridge", address: "A26", tableName: "tblApprovedProjectEvidence", path: "../samples/approved_project_evidence_starter.tsv" },
       { sheet: "PQ Budget Input", address: "A1", tableName: "tblBudgetInput", path: "../samples/planning_table_starter.tsv" },
       { sheet: "PQ Budget QA", address: "A3", tableName: "tblBudgetImportStatus", path: "../samples/budget_import_status_starter.tsv" },
       { sheet: "PQ Budget QA", address: "A11", tableName: "tblBudgetImportIssues", path: "../samples/budget_import_issues_starter.tsv" },
@@ -55,6 +58,7 @@
       { sheet: "Start Here", visibility: "visible" },
       { sheet: "Source Status", visibility: "visible" },
       { sheet: "Data Import Setup", visibility: "visible" },
+      { sheet: "Integration Bridge", visibility: "visible" },
       { sheet: "Planning Table", visibility: "visible" },
       { sheet: "Cap Setup", visibility: "visible" },
       { sheet: "Planning Review", visibility: "visible" },
@@ -461,6 +465,7 @@
     applicationData.sheets.planningTable,
     applicationData.sheets.capSetup,
     applicationData.sheets.dataImportSetup,
+    applicationData.sheets.integrationBridge,
     applicationData.sheets.pqBudgetInput,
     applicationData.sheets.pqBudgetQa,
     applicationData.sheets.sourceStatus,
@@ -577,6 +582,7 @@
 
       buildValidationLists(context.workbook.worksheets.getItem(validationSheet));
       formatDataImportSetup(context.workbook.worksheets.getItem(applicationData.sheets.dataImportSetup));
+      formatIntegrationBridge(context.workbook.worksheets.getItem(applicationData.sheets.integrationBridge));
       formatBudgetInput(context.workbook.worksheets.getItem(applicationData.sheets.pqBudgetInput));
       formatBudgetQa(context.workbook.worksheets.getItem(applicationData.sheets.pqBudgetQa));
       formatPlanningTable(
@@ -1011,14 +1017,15 @@
       "Workbook flow",
       "The workbook keeps data intake, canonical source rows, formula outputs, review hubs, and optional staged writeback as separate surfaces."
     );
-    sheet.getRange("A7:D13").values = [
+    sheet.getRange("A7:D14").values = [
       ["Step", "From", "To", "Purpose"],
       ["1", "Manual source / database / Fabric / Dataverse", "Power Query or current-workbook adapter", "Select and shape incoming planning data."],
       ["2", "Power Query or current-workbook adapter", "tblBudgetInput", "Load the canonical 64-column planning contract."],
       ["3", "tblBudgetInput", "Governed formula modules", "Keep formulas independent of the source system."],
       ["4", "Governed formula modules", "Planning Review / Analysis Hub / Asset Hub / Asset Finance Hub", "Review controlled outputs on a smaller visible sheet set."],
       ["5", "Planning Review P:R", "Decision Staging", "Prepare optional notes/status/timeline writeback."],
-      ["6", "Decision Staging", "Planning Table", "Apply reviewed writeback, then refresh or re-sync before relying on outputs."]
+      ["6", "Decision Staging", "Planning Table", "Apply reviewed writeback, then refresh or re-sync before relying on outputs."],
+      ["7", "tblBudgetInput and approved evidence rows", "Integration Bridge", "Exchange reviewed evidence mappings as advisory context only."]
     ];
     sheet.getRange("A7:D7").format.font.bold = true;
     sheet.getRange("A7:D7").format.fill.color = "#D9EAF7";
@@ -1035,10 +1042,11 @@
     );
 
     formatSectionHeader(sheet.getRange("A16"), "Go to", "Use these visible sheets for the normal left-to-right operator flow.");
-    sheet.getRange("A18:C26").values = [
+    sheet.getRange("A18:C27").values = [
       ["Sheet", "Use it for", "Normal action"],
       ["Source Status", "Check freshness and import issues.", "Review first."],
       ["Data Import Setup", "Configure source mode and schema.", "Update source profile and contract."],
+      ["Integration Bridge", "Reviewed evidence handoff.", "Export project keys or paste approved evidence."],
       ["Planning Table", "Manual starter/local writeback.", "Edit only when using manual/current-workbook mode."],
       ["Cap Setup", "BU cap limits.", "Review or update caps."],
       ["Planning Review", "Main planning report.", "Run meeting review and enter P:R notes."],
@@ -1048,7 +1056,7 @@
     ];
     sheet.getRange("A18:C18").format.font.bold = true;
     sheet.getRange("A18:C18").format.fill.color = "#D9EAF7";
-    const navSheets = ["Source Status", "Data Import Setup", "Planning Table", "Cap Setup", "Planning Review", "Analysis Hub", "Asset Hub", "Asset Finance Hub"];
+    const navSheets = ["Source Status", "Data Import Setup", "Integration Bridge", "Planning Table", "Cap Setup", "Planning Review", "Analysis Hub", "Asset Hub", "Asset Finance Hub"];
     for (let index = 0; index < navSheets.length; index += 1) {
       setInternalSheetLink(sheet.getRange(`A${19 + index}`), navSheets[index], "A1", navSheets[index]);
     }
@@ -1061,7 +1069,7 @@
     setMergedPanel(
       sheet,
       "F18:M24",
-      "Hidden backend/admin sheets are still part of the governed workbook. PQ Budget Input, PQ Budget QA, Validation Lists, Decision Staging, Automation Setup, asset setup tables, Workbook Manifest, and intermediate asset-evidence outputs stay hidden by default. Unhide them only for troubleshooting, administration, or release checks.",
+      "Hidden backend/admin sheets are still part of the governed workbook. PQ Budget Input, PQ Budget QA, Validation Lists, Decision Staging, Automation Setup, asset setup tables, Workbook Manifest, and intermediate asset-evidence outputs stay hidden by default. Integration Bridge is visible because it is an operator handoff surface. Unhide backend sheets only for troubleshooting, administration, or release checks.",
       "#F3F6FA"
     );
     sheet.getRange("A:M").format.wrapText = true;
@@ -1070,10 +1078,10 @@
     sheet.getRange("D:D").format.columnWidth = 320;
     sheet.getRange("F:M").format.columnWidth = 118;
     normalizeSheetRows(sheet, [5, 16]);
-    for (let row = 7; row <= 13; row += 1) {
+    for (let row = 7; row <= 14; row += 1) {
       sheet.getRange(`${row}:${row}`).format.rowHeight = 24;
     }
-    for (let row = 18; row <= 24; row += 1) {
+    for (let row = 18; row <= 27; row += 1) {
       sheet.getRange(`${row}:${row}`).format.rowHeight = 22;
     }
   }
@@ -1110,14 +1118,16 @@
   function formatWorkbookManifest(sheet) {
     formatPageHeader(
       sheet,
-      "A1:J3",
+      "A1:L3",
       "Workbook Manifest",
       "Source-controlled sheet/table map used for workbook navigation and visibility."
     );
-    sheet.getRange("A:J").format.wrapText = true;
-    sheet.getRange("A:J").format.autofitColumns();
+    sheet.getRange("A:L").format.wrapText = true;
+    sheet.getRange("A:L").format.autofitColumns();
     sheet.getRange("F:F").format.columnWidth = 120;
-    sheet.getRange("J:J").format.columnWidth = 340;
+    sheet.getRange("J:J").format.columnWidth = 180;
+    sheet.getRange("K:K").format.columnWidth = 220;
+    sheet.getRange("L:L").format.columnWidth = 340;
   }
 
   function formatPageHeader(sheet, bandAddress, title, subtitle) {
@@ -1469,6 +1479,47 @@
     sheet.getRange("F:F").format.columnWidth = 240;
     sheet.getRange("G:G").format.columnWidth = 380;
     normalizeSheetRows(sheet);
+    sheet.getRange("2:2").format.rowHeight = 36;
+  }
+
+  function formatIntegrationBridge(sheet) {
+    sheet.getRange("A1:O3").clear(Excel.ClearApplyTo.all);
+    formatPageHeader(
+      sheet,
+      "A1:O3",
+      "Integration Bridge",
+      'Optional reviewed-evidence handoff. ProjectKey is Source ID & "-" & Job ID. Approved evidence is advisory only.'
+    );
+    formatSectionHeader(
+      sheet.getRange("A5"),
+      "Financial project register export",
+      "Export this reviewed project identity shape to the evidence review workspace. It does not create official financial projects."
+    );
+    setMergedPanel(
+      sheet,
+      "J7:O13",
+      'ProjectKey is derived for the bridge as Source ID & "-" & Job ID. Raw file paths are evidence context, not project identity. The bridge exports workbook project identity for review; it does not make new financial projects.',
+      "#FFF2CC"
+    );
+    formatSectionHeader(
+      sheet.getRange("A17"),
+      "Approved evidence import",
+      "Paste or load approved evidence rows only. These links are advisory context for review, not workbook status updates."
+    );
+    setMergedPanel(
+      sheet,
+      "A19:O23",
+      "Approved evidence remains separate from generated candidates and manual review decisions. It may support review, but it must not overwrite planning status, create projects, or turn documentation signals into official finance status.",
+      "#F3F6FA"
+    );
+    sheet.freezePanes.freezeRows(7);
+    sheet.getRange("A:O").format.wrapText = true;
+    sheet.getRange("A:O").format.autofitColumns();
+    sheet.getRange("A:A").format.columnWidth = 120;
+    sheet.getRange("C:D").format.columnWidth = 190;
+    sheet.getRange("J:J").format.columnWidth = 190;
+    sheet.getRange("N:N").format.columnWidth = 230;
+    normalizeSheetRows(sheet, [5, 17]);
     sheet.getRange("2:2").format.rowHeight = 36;
   }
 

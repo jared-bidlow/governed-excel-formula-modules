@@ -46,6 +46,7 @@ governed-excel-formula-modules/
 |   +-- asset_evidence_power_query.md
 |   +-- copilot_review_playbook.md
 |   +-- database_import_contract.md
+|   +-- integration_bridge_contract.md
 |   +-- notes_apply_workflow.md
 |   +-- operating_contract.md
 |   +-- planning_plugins.md
@@ -101,8 +102,10 @@ For release review, `npm run validate` runs the static audit, formula lint, and 
 The default generated `Governance_Starter.xltx` is planning-only. Its visible flow is:
 
 ```text
-Start Here -> Source Status -> Data Import Setup -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
+Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
 ```
+
+Integration Bridge is optional. It exports workbook project identity as `Source ID`, `Job ID`, and `ProjectKey`, then imports approved evidence rows as advisory context. It does not create projects, update official status, or use raw file paths as project keys.
 
 Asset workflow is optional. Start with Asset Hub to decide whether assets are needed. Start with Asset Register to enter a simple asset. `AssetsLite` adds `Asset Hub` and `Asset Register`; `AssetsFull` adds `Asset Finance Hub`; `SemanticTwin` adds `Semantic Map Hub` for optional REC/Brick semantic crosswalk review. Do not start with Asset Evidence, Asset State History, or PQ asset sheets. `LinkedProjectID` is optional and advisory.
 

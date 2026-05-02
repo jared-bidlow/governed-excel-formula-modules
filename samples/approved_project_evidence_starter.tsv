@@ -1,0 +1,2 @@
+ProjectKey	EvidenceId	EvidenceType	EvidencePath	EvidenceName	Extension	DocumentAreaID	DocumentAreaName	CategoryID	CategoryName	DateModified	ReviewStatus	ApprovedOn	ReviewerNotes	StatusSignal
+SRC-001-JOB-001	EVID-001	File	approved-evidence/example-project-charter.md	charter.md	.md	AREA-001	Project Charter	CAT-001	Core Docs	2026-05-01	Approved	2026-05-02	Example approved evidence link	Unknown

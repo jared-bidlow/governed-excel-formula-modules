@@ -27,6 +27,35 @@ The generated `Governance_Starter.xltx` and the Office.js blank-workbook setup c
 
 The generated starter keeps `PQ Budget Input` and `PQ Budget QA` hidden by default. Operators normally review import health through `Source Status` and use `Data Import Setup` plus `Planning Table` for setup and manual/local writeback.
 
+## Integration Bridge Boundary
+
+The optional `Integration Bridge` sheet stages a reviewed-evidence handoff without changing the canonical planning contract.
+
+| Sheet | Table | Purpose |
+|---|---|---|
+| `Integration Bridge` | `tblFinancialProjectRegisterExport` | Project identity export for a separate evidence review workspace. |
+| `Integration Bridge` | `tblApprovedProjectEvidence` | Approved evidence links imported back as advisory context. |
+
+`tblFinancialProjectRegisterExport` uses this public-safe shape:
+
+```text
+Source ID | Job ID | ProjectKey | Project Description | Status | BU | Category | Site | PM
+```
+
+For the bridge only, `ProjectKey` is derived as:
+
+```text
+Source ID & "-" & Job ID
+```
+
+`tblApprovedProjectEvidence` accepts approved rows with:
+
+```text
+ProjectKey | EvidenceId | EvidenceType | EvidencePath | EvidenceName | Extension | DocumentAreaID | DocumentAreaName | CategoryID | CategoryName | DateModified | ReviewStatus | ApprovedOn | ReviewerNotes | StatusSignal
+```
+
+Approved evidence is advisory. It does not auto-create financial projects, does not update official project status from documentation text, and does not treat raw file paths as financial project keys.
+
 ## Power Query Templates
 
 Budget import templates live under:
@@ -50,6 +79,17 @@ The canonical shaping queries are:
 - `qBudget_Input`
 - `qBudget_Status`
 - `qBudget_Issues`
+
+The optional integration bridge templates live under:
+
+```text
+samples/power-query/integration-bridge/
+```
+
+The bridge templates are:
+
+- `qBridge_FinancialProjectRegister`
+- `qBridge_ApprovedProjectEvidence`
 
 The database-oriented adapters are placeholder templates. They use public-safe placeholder names only. Do not commit real server names, tenant names, workspace names, connection strings, credentials, tokens, private URLs, or local workbook paths.
 

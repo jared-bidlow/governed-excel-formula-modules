@@ -12,8 +12,9 @@ The generated template also includes a hidden `Automation Setup` worksheet. That
 
 ## What It Does
 
-- Creates the starter sheets: `Start Here`, `Planning Table`, `Cap Setup`, `Data Import Setup`, `PQ Budget Input`, `PQ Budget QA`, `Planning Review`, `Source Status`, `Analysis Hub`, `Asset Hub`, `Asset Finance Hub`, and `Workbook Manifest`.
+- Creates the starter sheets: `Start Here`, `Planning Table`, `Cap Setup`, `Data Import Setup`, `Integration Bridge`, `PQ Budget Input`, `PQ Budget QA`, `Planning Review`, `Source Status`, `Analysis Hub`, `Asset Hub`, `Asset Finance Hub`, and `Workbook Manifest`.
 - Creates canonical data import tables: `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`.
+- Creates optional reviewed-evidence bridge tables: `tblFinancialProjectRegisterExport` and `tblApprovedProjectEvidence`.
 - Creates the `Validation Lists` sheet for dropdown sources.
 - Pastes the public starter TSV data into `Planning Table!A2` and `Cap Setup!A2`.
 - Formats starter headers, freezes top rows, applies currency formats, and adds non-negative cap validation.
@@ -129,6 +130,8 @@ The v0.5 data import bridge is part of both generated starter setup and blank-wo
 
 The add-in-created blank workbook path now creates both `tblPlanningTable` and `tblBudgetInput`, so the current-workbook Power Query adapter has the same source table contract as the generated starter.
 
+The generated starter and add-in-created blank workbook also create `Integration Bridge`. Its project register export derives `ProjectKey` as `Source ID & "-" & Job ID`; its approved evidence import is advisory context only and must not create official projects or update official workbook status.
+
 | Sheet | Cell | Formula |
 |---|---|---|
 | `Planning Review` | `A4` | `=CapitalPlanning.CAPITAL_PLANNING_REPORT()` |
@@ -173,6 +176,7 @@ The setup path is intentionally small and inspectable:
 - `Planning Table` starts at `A2`, freezes the top two rows, formats the 64-column starter contract, and adds model-driven dropdowns for common status and yes/no fields.
 - `Start Here` is the active sheet after setup and explains the left-to-right operator flow, source rule, visible-sheet navigation, and hidden backend/admin sheets.
 - `Data Import Setup` starts the public-safe source profile and 64-column import contract.
+- `Integration Bridge` starts visible `tblFinancialProjectRegisterExport` and `tblApprovedProjectEvidence` tables for the optional reviewed-evidence handoff.
 - `PQ Budget Input` starts hidden `tblBudgetInput` at `A1`; formula modules read this table.
 - `PQ Budget QA` stores hidden `tblBudgetImportStatus` and `tblBudgetImportIssues`.
 - The `Chargeable` dropdown is applied by finding the `Chargeable` header on row `2`, then validating rows `3:2000` against `Y,N`.
