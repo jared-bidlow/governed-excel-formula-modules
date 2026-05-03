@@ -14,6 +14,8 @@ tblBudgetInput -> financial project register export -> review workspace -> appro
 
 The workbook remains the owner of financial project identity, planning status, caps, notes, and formula outputs. The review workspace owns manual approval decisions for evidence-to-project relationships.
 
+If the integration repo produces asset scorecards or approved asset-project links, those outputs are advisory relationship context. The workbook still owns `ProjectKey` and official planning status; asset score signals or approved asset links must not create projects or update official status.
+
 The bridge does not:
 
 - create official financial projects,
