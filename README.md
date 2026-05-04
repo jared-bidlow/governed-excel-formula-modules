@@ -50,7 +50,7 @@ governed-excel-formula-modules/
 |   +-- notes_apply_workflow.md
 |   +-- operating_contract.md
 |   +-- planning_plugins.md
-|   +-- power_platform_fabric_integration.md
+|   +-- optional_platform_adapters.md
 |   +-- public_release_checklist.md
 |   +-- reference_architecture_tree.md
 |   +-- scenario_matrix.md
@@ -109,7 +109,7 @@ Integration Bridge is optional. It exports workbook project identity as `Source 
 
 In a local three-repo setup, keep the durable operator diagram and no-copy handoff command in the integration repo, for example `<LOCAL_INTEGRATION_REPO_V1>\docs\operator_cross_repo_map.md` and `<LOCAL_INTEGRATION_REPO_V1>\scripts\run_operator_handoff.ps1`.
 
-Asset workflow is optional. Start with Asset Hub to decide whether assets are needed. Start with Asset Register to enter a simple asset. `AssetsLite` adds `Asset Hub` and `Asset Register`; `AssetsFull` adds `Asset Finance Hub`; `SemanticTwin` adds `Semantic Map Hub` for optional REC/Brick semantic crosswalk review. Do not start with Asset Evidence, Asset State History, or PQ asset sheets. `LinkedProjectID` is optional and advisory.
+Asset workflow is optional. Start with Asset Hub to decide whether assets are needed. Start with Asset Register to enter a simple asset. `AssetsLite` adds `Asset Hub` and `Asset Register`; `AssetsFull` adds `Asset Finance Hub`. Do not start with Asset Evidence, Asset State History, or PQ asset sheets. `LinkedProjectID` is optional and advisory.
 
 tblBudgetInput remains the manual/canonical planning input table for this release because refresh is not surfaced. `Planning Table` / `tblPlanningTable` is manual/staging/local writeback. After manual Planning Table edits or `ApplyNotes`, refresh or re-sync the current-workbook adapter before relying on formula outputs.
 
@@ -184,7 +184,7 @@ Governance_Starter.xltx
 
 The `.xltx` is the user-facing Excel template. The `.xlsx` is kept beside it for inspection and smoke testing. Both are generated from tracked text sources: formula modules in `modules/`, starter TSVs in `samples/`, and M templates in `samples/power-query/`.
 
-The generated workbook opens on `Start Here` and keeps the default visible surface small: `Source Status`, `Data Import Setup`, `Planning Table`, `Cap Setup`, `Planning Review`, and `Analysis Hub`. Asset and semantic surfaces are opt-in by edition. In asset-enabled editions, `Asset Register` is visible because it is the canonical manual table for entering one simple asset; advanced asset setup, evidence, finance setup, state-history, and PQ sheets stay hidden/admin-scoped. `Start Here` includes workbook flow, the `tblBudgetInput` source rule, navigation links, and the hidden-backend explanation. Governed backend sheets such as `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, semantic setup sheets, and intermediate asset-evidence Power Query outputs are still generated, but hidden by default from the source-controlled workbook manifest. The manifest includes a `Presence` field so legacy sheet names can remain documented as `OptionalLegacy` without being created as primary workbook sheets.
+The generated workbook opens on `Start Here` and keeps the default visible surface small: `Source Status`, `Data Import Setup`, `Planning Table`, `Cap Setup`, `Planning Review`, and `Analysis Hub`. Asset surfaces are opt-in by edition. In asset-enabled editions, `Asset Register` is visible because it is the canonical manual table for entering one simple asset; advanced asset setup, evidence, finance setup, state-history, and PQ sheets stay hidden/admin-scoped. `Start Here` includes workbook flow, the `tblBudgetInput` source rule, navigation links, and the hidden-backend explanation. Governed backend sheets such as `PQ Budget Input`, `PQ Budget QA`, `Validation Lists`, `Decision Staging`, and intermediate asset-evidence Power Query outputs are still generated, but hidden by default from the source-controlled workbook manifest. The manifest includes a `Presence` field so legacy sheet names can remain documented as `OptionalLegacy` without being created as primary workbook sheets.
 
 The v0.5 data import bridge adds `Data Import Setup`, hidden `PQ Budget Input`, and hidden `PQ Budget QA` sheets. The generated template creates `tblDataSourceProfile`, `tblBudgetImportParameters`, `tblBudgetImportContract`, `tblBudgetInput`, `tblBudgetImportStatus`, and `tblBudgetImportIssues`. Formula modules now read the canonical `tblBudgetInput` table; `Planning Table` remains the manual starter source and current-workbook adapter source.
 
@@ -208,7 +208,7 @@ samples/budget_import_contract_starter.tsv
 
 Paste the planning table into `Planning Table!A2` and into `PQ Budget Input!A1` as `tblBudgetInput`, paste the cap table into `Cap Setup!A2`, set `Planning Review!M2` to a month abbreviation such as `Mar`, then import the formula modules. For a normal v0.5 start, use the generated `Governance_Starter.xltx` so the canonical import tables already exist.
 
-See `docs/database_import_contract.md` for the canonical `tblBudgetInput` contract, `docs/power_platform_fabric_integration.md` for the later platform path, and `docs/copilot_review_playbook.md` for prompt-card guidance. Copilot may explain and summarize reviewed tables, but governed numeric calculations stay in native Excel formulas.
+See `docs/database_import_contract.md` for the canonical `tblBudgetInput` contract, `docs/optional_platform_adapters.md` for optional placeholder adapter boundaries, and `docs/copilot_review_playbook.md` for prompt-card guidance. Copilot may explain and summarize reviewed tables, but governed numeric calculations stay in native Excel formulas.
 
 ## Office.js Add-In Starter
 
@@ -262,29 +262,11 @@ The v0.2.0 workflow layer adds a controlled notes/status/timeline apply path and
 
 - `Setup Notes Workflow` creates `Planning Review!O:R` notes columns and `Decision Staging` / `tblDecisionStaging`.
 - `office-scripts/apply_notes.ts` performs the two-pass prepare/apply writeback to `Planning Notes`, `Timeline`, `Comments`, and `Status`.
-- `Setup Asset Workflow` is optional. It creates `Asset Register` / `tblAssets` as the simple manual asset-entry table, shows `Asset Hub`, and keeps finance, semantic, evidence, and PQ backend sheets out of the default flow.
+- `Setup Asset Workflow` is optional. It creates `Asset Register` / `tblAssets` as the simple manual asset-entry table, shows `Asset Hub`, and keeps finance, evidence, and PQ backend sheets out of the default flow.
 - Asset Evidence Power Query is a separate seed-workbook path. Source-controlled M templates live in `samples/power-query/asset-evidence/`; `tools/start_asset_evidence_pq_installer.ps1` provides the local button launcher, and `tools/install_asset_evidence_pq_workbook.ps1` installs the setup sheets, query definitions, and loaded output tables into a new target workbook copy.
 - `modules/assets.formula.txt` contains review queues only; Office Scripts perform controlled writes.
 
 See `docs/notes_apply_workflow.md`, `docs/asset_setup_workflow.md`, `docs/asset_evidence_power_query.md`, and `office-scripts/README.md`.
-
-## Optional SemanticTwin Crosswalk
-
-`SemanticTwin` is an opt-in starter edition for digital-twin-readiness review. It adds `Semantic Map Hub` and hidden `Semantic Map Setup` tables without changing the default planning workbook.
-
-The semantic layer is optional. Use REC for buildings, rooms, spaces, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. This is not a full ontology import, not a JSON-LD/RDF exporter, and not a completed Azure Digital Twins or Fabric graph integration.
-
-The first slice is a curated crosswalk:
-
-- `tblOntologyNamespaces`
-- `tblOntologyClassMap`
-- `tblOntologyRelationshipMap`
-- `tblProjectSemanticMap`
-- `tblAssetSemanticMap`
-- `Ontology.TRIPLE_EXPORT_QUEUE`
-- `Ontology.ONTOLOGY_ISSUES`
-
-See `docs/semantic_standards_strategy.md`.
 
 ## Core Pattern
 

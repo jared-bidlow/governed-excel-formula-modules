@@ -814,7 +814,7 @@ def audit_docs(results: list[Result]) -> None:
     review = read_text(ROOT / "docs" / "technical_review_guide.md")
     notes_workflow = read_text(ROOT / "docs" / "notes_apply_workflow.md")
     database_import = read_text(ROOT / "docs" / "database_import_contract.md")
-    platform_integration = read_text(ROOT / "docs" / "power_platform_fabric_integration.md")
+    optional_adapters = read_text(ROOT / "docs" / "optional_platform_adapters.md")
     copilot_playbook = read_text(ROOT / "docs" / "copilot_review_playbook.md")
     notes_formula = read_text(ROOT / "modules" / "notes.formula.txt")
     asset_workflow = read_text(ROOT / "docs" / "asset_setup_workflow.md")
@@ -824,6 +824,7 @@ def audit_docs(results: list[Result]) -> None:
     durable_contract = read_text(ROOT / "docs" / "codex_chatgpt_durable_contract.md")
     import_map = read_text(ROOT / "docs" / "workbook_import_map.md")
     structure_map = read_text(ROOT / "docs" / "planning_worksheet_structure_map.md")
+    workbook_map = read_text(ROOT / "docs" / "workbook_left_to_right_map.md")
     worktree_doc = read_text(ROOT / "docs" / "git_worktree_workflow.md")
     office_scripts_readme = read_text(ROOT / "office-scripts" / "README.md")
     apply_notes_script = read_text(ROOT / "office-scripts" / "apply_notes.ts")
@@ -902,6 +903,43 @@ def audit_docs(results: list[Result]) -> None:
         "README states application boundary",
         r"multi-user transactions, permissions, APIs, durable storage",
         "Keep the public Excel rationale honest about application boundaries.",
+    )
+    add(
+        results,
+        not re.search(
+            r"\b(Dataverse|Fabric|Power Platform|Azure Digital Twins|SemanticTwin)\b",
+            readme,
+            re.IGNORECASE,
+        ),
+        "README.md",
+        "README avoids speculative platform promotion",
+        "platform terms absent from README",
+        "Keep the README focused on the current Excel workbook, CSV handoff, and validation workflow.",
+    )
+    public_doc_bundle = "\n".join(
+        [
+            readme,
+            readme_first,
+            starter,
+            database_import,
+            asset_workflow,
+            asset_evidence_pq,
+            import_map,
+            structure_map,
+            workbook_map,
+        ]
+    )
+    add(
+        results,
+        not re.search(
+            r"platform path|recommended path|later workflow path|future implementation|digital-twin readiness|enterprise data platform|Fabric-ready|Dataverse workflow|Power Platform path",
+            public_doc_bundle,
+            re.IGNORECASE,
+        ),
+        "docs",
+        "public docs avoid roadmap language",
+        "speculative roadmap phrases absent",
+        "Use current workflow, operator package, CSV handoff, workbook input, review queue, approved output, and placeholder adapter language.",
     )
     check_required_regex(
         results,
@@ -1076,11 +1114,11 @@ def audit_docs(results: list[Result]) -> None:
     )
     check_required_regex(
         results,
-        "docs/power_platform_fabric_integration.md",
-        platform_integration,
-        "platform integration doc stays design-only",
-        r"Power Query adapter.*tblBudgetInput.*does not create.*workspace.*does not create Dataverse tables.*Power Apps.*Power Automate flows.*direct database writeback",
-        "Keep Power Platform/Fabric integration as a documented path, not a tenant-specific implementation.",
+        "docs/optional_platform_adapters.md",
+        optional_adapters,
+        "optional adapter doc stays placeholder-only",
+        r"Excel-first.*tblBudgetInput.*placeholder adapters.*not part of the current operator package.*not a recommended next step.*do not create.*direct database writeback",
+        "Keep non-current-workbook adapters documented as placeholders, not as a roadmap.",
     )
     check_required_regex(
         results,
@@ -1287,8 +1325,8 @@ def audit_docs(results: list[Result]) -> None:
         "docs/asset_setup_workflow.md",
         asset_workflow,
         "asset workflow still defers export and finished reports",
-        r"does not include RDF export.*SHACL validation.*finished asset reports.*Power Query seed provides setup tables",
-        "Keep RDF/export and finished reports out of this asset setup slice.",
+        r"does not include external graph export.*validation against ontology files.*finished asset reports.*Power Query seed provides setup tables",
+        "Keep graph export and finished reports out of this asset setup slice.",
     )
     check_required_regex(
         results,
@@ -1399,8 +1437,8 @@ def audit_docs(results: list[Result]) -> None:
         "docs/v0.2.0_release_notes.md",
         v020_release,
         "v0.2.0 release notes defer export bridge work",
-        r"RDF/export.*SHACL validation.*Power Query bridge",
-        "Explicitly defer RDF/export, SHACL, and Power Query bridge work.",
+        r"external graph export.*external validation.*Power Query bridge",
+        "Explicitly defer external graph export, external validation, and Power Query bridge work.",
     )
     check_required_regex(
         results,
@@ -2178,7 +2216,7 @@ def audit_docs(results: list[Result]) -> None:
                 ("documents live ApplyNotes control status", r"apply_notes\.ts.*Planning Review!O1:R3.*last phase/result/next action"),
                 ("documents asset mapping script", r"apply_asset_mappings\.ts.*accepted asset setup rows.*asset mapping.*state-history"),
                 ("states formulas review and scripts write", r"Formula modules create review queues.*Office Scripts perform controlled writes"),
-                ("excludes RDF export", r"RDF/export is not part of this release"),
+                ("excludes graph export", r"External graph export is not part of this release"),
             ],
         ),
         (
@@ -2207,7 +2245,7 @@ def audit_docs(results: list[Result]) -> None:
                 ("states asset register boundary", r"Asset Register / tblAssets.*does not create, overwrite, or enrich tblAssets"),
                 ("validates new asset rule", r"new_asset requires target_asset_id"),
                 ("validates replacement rule", r"replace_asset requires source_asset_id and target_asset_id"),
-                ("excludes RDF export", r"does not export RDF|RDF/export was not run"),
+                ("excludes graph export", r"does not export graph data|External graph export was not run"),
             ],
         ),
     ]:
@@ -2332,7 +2370,7 @@ def audit_addin_contract(results: list[Result]) -> None:
         ("validates Ready helpers", r"Ready\.ColumnOrBlank.*Ready\.InternalEligible.*Ready\.ChargeableFlag.*Ready\.InternalReady3.*Ready\.InternalJobs_Export"),
         ("validates workbook-local compatibility helpers", r"TRIMRANGE_KEEPBLANKS.*RBYROW"),
         ("formats starter workbook", r"formatDataImportSetup.*formatBudgetInput.*formatBudgetQa.*formatPlanningTable.*formatCapSetup.*formatPlanningReview.*formatStartHere.*formatSourceStatus.*formatHubShell"),
-        ("enriches Start Here navigation", r"formatStartHere.*Workbook flow.*Manual source / database / Fabric / Dataverse.*Go to.*Backend/admin sheets.*setMergedPanel"),
+        ("enriches Start Here navigation", r"formatStartHere.*Workbook flow.*Manual workbook source / optional placeholder adapter.*Go to.*Backend/admin sheets.*setMergedPanel"),
         ("adds clickable hub table of contents", r"formatHubToc.*Go to section.*setInternalSheetLink.*documentReference.*#1F4E79"),
         ("normalizes row heights", r"normalizeSheetRows.*rowHeight"),
         ("widens Start Here flow text columns", r"formatStartHere.*C:C.*columnWidth.*D:D.*columnWidth"),
@@ -3348,8 +3386,8 @@ def audit_release_accelerator_contract(results: list[Result]) -> None:
         "semantic_twin_edition",
         "semantic_crosswalk_lite",
         "semantic_starter_contract",
-        "jsonld_graph_export",
-        "azure_digital_twins_integration",
+        "graph_export_reference",
+        "external_twin_integration",
     ]:
         add(
             results,
@@ -3596,7 +3634,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "tools/build_governance_starter_workbook.ps1",
         builder,
         "governance starter builder keeps Start Here flow table shaped",
-        r"New-Object 'object\[\]\[\]' 7.*Manual source / database / Fabric / Dataverse.*tblStartHereFlow",
+        r"New-Object 'object\[\]\[\]' 7.*Manual workbook source / optional placeholder adapter.*tblStartHereFlow",
         "Keep tblStartHereFlow as a four-column workbook table instead of a flattened one-column array.",
     )
     check_required_regex(
@@ -3782,7 +3820,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "README.md",
         readme,
         "README documents simplified workbook UX",
-        r"Starter Workbook Editions.*Governance_Starter\.xltx.*planning-only.*Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub.*SemanticTwin.*Semantic Map Hub",
+        r"Starter Workbook Editions.*Governance_Starter\.xltx.*planning-only.*Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub",
         "Document the default visible workbook surface.",
     )
     check_required_regex(
@@ -3814,7 +3852,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/starter_workbook.md",
         starter_doc,
         "starter docs document simplified workbook UX",
-        r"(?=.*default build is the `Planning` edition)(?=.*Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub)(?=.*AssetsLite.*Asset Hub)(?=.*AssetsFull.*Asset Hub.*Asset Finance Hub)(?=.*SemanticTwin.*Semantic Map Hub)(?=.*PQ Budget Input)(?=.*Validation Lists)(?=.*Workbook Manifest)(?=.*hidden by default)",
+        r"(?=.*default build is the `Planning` edition)(?=.*Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub)(?=.*AssetsLite.*Asset Hub)(?=.*AssetsFull.*Asset Hub.*Asset Finance Hub)(?=.*reference-only semantic crosswalk edition)(?=.*PQ Budget Input)(?=.*Validation Lists)(?=.*Workbook Manifest)(?=.*hidden by default)",
         "Document the generated workbook front door and hidden backend sheets.",
     )
     check_required_regex(
@@ -3846,7 +3884,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "add-in docs point new workbook starts to generated template",
-        r"preferred path is now the generated starter template.*build_governance_starter_workbook\.ps1.*default generated `.xltx` is planning-only.*-Edition AssetsLite.*-Edition AssetsFull.*-Edition SemanticTwin",
+        r"preferred path is now the generated starter template.*build_governance_starter_workbook\.ps1.*default generated `.xltx` is planning-only.*-Edition AssetsLite.*-Edition AssetsFull",
         "Keep the add-in boundary aligned with the generated starter path.",
     )
     check_required_regex(
@@ -3878,7 +3916,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/workbook_left_to_right_map.md",
         workbook_map_doc,
         "workbook map documents simplified visible flow",
-        r"Start Here.*Source Status.*Data Import Setup.*Planning Table.*tblBudgetInput.*Planning Review.*Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub.*SemanticTwin.*Semantic Map Hub.*hidden backend",
+        r"Start Here.*Source Status.*Data Import Setup.*Planning Table.*tblBudgetInput.*Planning Review.*Analysis Hub.*AssetsLite.*Asset Hub.*AssetsFull.*Asset Finance Hub.*reference-only semantic crosswalk.*hidden backend",
         "Keep the workbook map aligned to the simplified generated template.",
     )
     check_required_regex(
@@ -4030,7 +4068,7 @@ def audit_governance_starter_template_contract(results: list[Result]) -> None:
         "docs/change_log.md",
         changelog,
         "change log records simple asset entry path",
-        r"(?=.*Make simple asset entry obvious)(?=.*Asset Register)(?=.*AssetsLite)(?=.*AssetsFull)(?=.*SemanticTwin)(?=.*To enter one asset, go to Asset Register\.)(?=.*ASSET_REGISTER_START_HERE)(?=.*ASSET_REGISTER_STATUS)(?=.*ASSET_REGISTER_ISSUES)(?=.*ASSET_REGISTER_FIELD_GUIDE)(?=.*LinkedProjectID)(?=.*tblBudgetInput remains the manual/canonical planning input table)",
+        r"(?=.*Make simple asset entry obvious)(?=.*Asset Register)(?=.*AssetsLite)(?=.*AssetsFull)(?=.*Reference-only semantic crosswalk edition)(?=.*To enter one asset, go to Asset Register\.)(?=.*ASSET_REGISTER_START_HERE)(?=.*ASSET_REGISTER_STATUS)(?=.*ASSET_REGISTER_ISSUES)(?=.*ASSET_REGISTER_FIELD_GUIDE)(?=.*LinkedProjectID)(?=.*tblBudgetInput remains the manual/canonical planning input table)",
         "Record the asset-register entry path without changing the budget input boundary.",
     )
 
@@ -4063,7 +4101,7 @@ def audit_semantic_crosswalk_contract(results: list[Result]) -> None:
             read_text(ROOT / file_name),
             "semantic crosswalk starter has required contract",
             pattern,
-            "Keep SemanticTwin starter tables public-safe and machine-readable.",
+            "Keep semantic starter tables public-safe and machine-readable.",
         )
 
     check_required_regex(
@@ -4086,15 +4124,15 @@ def audit_semantic_crosswalk_contract(results: list[Result]) -> None:
         results,
         "tools/build_governance_starter_workbook.ps1",
         builder,
-        "governance starter builder supports SemanticTwin edition",
+        "governance starter builder supports reference semantic edition",
         r"(?=.*ValidateSet\(\"Planning\", \"AssetsLite\", \"AssetsFull\", \"SemanticTwin\"\))(?=.*Build-SemanticMapSetup)(?=.*Build-SemanticMapHub)(?=.*modules\\ontology\.formula\.txt)",
-        "Keep SemanticTwin as an opt-in edition stacked on the asset editions.",
+        "Keep the reference semantic edition isolated from the default operator flow.",
     )
     check_required_regex(
         results,
         "samples/workbook_manifest.tsv",
         manifest,
-        "workbook manifest makes Semantic Map Hub SemanticTwin-only",
+        "workbook manifest makes Semantic Map Hub reference-edition only",
         r"Semantic Map Hub.*\tvisible\tGenerated\tSemanticTwin\tSemantic Map Hub.*Semantic Map Setup.*\thidden\tGenerated\tAssetsFull;SemanticTwin",
         "Keep semantic mapping out of the default Planning and AssetsLite visible surfaces.",
     )
@@ -4102,12 +4140,11 @@ def audit_semantic_crosswalk_contract(results: list[Result]) -> None:
         results,
         "docs/semantic_standards_strategy.md",
         semantic_doc,
-        "semantic strategy documents REC and Brick roles",
-        r"RealEstateCore.*buildings.*rooms.*spaces.*Brick.*equipment.*points.*sensors.*does not import full REC or Brick ontology dumps.*does not implement Azure Digital Twins.*complete integration",
-        "Document the optional REC/Brick boundary without claiming full graph integration.",
+        "semantic strategy marks crosswalk reference-only",
+        r"archived/reference note.*not part of the current operator workflow.*not a recommended next step.*does not import full REC or Brick ontology dumps.*does not implement Azure Digital Twins.*complete integration",
+        "Document the semantic crosswalk as reference-only without claiming a deployed integration.",
     )
     for file_name, text in [
-        ("README.md", readme),
         ("docs/starter_workbook.md", starter_doc),
         ("docs/workbook_left_to_right_map.md", workbook_map_doc),
         ("docs/asset_quick_start.md", asset_quick_start),
@@ -4117,9 +4154,9 @@ def audit_semantic_crosswalk_contract(results: list[Result]) -> None:
             results,
             file_name,
             text,
-            "docs mention optional SemanticTwin crosswalk",
-            r"SemanticTwin.*optional.*REC.*Brick.*not.*full ontology",
-            "Keep public docs clear that semantic mapping is opt-in and limited.",
+            "docs mention reference-only semantic crosswalk",
+            r"semantic crosswalk.*reference-only|reference-only semantic crosswalk|reference crosswalk",
+            "Keep public docs clear that semantic mapping is reference-only and limited.",
         )
 
     for suffix in [".ttl", ".owl", ".rdf", ".nt", ".jsonld"]:
@@ -4145,9 +4182,9 @@ def audit_semantic_crosswalk_contract(results: list[Result]) -> None:
         results,
         "docs/change_log.md",
         changelog,
-        "change log records SemanticTwin crosswalk",
-        r"Add optional SemanticTwin REC/Brick semantic crosswalk.*Semantic Map Hub.*modules/ontology\.formula\.txt.*TRIPLE_EXPORT_QUEUE",
-        "Record the optional REC/Brick semantic crosswalk change.",
+        "change log records semantic crosswalk reference",
+        r"Add optional semantic crosswalk reference.*Semantic Map Hub.*modules/ontology\.formula\.txt.*TRIPLE_EXPORT_QUEUE",
+        "Record the optional semantic crosswalk reference change.",
     )
 
 

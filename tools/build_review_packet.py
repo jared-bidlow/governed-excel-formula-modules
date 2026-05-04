@@ -74,7 +74,8 @@ def power_query_summary() -> str:
         [
             f"- Budget input templates: {', '.join(files)}",
             f"- Adapter selector modes: {', '.join(modes) if modes else '(selector missing modes)'}",
-            "- External adapters are public-safe templates; credentials and tenant-specific endpoints are not included.",
+            "- CurrentWorkbook is the normal operator path.",
+            "- Other source adapters are public-safe placeholders; credentials and tenant-specific endpoints are not included.",
         ]
     )
 

@@ -4,9 +4,9 @@ This repo includes a minimal Excel Office.js task-pane add-in under `addin/`.
 
 The add-in is an installer and validator. It does not replace the formula modules with JavaScript business logic.
 
-For a new workbook artifact, the preferred path is now the generated starter template from `tools/build_governance_starter_workbook.ps1`. The default generated `.xltx` is planning-only. Use `-Edition AssetsLite` for a visible `Asset Hub`, `-Edition AssetsFull` for visible `Asset Hub` plus `Asset Finance Hub`, and `-Edition SemanticTwin` for the optional REC/Brick semantic crosswalk.
+For a new workbook artifact, the preferred path is now the generated starter template from `tools/build_governance_starter_workbook.ps1`. The default generated `.xltx` is planning-only. Use `-Edition AssetsLite` for a visible `Asset Hub` and `-Edition AssetsFull` for visible `Asset Hub` plus `Asset Finance Hub`.
 
-SemanticTwin is generated through the workbook builder rather than a new default add-in workflow. The add-in remains focused on setup, formula installation, validation, and planning/asset workflow helpers; it does not import full ontologies or complete graph/digital-twin export.
+A reference-only semantic crosswalk edition still exists in the workbook builder for audit coverage and private extension. The add-in remains focused on setup, formula installation, validation, and planning/asset workflow helpers; it does not import ontology files or perform external graph export.
 
 The generated template also includes a hidden `Automation Setup` worksheet. That sheet explains that `ApplyNotes.ts` is an optional Office Script release asset and must be imported through Excel `Automate -> New Script` before the notes writeback automation can run.
 

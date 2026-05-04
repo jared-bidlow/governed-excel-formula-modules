@@ -1019,7 +1019,7 @@
     );
     sheet.getRange("A7:D14").values = [
       ["Step", "From", "To", "Purpose"],
-      ["1", "Manual source / database / Fabric / Dataverse", "Power Query or current-workbook adapter", "Select and shape incoming planning data."],
+      ["1", "Manual workbook source / optional placeholder adapter", "Power Query or current-workbook adapter", "Select and shape incoming planning data."],
       ["2", "Power Query or current-workbook adapter", "tblBudgetInput", "Load the canonical 64-column planning contract."],
       ["3", "tblBudgetInput", "Governed formula modules", "Keep formulas independent of the source system."],
       ["4", "Governed formula modules", "Planning Review / Analysis Hub / Asset Hub / Asset Finance Hub", "Review controlled outputs on a smaller visible sheet set."],

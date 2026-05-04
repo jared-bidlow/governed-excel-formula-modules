@@ -1,4 +1,5 @@
 let
+    // CurrentWorkbook is the normal operator path. Other values route to optional placeholder adapters.
     Parameters = Excel.CurrentWorkbook(){[Name = "tblBudgetImportParameters"]}[Content],
     ActiveAdapter = try Parameters{[Parameter = "ActiveAdapter"]}[Value] otherwise "CurrentWorkbook",
     Source =

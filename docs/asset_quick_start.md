@@ -76,11 +76,11 @@ Asset Finance is advanced and requires classified evidence.
 
 Rows feed AssetFinance outputs only when `PresentWithClassifiedEvidence = TRUE`.
 
-## SemanticTwin Is Separate
+## Reference Crosswalk Is Separate
 
-SemanticTwin is optional even when assets are in scope. Use it only when projects or assets need REC and Brick semantic crosswalk labels for future digital-twin-ready review.
+The semantic crosswalk files are reference-only for this public repo. They are not part of the current asset operator workflow.
 
-Use REC for buildings, spaces, rooms, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. SemanticTwin is not a full ontology import and it does not complete graph, Fabric, or Azure Digital Twins integration.
+If a private workbook copy explicitly needs semantic labels, keep that work separate from simple asset entry, asset evidence review, and asset finance outputs. The tracked reference files are a small curated crosswalk only; they are not a full ontology import or deployed external integration.
 
 ## Asset Glossary
 

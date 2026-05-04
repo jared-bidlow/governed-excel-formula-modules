@@ -1,4 +1,5 @@
 let
+    // Optional placeholder adapter. Not part of the current operator workflow.
     EndpointName = "FABRIC_SQL_ENDPOINT_PLACEHOLDER",
     DatabaseName = "DATABASE_OR_WORKSPACE_PLACEHOLDER",
     ViewName = "vBudgetPlanningWorkbookContract",

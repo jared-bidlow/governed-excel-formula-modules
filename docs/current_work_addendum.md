@@ -27,8 +27,8 @@ Excluded:
 - TSV/sample additions.
 - Workbook binaries or generated artifacts.
 - Asset workflow design.
-- RDF/export scope.
-- SHACL validation or semantic graph publication.
+- External graph export scope.
+- External validation or semantic graph publication.
 
 ## Next Recommended Implementation Task
 

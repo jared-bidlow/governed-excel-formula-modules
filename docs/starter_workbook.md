@@ -32,6 +32,8 @@ The default build is the `Planning` edition. Optional editions can be generated 
 
 `AssetsLite` writes `Governance_Starter_AssetsLite.xlsx` / `.xltx` with visible `Asset Hub` and `Asset Register`. `AssetsFull` writes `Governance_Starter_AssetsFull.xlsx` / `.xltx` with visible `Asset Hub`, `Asset Register`, and `Asset Finance Hub`.
 
+A reference-only semantic crosswalk edition still exists for audit coverage and private extension, but it is not part of the current operator workflow.
+
 Use `Governance_Starter.xltx` as the Excel template. Use `Governance_Starter.xlsx` for inspection and smoke testing. The generator pulls from source-controlled formula modules, starter TSVs, and M templates, so the workbook artifact can be rebuilt instead of reviewed as source.
 
 The generated starter includes:
@@ -277,17 +279,11 @@ These formulas read `tblAssetEvidence_ModelInputs`, not the raw setup tables. Ro
 
 The task-pane `Setup + Install + Validate + Outputs` button creates the public demo hub sheets as part of the full starter flow. The standalone `Insert Demo Outputs` button remains available for rerunning only the hub output insertion. Before either path writes the main report, it checks `Planning Review!A4:N200` and reports the first cell that would block the spill. It inserts the main report at `Planning Review!A4` and places the Analysis Hub sections for `BU Cap Scorecard`, `Reforecast Queue`, `PM Spend Report`, `Working Budget`, `Burndown`, and `Internal Jobs` with `=Ready.InternalJobs_Export()` instead of creating separate output sheets. Each generated hub includes a clickable section table before the stacked outputs.
 
-## SemanticTwin Edition
+## Reference Crosswalk Edition
 
-`SemanticTwin` is an optional generated edition for REC and Brick semantic mapping. It keeps the planning, asset, and finance surfaces from `AssetsFull`, then makes `Semantic Map Hub` visible. `Semantic Map Setup` remains hidden/admin-scoped.
+The builder still accepts `-Edition SemanticTwin` because tracked tests and source-controlled manifests cover the optional semantic crosswalk files. Treat that edition as reference-only. It is not the normal workbook start, not part of the current operator package, and not a roadmap.
 
-Use REC for buildings, rooms, spaces, real-estate context, and generic facility assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. The starter includes only curated crosswalk TSVs and `modules/ontology.formula.txt`; it is not a full ontology import and does not implement Azure Digital Twins, Fabric graph, RDF, Turtle, or JSON-LD export.
-
-Build the semantic edition with:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_governance_starter_workbook.ps1 -Edition SemanticTwin
-```
+Use it only in a private workbook copy when semantic mapping is explicitly in scope. The tracked crosswalk is curated and small; it is not a full ontology import or deployed external integration.
 
 ## Add-In Option
 

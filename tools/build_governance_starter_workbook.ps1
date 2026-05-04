@@ -1365,7 +1365,7 @@ function Build-StartHere {
         -Note "The workbook keeps data intake, canonical source rows, formula outputs, review hubs, and optional staged writeback as separate surfaces."
     $flowRows = New-Object 'object[][]' 8
     $flowRows[0] = [object[]]@("Step", "From", "To", "Purpose")
-    $flowRows[1] = [object[]]@("1", "Manual source / database / Fabric / Dataverse", "Power Query or current-workbook adapter", "Select and shape incoming planning data.")
+    $flowRows[1] = [object[]]@("1", "Manual workbook source / optional placeholder adapter", "Power Query or current-workbook adapter", "Select and shape incoming planning data.")
     $flowRows[2] = [object[]]@("2", "Power Query or current-workbook adapter", "tblBudgetInput", "Load the canonical 64-column planning contract.")
     $flowRows[3] = [object[]]@("3", "tblBudgetInput", "Governed formula modules", "Keep formulas independent of the source system.")
     $flowRows[4] = [object[]]@("4", "Governed formula modules", "Planning Review / Analysis Hub / Asset Hub / Asset Finance Hub", "Review controlled outputs on a smaller visible sheet set.")
@@ -1641,7 +1641,7 @@ function Build-SemanticMapSetup {
     Format-PageHeader `
         -Worksheet $Worksheet `
         -Title "Semantic Map Setup" `
-        -Subtitle "Hidden REC/Brick crosswalk tables for the optional SemanticTwin edition. Do not add private endpoints or full ontology dumps." `
+        -Subtitle "Hidden reference crosswalk tables for private workbook extension. Do not add private endpoints or full ontology dumps." `
         -BandRange "A1:K3"
 
     [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblOntologyNamespaces" -TopLeft "A4" -Rows (Read-TsvMatrix "samples\ontology_namespaces_starter.tsv"))
@@ -1664,17 +1664,17 @@ function Build-SemanticMapHub {
     Format-HubSheet `
         -Worksheet $Worksheet `
         -Title "Semantic Map Hub" `
-        -Note "Optional SemanticTwin crosswalk. Use REC for buildings, rooms, spaces, and real-estate context; use Brick for equipment, systems, points, sensors, meters, setpoints, and commands." `
+        -Note "Reference-only semantic crosswalk. Keep it separate from the normal planning and asset operator workflow." `
         -ClearRange "A1:Z270"
 
     $sections = @(
-        @{ Cell = "A15"; Title = "Start here"; Note = "Plain-language guidance for the optional REC/Brick crosswalk."; Formula = "=Ontology.ONTOLOGY_START_HERE" },
+        @{ Cell = "A15"; Title = "Start here"; Note = "Plain-language guidance for the reference crosswalk."; Formula = "=Ontology.ONTOLOGY_START_HERE" },
         @{ Cell = "A35"; Title = "Semantic mapping status"; Note = "Counts for project mappings, asset mappings, export rows, and ontology issues."; Formula = "=Ontology.SEMANTIC_MAPPING_STATUS" },
-        @{ Cell = "A55"; Title = "Ontology issues"; Note = "Rows missing identifiers, REC/Brick classes, predicates, or objects."; Formula = "=Ontology.ONTOLOGY_ISSUES" },
-        @{ Cell = "A100"; Title = "Triple export queue"; Note = "Reviewable Subject-Predicate-Object rows for future graph, Fabric, or digital-twin workflows."; Formula = "=Ontology.TRIPLE_EXPORT_QUEUE" },
-        @{ Cell = "A150"; Title = "Class map"; Note = "Curated REC and Brick class labels. This is intentionally not a full ontology dump."; Formula = "=Ontology.CLASS_MAP" },
+        @{ Cell = "A55"; Title = "Ontology issues"; Note = "Rows missing identifiers, classes, predicates, or objects."; Formula = "=Ontology.ONTOLOGY_ISSUES" },
+        @{ Cell = "A100"; Title = "Triple export queue"; Note = "Reviewable Subject-Predicate-Object rows for private extension."; Formula = "=Ontology.TRIPLE_EXPORT_QUEUE" },
+        @{ Cell = "A150"; Title = "Class map"; Note = "Curated class labels. This is intentionally not a full ontology dump."; Formula = "=Ontology.CLASS_MAP" },
         @{ Cell = "A190"; Title = "Relationship map"; Note = "Curated relationships for location, composition, feeds, points, and project impact."; Formula = "=Ontology.RELATIONSHIP_MAP" },
-        @{ Cell = "A225"; Title = "JSON-LD and digital twin note"; Note = "Guidance only. This slice does not implement JSON-LD, RDF, Fabric graph, or Azure Digital Twins export."; Formula = "=Ontology.JSONLD_EXPORT_HELP" }
+        @{ Cell = "A225"; Title = "Reference export note"; Note = "Guidance only. This slice does not implement a deployed graph export."; Formula = "=Ontology.JSONLD_EXPORT_HELP" }
     )
     $toc = Add-HubTableOfContents -Worksheet $Worksheet -TableName "tblSemanticMapHubSections" -Sections $sections -TopLeft "A4"
     foreach ($section in $sections) {

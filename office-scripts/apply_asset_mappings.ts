@@ -1,7 +1,7 @@
 /**
  * Starter Office Script for applying accepted asset-mapping rows.
  *
- * This is workbook mechanics only. It does not export RDF or any external format.
+ * This is workbook mechanics only. It does not export graph data or any external format.
  *
  * Expected target sheets/tables when present:
  * - Project Asset Map / tblProjectAssetMap
@@ -308,6 +308,6 @@ function main(workbook: ExcelScript.Workbook): {
             (missingOptionalTargets.length > 0
                 ? "Optional target tables missing: " + missingOptionalTargets.join(", ") + ". "
                 : "") +
-            "RDF/export was not run."
+    "External graph export was not run."
     };
 }

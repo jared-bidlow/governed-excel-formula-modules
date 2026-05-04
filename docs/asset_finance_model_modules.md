@@ -63,9 +63,9 @@ Mapped structural hints can support review queues and context, but they do not d
 - v0.4 funding requirements use full grouped classified amounts. `FundingRequirementRule` is a contract/label field; unsupported values keep the grouped row visible, preserve the entered rule, blank `FundingRequirementAmount`, and append `FundingIssue`.
 - `ChartGroup` affects funding chart feed grouping only. Depreciation chart feed rows group by `DepreciationClass`. Chart feeds exclude unsupported rows by reading nonblank `AnnualDepreciation` and `FundingRequirementAmount` values from the formula outputs.
 
-## SemanticTwin Boundary
+## Reference Crosswalk Boundary
 
-SemanticTwin is optional and sits outside the AssetFinance calculation layer. Use REC for buildings, rooms, spaces, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. The semantic crosswalk is not a full ontology import and does not change depreciation, funding requirements, finance totals, or chart-ready feeds.
+The semantic crosswalk files are reference-only and sit outside the AssetFinance calculation layer. They are not part of the current asset finance operator flow and do not change depreciation, funding requirements, finance totals, or chart-ready feeds.
 
 ## Source Boundary
 

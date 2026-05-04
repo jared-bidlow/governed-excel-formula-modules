@@ -1,12 +1,12 @@
 # Data Import Bridge Contract
 
-v0.5 adds a canonical import layer in front of the existing formula modules:
+This repo keeps the budget source boundary simple:
 
 ```text
-External or manual source -> Power Query adapter -> tblBudgetInput -> formula modules
+Planning Table or workbook input -> Power Query adapter -> tblBudgetInput -> formula modules
 ```
 
-Excel remains the review and calculation surface. This slice does not build a database app, Power App, Fabric workspace, or direct database writeback.
+Excel remains the review and calculation surface. The current operator workflow does not build a database app, app workflow, external writeback, or migration path.
 
 Asset workflow is optional and separate from the budget import source boundary. `tblBudgetInput` remains the canonical planning formula source whether or not an asset edition is generated.
 
@@ -64,9 +64,12 @@ Budget import templates live under:
 samples/power-query/budget-input/
 ```
 
-The source adapters are:
+The normal/default source adapter is:
 
 - `qBudget_Source_CurrentWorkbook`
+
+Optional placeholder adapters are also tracked:
+
 - `qBudget_Source_AzureSql`
 - `qBudget_Source_Dataverse`
 - `qBudget_Source_FabricSqlEndpoint`
@@ -91,20 +94,14 @@ The bridge templates are:
 - `qBridge_FinancialProjectRegister`
 - `qBridge_ApprovedProjectEvidence`
 
-The database-oriented adapters are placeholder templates. They use public-safe placeholder names only. Do not commit real server names, tenant names, workspace names, connection strings, credentials, tokens, private URLs, or local workbook paths.
+The non-current-workbook source adapters are placeholder examples. They use public-safe placeholder names only and are not part of the current operator workflow. Do not commit real server names, tenant names, workspace names, connection strings, credentials, tokens, private URLs, or local workbook paths.
 
-`qBudget_Source_Selected` reads `tblBudgetImportParameters[ActiveAdapter]` and selects `CurrentWorkbook`, `AzureSQL`, `Dataverse`, or `FabricSqlEndpoint`. `qBudget_Normalized`, `qBudget_Issues`, and `qBudget_Status` use that selected adapter path.
-
-## Semantic Mapping Boundary
-
-SemanticTwin can add optional REC and Brick semantic crosswalk labels after data lands in `tblBudgetInput` and after planning or asset review surfaces are understood. It does not change the canonical budget import contract and it does not make external source mode a graph or digital-twin writeback path.
-
-Use REC for buildings, spaces, rooms, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. The public template does not import full ontologies or claim a completed Azure Digital Twins, Fabric graph, RDF, Turtle, or JSON-LD integration.
+`qBudget_Source_Selected` reads `tblBudgetImportParameters[ActiveAdapter]`. `CurrentWorkbook` is the default and expected operator path. `AzureSQL`, `Dataverse`, and `FabricSqlEndpoint` are placeholder adapter names that a private workbook owner can wire later while preserving the same `tblBudgetInput` contract. `qBudget_Normalized`, `qBudget_Issues`, and `qBudget_Status` use the selected adapter output.
 
 ## Operator Flow
 
 1. Open `Governance_Starter.xltx` as a workbook copy. Use `Governance_Starter_AssetsLite.xltx` or `Governance_Starter_AssetsFull.xltx` only when the optional asset workflow is in scope.
-2. Use `Planning Table` / `tblPlanningTable` for manual starter data, or import a Power Query adapter.
+2. Use `Planning Table` / `tblPlanningTable` for manual starter data, or refresh the current-workbook adapter.
 3. Refresh Power Query so `qBudget_Input` loads `tblBudgetInput`.
 4. Review `Source Status`; unhide `PQ Budget QA` only when troubleshooting `tblBudgetImportStatus` or `tblBudgetImportIssues`.
 5. Review formula outputs that now consume `tblBudgetInput`.
@@ -125,7 +122,7 @@ The public source profile is intentionally descriptive:
 - No new Trace, Variance, or Scenario formula modules.
 - No expanded AssetFinance calculations.
 - No policy-driven defer module.
-- No Power App implementation.
-- No Fabric workspace automation.
+- No external app implementation.
+- No workspace automation.
 - No direct database writeback.
 - No workbook binaries in tracked source.

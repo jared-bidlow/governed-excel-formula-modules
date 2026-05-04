@@ -77,4 +77,4 @@ When `ApplyNotes` archives prior planning-note text into `Planning Table[Comment
 
 ## Boundary
 
-Formula modules produce the review data. The Office Script stages the current review inputs and performs the controlled writeback. This release does not add RDF export, SHACL validation, or an external data bridge.
+Formula modules produce the review data. The Office Script stages the current review inputs and performs the controlled writeback. This release does not add external graph export, external validation, or an external data bridge.

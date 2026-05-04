@@ -1,3 +1,17 @@
+## 2026-05-03 - Demote speculative platform language
+
+Semantic change:
+
+- Replaced broad platform integration wording with practical workbook, CSV handoff, and placeholder-adapter language.
+- Replaced the old broad-integration doc with `docs/optional_platform_adapters.md`.
+- Clarified that non-current-workbook source adapters and semantic crosswalk files are optional placeholders/reference material, not the current operator workflow.
+- Kept `tblBudgetInput`, Integration Bridge, asset workflow, and static validation as the main public message.
+
+Visible impact:
+
+- Documentation reads as an Excel/CSV/PowerShell/GitHub operator toolset.
+- Formula behavior, generated workbook contracts, Integration Bridge tables, and placeholder source files have no intended change.
+
 ## 2026-05-02 - Add optional integration bridge handoff
 
 Semantic change:
@@ -18,7 +32,7 @@ Visible impact:
 
 Semantic change:
 
-- Made `Asset Register` visible in `AssetsLite`, `AssetsFull`, and `SemanticTwin` while keeping it hidden from the default `Planning` edition.
+- Made `Asset Register` visible in asset-enabled editions while keeping it hidden from the default `Planning` edition.
 - Reworked `Asset Hub` so the first instruction is: "To enter one asset, go to Asset Register."
 - Added `Assets.ASSET_REGISTER_START_HERE`, `Assets.ASSET_REGISTER_STATUS`, `Assets.ASSET_REGISTER_ISSUES`, and `Assets.ASSET_REGISTER_FIELD_GUIDE`.
 - Added native Excel validation/input-message support for `tblAssets`, including `AssetType`, required field prompts, non-negative cost/life fields, and advisory `LinkedProjectID` validation.
@@ -28,7 +42,7 @@ Visible impact:
 
 - `AssetsLite`: visible `Asset Hub` and `Asset Register`.
 - `AssetsFull`: visible `Asset Hub`, `Asset Register`, and `Asset Finance Hub`.
-- `SemanticTwin`: visible `Asset Hub`, `Asset Register`, `Asset Finance Hub`, and `Semantic Map Hub`.
+- Reference-only semantic crosswalk edition: visible `Semantic Map Hub` for private extension.
 - Main report totals, subtotal flags, cap remaining values, and existing AssetFinance calculations have no intended change.
 
 ## 2026-04-29 - Add clickable hub section navigation
@@ -43,21 +57,20 @@ Visible impact:
 - Report math, AssetFinance calculations, canonical input behavior, and workbook edition rules are unchanged.
 - Generated hub sheets are easier to navigate because operators can jump down-page to each section instead of scrolling through stacked outputs.
 
-## 2026-04-29 - Add optional SemanticTwin REC/Brick semantic crosswalk
+## 2026-04-29 - Add optional semantic crosswalk reference
 
 Semantic change:
 
-- Added `SemanticTwin` as an opt-in generated workbook edition with visible `Semantic Map Hub`.
-- Added hidden/admin `Semantic Map Setup` tables for curated REC/Brick namespace, class, relationship, project mapping, asset mapping, export queue, and issue contracts.
+- Added a reference-only generated workbook edition with visible `Semantic Map Hub`.
+- Added hidden/admin `Semantic Map Setup` tables for curated namespace, class, relationship, project mapping, asset mapping, export queue, and issue contracts.
 - Added `modules/ontology.formula.txt` with `ONTOLOGY_START_HERE`, `CLASS_MAP`, `RELATIONSHIP_MAP`, `SEMANTIC_MAPPING_STATUS`, `ONTOLOGY_ISSUES`, `TRIPLE_EXPORT_QUEUE`, and `JSONLD_EXPORT_HELP`.
-- Documented that REC is for buildings, rooms, spaces, real-estate context, and generic assets while Brick is for equipment, points, sensors, meters, setpoints, commands, and building systems.
-- Kept the semantic layer as a curated crosswalk only: no full ontology dumps, no JSON-LD/RDF exporter, no completed Azure Digital Twins or Fabric graph integration.
+- Kept the semantic layer as a curated crosswalk only: no full ontology dumps and no deployed external integration.
 
 Visible impact:
 
 - Default `Planning` remains planning-only.
 - `AssetsLite` and `AssetsFull` remain asset/finance editions.
-- `SemanticTwin` visibly adds `Semantic Map Hub`.
+- The reference-only semantic edition visibly adds `Semantic Map Hub`.
 - Main report totals, subtotal flags, cap remaining values, and existing AssetFinance calculations have no intended change.
 
 ## 2026-04-29 - Make asset workflow optional and guided
@@ -150,8 +163,8 @@ Semantic change:
 - Moved the formula source boundary from direct `Planning Table` range reads to canonical `tblBudgetInput`.
 - Added `Data Import Setup`, `PQ Budget Input`, and `PQ Budget QA` starter surfaces with public-safe source profile, import contract, status, and issue tables.
 - Added `Source` formula outputs for source status, schema status, refresh status, row health, lineage, and reconciliation queue review.
-- Added public-safe budget Power Query templates for current workbook, Azure SQL, Dataverse, and Fabric SQL endpoint adapter paths.
-- Added documentation for the canonical budget import contract, Power Platform/Fabric path, and Copilot review playbook. Copilot remains explanatory; governed numeric calculations stay in native Excel formulas.
+- Added public-safe budget Power Query templates for current workbook and optional placeholder source adapters.
+- Added documentation for the canonical budget import contract, optional placeholder adapters, and Copilot review playbook. Copilot remains explanatory; governed numeric calculations stay in native Excel formulas.
 - Follow-up: added `qBudget_Source_Selected`, pointed normalized/status/issues queries at the active adapter selector, and aligned the add-in blank-workbook path to create `tblPlanningTable`.
 
 Minimal diff summary:

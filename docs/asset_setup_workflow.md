@@ -121,6 +121,6 @@ The evidence bridge keeps mapped context and classified evidence separate. Asset
 
 This release keeps asset workflow separate from semantic mapping. Asset formulas review workbook state; Office Scripts perform controlled workbook writes; the asset evidence Power Query seed provides setup tables and public-safe M templates only.
 
-This asset setup slice does not include RDF export, SHACL validation, or finished asset reports. The Power Query seed provides setup tables and evidence M templates only.
+This asset setup slice does not include external graph export, validation against ontology files, or finished asset reports. The Power Query seed provides setup tables and evidence M templates only.
 
-`SemanticTwin` is optional and sits after the asset workflow. Use REC for buildings, spaces, rooms, real-estate context, and generic assets. Use Brick for equipment, points, sensors, meters, setpoints, commands, and building systems. The semantic crosswalk is not a full ontology import, not SHACL validation, and not a completed graph or Azure Digital Twins integration.
+The semantic crosswalk files are reference-only and sit outside the normal asset workflow. They are not a full ontology import, not external validation, and not a deployed integration.

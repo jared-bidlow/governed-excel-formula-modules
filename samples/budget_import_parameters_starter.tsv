@@ -1,5 +1,5 @@
 Parameter	Value	Description
-ActiveAdapter	CurrentWorkbook	CurrentWorkbook, AzureSQL, Dataverse, or FabricSqlEndpoint.
+ActiveAdapter	CurrentWorkbook	Use CurrentWorkbook for the normal operator path. Other adapter names are placeholder examples only.
 CanonicalTable	tblBudgetInput	Loaded table consumed by formula modules.
 ManualSourceTable	tblPlanningTable	Manual/starter source table used by the current-workbook adapter.
 ContractView	vBudgetPlanningWorkbookContract	Public-safe example source view name.

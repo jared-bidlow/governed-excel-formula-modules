@@ -6,7 +6,7 @@ This document is the design checkpoint for the notes-apply workflow introduced a
 
 `v0.2.0` adds a controlled notes, status, and timeline apply workflow.
 
-It does not include RDF export, SHACL validation, semantic graph publication, asset workflow design, generated workbook artifacts, or workbook binaries.
+It does not include external graph export, external validation, semantic graph publication, asset workflow design, generated workbook artifacts, or workbook binaries.
 
 ## Workflow Contract
 
