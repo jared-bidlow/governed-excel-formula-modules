@@ -907,13 +907,13 @@ def audit_docs(results: list[Result]) -> None:
     add(
         results,
         not re.search(
-            r"\b(Dataverse|Fabric|Power Platform|Azure Digital Twins|SemanticTwin)\b",
+            r"\b(Dataverse|Fabric|Power Platform|Azure Digital Twins|SemanticTwin)\b|digital twin readiness",
             readme,
             re.IGNORECASE,
         ),
         "README.md",
-        "README avoids speculative platform promotion",
-        "platform terms absent from README",
+        "README has no platform-roadmap terms",
+        "Dataverse, Fabric, Power Platform, Azure Digital Twins, SemanticTwin, and digital twin readiness are absent from README",
         "Keep the README focused on the current Excel workbook, CSV handoff, and validation workflow.",
     )
     public_doc_bundle = "\n".join(
@@ -3383,11 +3383,11 @@ def audit_release_accelerator_contract(results: list[Result]) -> None:
         "asset_editions",
         "asset_guided_start",
         "asset_finance_empty_state",
-        "semantic_twin_edition",
+        "semantic_reference_edition",
         "semantic_crosswalk_lite",
         "semantic_starter_contract",
-        "graph_export_reference",
-        "external_twin_integration",
+        "semantic_export_reference",
+        "external_semantic_integration",
     ]:
         add(
             results,
