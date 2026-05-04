@@ -3218,6 +3218,7 @@ def audit_integration_bridge_contract(results: list[Result]) -> None:
 
     financial_rows = read_tsv_rows("samples/financial_project_register_export_starter.tsv")
     approved_rows = read_tsv_rows("samples/approved_project_evidence_starter.tsv")
+    bridge_config_rows = read_tsv_rows("samples/integration_bridge_config_starter.tsv")
     add(
         results,
         bool(financial_rows) and financial_rows[0] == expected_financial_headers,
@@ -3234,13 +3235,25 @@ def audit_integration_bridge_contract(results: list[Result]) -> None:
         "headers match approved evidence import contract",
         "Keep the approved evidence import shape aligned to the integration bridge contract.",
     )
+    add(
+        results,
+        bool(bridge_config_rows)
+        and bridge_config_rows[0] == ["Setting", "Value", "Notes"]
+        and {"IntegrationRepoRoot", "ApprovedProjectEvidenceCsvRelativePath", "RefreshApprovedEvidenceOnOpen"}.issubset(
+            {row[0] for row in bridge_config_rows[1:] if row}
+        ),
+        "samples/integration_bridge_config_starter.tsv",
+        "integration bridge config starter rows",
+        "required approved evidence import settings are present",
+        "Keep the Finance-owned approved evidence import configurable without private paths.",
+    )
 
     check_required_regex(
         results,
         "samples/workbook_manifest.tsv",
         manifest,
         "workbook manifest exposes Integration Bridge",
-        r"Integration Bridge\ttblFinancialProjectRegisterExport; tblApprovedProjectEvidence\tControl\tReviewed evidence handoff\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin",
+        r"Integration Bridge\ttblFinancialProjectRegisterExport; tblApprovedProjectEvidence; tblIntegrationBridgeConfig\tControl\tReviewed evidence handoff\tvisible\tGenerated\tPlanning;AssetsLite;AssetsFull;SemanticTwin",
         "Keep the operator bridge visible in generated workbook editions.",
     )
     check_required_regex(
@@ -3248,7 +3261,7 @@ def audit_integration_bridge_contract(results: list[Result]) -> None:
         "tools/build_governance_starter_workbook.ps1",
         builder,
         "governance starter builder creates Integration Bridge",
-        r"Build-IntegrationBridge.*tblFinancialProjectRegisterExport.*financial_project_register_export_starter\.tsv.*tblApprovedProjectEvidence.*approved_project_evidence_starter\.tsv",
+        r"Build-IntegrationBridge.*tblFinancialProjectRegisterExport.*financial_project_register_export_starter\.tsv.*tblApprovedProjectEvidence.*approved_project_evidence_starter\.tsv.*tblIntegrationBridgeConfig.*integration_bridge_config_starter\.tsv",
         "Build the bridge tables from tracked starter TSV files.",
     )
     check_required_regex(
@@ -3264,7 +3277,7 @@ def audit_integration_bridge_contract(results: list[Result]) -> None:
         "addin/taskpane.js",
         taskpane,
         "task pane creates Integration Bridge starter tables",
-        r"integrationBridge: \"Integration Bridge\".*tblFinancialProjectRegisterExport.*financial_project_register_export_starter\.tsv.*tblApprovedProjectEvidence.*approved_project_evidence_starter\.tsv.*formatIntegrationBridge",
+        r"integrationBridge: \"Integration Bridge\".*tblFinancialProjectRegisterExport.*financial_project_register_export_starter\.tsv.*tblApprovedProjectEvidence.*approved_project_evidence_starter\.tsv.*tblIntegrationBridgeConfig.*integration_bridge_config_starter\.tsv.*formatIntegrationBridge",
         "Keep the Office.js blank-workbook setup aligned with the generated starter.",
     )
     check_required_regex(
@@ -3288,8 +3301,24 @@ def audit_integration_bridge_contract(results: list[Result]) -> None:
         "samples/power-query/integration-bridge/qBridge_ApprovedProjectEvidence.m",
         approved_query,
         "approved evidence query filters approved rows",
-        r"tblApprovedProjectEvidence.*RequiredColumns.*\"ReviewStatus\".*Text\.Upper.*\"APPROVED\"",
+        r"tblIntegrationBridgeConfig.*IntegrationRepoRoot.*ApprovedProjectEvidenceCsvRelativePath.*data\\exports\\approved_project_evidence\.csv.*File\.Contents.*Csv\.Document.*EmptyTyped.*ReviewStatus.*Text\.Upper.*\"APPROVED\"",
         "Only approved evidence rows should flow into the advisory import query.",
+    )
+    check_required_regex(
+        results,
+        "docs/integration_bridge_contract.md",
+        contract_doc,
+        "integration bridge contract says Power Query import is normal",
+        r"Power Query import is the normal path.*tblIntegrationBridgeConfig.*Refresh-on-open is not enabled by default.*data\\exports\\approved_project_evidence\.csv.*Manual paste.*fallback only",
+        "Document the Finance-owned approved evidence import and fallback boundary.",
+    )
+    check_required_regex(
+        results,
+        "docs/integration_bridge_contract.md",
+        contract_doc,
+        "integration bridge contract keeps imported evidence advisory",
+        r"ReviewStatus = Approved.*StatusSignal.*must not change the official workbook status",
+        "Document that imported evidence is advisory and cannot update official status.",
     )
     check_required_regex(
         results,
@@ -3312,15 +3341,23 @@ def audit_integration_bridge_contract(results: list[Result]) -> None:
         "docs/database_import_contract.md",
         database_import_doc,
         "database import doc includes Integration Bridge boundary",
-        r"Integration Bridge Boundary.*tblFinancialProjectRegisterExport.*tblApprovedProjectEvidence.*Source ID & \"-\" & Job ID.*does not auto-create financial projects.*does not update official project status",
+        r"Integration Bridge Boundary.*tblFinancialProjectRegisterExport.*tblApprovedProjectEvidence.*tblIntegrationBridgeConfig.*Source ID & \"-\" & Job ID.*does not auto-create financial projects.*does not update official project status",
         "Document the optional reviewed-evidence bridge beside the data import contract.",
+    )
+    check_required_regex(
+        results,
+        "docs/database_import_contract.md",
+        database_import_doc,
+        "database import doc says manual paste is fallback",
+        r"Power Query import is the normal path.*qBridge_ApprovedProjectEvidence.*Manual paste.*fallback only.*Refresh-on-open is not enabled by default",
+        "Document the normal approved evidence import path.",
     )
     check_required_regex(
         results,
         "docs/starter_workbook.md",
         starter_doc,
         "starter workbook doc includes Integration Bridge",
-        r"Integration Bridge.*tblFinancialProjectRegisterExport.*tblApprovedProjectEvidence.*Source ID & \"-\" & Job ID.*Candidate mappings and review decisions stay outside the generated workbook",
+        r"Integration Bridge.*tblFinancialProjectRegisterExport.*tblApprovedProjectEvidence.*tblIntegrationBridgeConfig.*Source ID & \"-\" & Job ID.*Refresh-on-open is not enabled by default.*Candidate mappings and review decisions stay outside the generated workbook",
         "Keep starter workbook docs aligned with the bridge tables.",
     )
     check_required_regex(
@@ -3328,7 +3365,7 @@ def audit_integration_bridge_contract(results: list[Result]) -> None:
         "docs/office_addin.md",
         addin_doc,
         "office add-in doc includes Integration Bridge",
-        r"Integration Bridge.*tblFinancialProjectRegisterExport.*tblApprovedProjectEvidence.*Source ID & \"-\" & Job ID.*advisory context only",
+        r"Integration Bridge.*tblFinancialProjectRegisterExport.*Source ID & \"-\" & Job ID.*tblIntegrationBridgeConfig.*tblApprovedProjectEvidence.*manual paste is fallback only.*advisory context only.*Refresh-on-open is not enabled by default",
         "Keep add-in docs aligned with the bridge setup path.",
     )
     check_required_regex(
@@ -3336,7 +3373,7 @@ def audit_integration_bridge_contract(results: list[Result]) -> None:
         "README.md",
         readme,
         "README mentions optional Integration Bridge",
-        r"Integration Bridge.*Source ID.*Job ID.*ProjectKey.*does not create projects, update official status, or use raw file paths as project keys",
+        r"Integration Bridge.*Source ID.*Job ID.*ProjectKey.*qBridge_ApprovedProjectEvidence.*does not create projects, update official status, or use raw file paths as project keys",
         "Keep the README clear about the optional bridge boundary.",
     )
     check_required_regex(

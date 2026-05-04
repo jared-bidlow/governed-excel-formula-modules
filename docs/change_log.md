@@ -1,3 +1,17 @@
+## 2026-05-03 - Make approved evidence a Finance-owned import
+
+Semantic change:
+
+- Added `tblIntegrationBridgeConfig` for the approved evidence import path.
+- Updated `qBridge_ApprovedProjectEvidence` so the Finance workbook pulls Integration's approved output CSV and returns an empty typed table when the file is missing, empty, or header-only.
+- Clarified that Power Query import is the normal path, manual paste is fallback only, and refresh-on-open is not enabled by default.
+
+Visible impact:
+
+- Integration still generates only `approved_project_evidence.csv`.
+- The Finance workbook owns loading approved evidence into `tblApprovedProjectEvidence`.
+- Imported evidence remains advisory only and does not create projects or update official status.
+
 ## 2026-05-03 - Demote speculative platform language
 
 Semantic change:

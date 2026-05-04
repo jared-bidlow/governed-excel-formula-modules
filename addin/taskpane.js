@@ -49,6 +49,7 @@
       { sheet: "Data Import Setup", address: "A16", tableName: "tblBudgetImportContract", path: "../samples/budget_import_contract_starter.tsv" },
       { sheet: "Integration Bridge", address: "A7", tableName: "tblFinancialProjectRegisterExport", path: "../samples/financial_project_register_export_starter.tsv" },
       { sheet: "Integration Bridge", address: "A26", tableName: "tblApprovedProjectEvidence", path: "../samples/approved_project_evidence_starter.tsv" },
+      { sheet: "Integration Bridge", address: "A42", tableName: "tblIntegrationBridgeConfig", path: "../samples/integration_bridge_config_starter.tsv" },
       { sheet: "PQ Budget Input", address: "A1", tableName: "tblBudgetInput", path: "../samples/planning_table_starter.tsv" },
       { sheet: "PQ Budget QA", address: "A3", tableName: "tblBudgetImportStatus", path: "../samples/budget_import_status_starter.tsv" },
       { sheet: "PQ Budget QA", address: "A11", tableName: "tblBudgetImportIssues", path: "../samples/budget_import_issues_starter.tsv" },
@@ -1025,7 +1026,7 @@
       ["4", "Governed formula modules", "Planning Review / Analysis Hub / Asset Hub / Asset Finance Hub", "Review controlled outputs on a smaller visible sheet set."],
       ["5", "Planning Review P:R", "Decision Staging", "Prepare optional notes/status/timeline writeback."],
       ["6", "Decision Staging", "Planning Table", "Apply reviewed writeback, then refresh or re-sync before relying on outputs."],
-      ["7", "tblBudgetInput and approved evidence rows", "Integration Bridge", "Exchange reviewed evidence mappings as advisory context only."]
+      ["7", "tblBudgetInput and approved evidence import", "Integration Bridge", "Exchange reviewed evidence mappings as advisory context only."]
     ];
     sheet.getRange("A7:D7").format.font.bold = true;
     sheet.getRange("A7:D7").format.fill.color = "#D9EAF7";
@@ -1046,7 +1047,7 @@
       ["Sheet", "Use it for", "Normal action"],
       ["Source Status", "Check freshness and import issues.", "Review first."],
       ["Data Import Setup", "Configure source mode and schema.", "Update source profile and contract."],
-      ["Integration Bridge", "Reviewed evidence handoff.", "Export project keys or paste approved evidence."],
+      ["Integration Bridge", "Reviewed evidence handoff.", "Export project keys or refresh approved evidence import."],
       ["Planning Table", "Manual starter/local writeback.", "Edit only when using manual/current-workbook mode."],
       ["Cap Setup", "BU cap limits.", "Review or update caps."],
       ["Planning Review", "Main planning report.", "Run meeting review and enter P:R notes."],
@@ -1504,13 +1505,18 @@
     formatSectionHeader(
       sheet.getRange("A17"),
       "Approved evidence import",
-      "Paste or load approved evidence rows only. These links are advisory context for review, not workbook status updates."
+      "Power Query import is the normal path. Refresh after the Integration handoff; manual paste is fallback only."
     );
     setMergedPanel(
       sheet,
       "A19:O23",
-      "Approved evidence remains separate from generated candidates and manual review decisions. It may support review, but it must not overwrite planning status, create projects, or turn documentation signals into official finance status.",
+      "After Integration handoff is complete, refresh this workbook to import approved evidence. Approved evidence remains advisory context only. It must not overwrite planning status, create projects, or turn documentation signals into official finance status.",
       "#F3F6FA"
+    );
+    formatSectionHeader(
+      sheet.getRange("A40"),
+      "Approved evidence import config",
+      "Finance owns this import. Set the Integration repo root, then refresh Power Query."
     );
     sheet.freezePanes.freezeRows(7);
     sheet.getRange("A:O").format.wrapText = true;
@@ -1519,7 +1525,7 @@
     sheet.getRange("C:D").format.columnWidth = 190;
     sheet.getRange("J:J").format.columnWidth = 190;
     sheet.getRange("N:N").format.columnWidth = 230;
-    normalizeSheetRows(sheet, [5, 17]);
+    normalizeSheetRows(sheet, [5, 17, 40]);
     sheet.getRange("2:2").format.rowHeight = 36;
   }
 

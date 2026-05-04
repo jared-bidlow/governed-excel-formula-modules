@@ -1300,11 +1300,11 @@ function Build-IntegrationBridge {
     Format-SectionHeader `
         -Anchor $Worksheet.Range("A17") `
         -Title "Approved evidence import" `
-        -Note "Paste or load approved evidence rows only. These links are advisory context for review, not workbook status updates."
+        -Note "Power Query import is the normal path. Refresh after the Integration handoff; manual paste is fallback only."
     Set-MergedPanel `
         -Worksheet $Worksheet `
         -Address "A19:O23" `
-        -Text "Approved evidence remains separate from generated candidates and manual review decisions. It may support review, but it must not overwrite planning status, create projects, or turn documentation signals into official finance status." `
+        -Text "After Integration handoff is complete, refresh this workbook to import approved evidence. Approved evidence remains advisory context only. It must not overwrite planning status, create projects, or turn documentation signals into official finance status." `
         -FillColor 16448250
 
     [void](Add-TableFromMatrix `
@@ -1312,6 +1312,16 @@ function Build-IntegrationBridge {
         -TableName "tblApprovedProjectEvidence" `
         -TopLeft "A26" `
         -Rows (Read-TsvMatrix "samples\approved_project_evidence_starter.tsv"))
+
+    Format-SectionHeader `
+        -Anchor $Worksheet.Range("A40") `
+        -Title "Approved evidence import config" `
+        -Note "Finance owns this import. Set the Integration repo root, then refresh Power Query."
+    [void](Add-TableFromMatrix `
+        -Worksheet $Worksheet `
+        -TableName "tblIntegrationBridgeConfig" `
+        -TopLeft "A42" `
+        -Rows (Read-TsvMatrix "samples\integration_bridge_config_starter.tsv"))
 
     $Worksheet.Range("A:O").WrapText = $true
     [void]$Worksheet.Columns.AutoFit()
@@ -1323,7 +1333,7 @@ function Build-IntegrationBridge {
     $Worksheet.Columns.Item(11).ColumnWidth = 18
     $Worksheet.Columns.Item(12).ColumnWidth = 18
     $Worksheet.Columns.Item(14).ColumnWidth = 30
-    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(5, 17) -DefaultHeight 20
+    Normalize-GeneratedSheetRows -Worksheet $Worksheet -SectionRows @(5, 17, 40) -DefaultHeight 20
     $Worksheet.Rows.Item(2).RowHeight = 36
 }
 
@@ -1371,7 +1381,7 @@ function Build-StartHere {
     $flowRows[4] = [object[]]@("4", "Governed formula modules", "Planning Review / Analysis Hub / Asset Hub / Asset Finance Hub", "Review controlled outputs on a smaller visible sheet set.")
     $flowRows[5] = [object[]]@("5", "Planning Review P:R", "Decision Staging", "Prepare optional notes/status/timeline writeback.")
     $flowRows[6] = [object[]]@("6", "Decision Staging", "Planning Table", "Apply reviewed writeback, then refresh or re-sync before relying on outputs.")
-    $flowRows[7] = [object[]]@("7", "tblBudgetInput and approved evidence rows", "Integration Bridge", "Exchange reviewed evidence mappings as advisory context only.")
+    $flowRows[7] = [object[]]@("7", "tblBudgetInput and approved evidence import", "Integration Bridge", "Exchange reviewed evidence mappings as advisory context only.")
     [void](Add-TableFromMatrix -Worksheet $Worksheet -TableName "tblStartHereFlow" -TopLeft "A7" -Rows $flowRows)
 
     Format-SectionHeader `
@@ -1392,7 +1402,7 @@ function Build-StartHere {
     $navRows[0] = [object[]]@("Sheet", "Use it for", "Normal action")
     $navRows[1] = [object[]]@("Source Status", "Check freshness and import issues.", "Review first.")
     $navRows[2] = [object[]]@("Data Import Setup", "Configure source mode and schema.", "Update source profile and contract.")
-    $navRows[3] = [object[]]@("Integration Bridge", "Reviewed evidence handoff.", "Export project keys or paste approved evidence.")
+    $navRows[3] = [object[]]@("Integration Bridge", "Reviewed evidence handoff.", "Export project keys or refresh approved evidence import.")
     $navRows[4] = [object[]]@("Planning Table", "Manual starter/local writeback.", "Edit only when using manual/current-workbook mode.")
     $navRows[5] = [object[]]@("Cap Setup", "BU cap limits.", "Review or update caps.")
     $navRows[6] = [object[]]@("Planning Review", "Main planning report.", "Run meeting review and enter P:R notes.")

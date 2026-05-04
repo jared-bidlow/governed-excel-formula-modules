@@ -105,7 +105,7 @@ The default generated `Governance_Starter.xltx` is planning-only. Its visible fl
 Start Here -> Source Status -> Data Import Setup -> Integration Bridge -> Planning Table -> Cap Setup -> Planning Review -> Analysis Hub
 ```
 
-Integration Bridge is optional. It exports workbook project identity as `Source ID`, `Job ID`, and `ProjectKey`, then imports approved evidence rows as advisory context. It does not create projects, update official status, or use raw file paths as project keys.
+Integration Bridge is optional. It exports workbook project identity as `Source ID`, `Job ID`, and `ProjectKey`. Finance then pulls `approved_project_evidence.csv` back through the `qBridge_ApprovedProjectEvidence` Power Query import as advisory context. It does not create projects, update official status, or use raw file paths as project keys.
 
 In a local three-repo setup, keep the durable operator diagram and no-copy handoff command in the integration repo, for example `<LOCAL_INTEGRATION_REPO_V1>\docs\operator_cross_repo_map.md` and `<LOCAL_INTEGRATION_REPO_V1>\scripts\run_operator_handoff.ps1`.
 

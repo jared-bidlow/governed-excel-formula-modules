@@ -35,6 +35,7 @@ The optional `Integration Bridge` sheet stages a reviewed-evidence handoff witho
 |---|---|---|
 | `Integration Bridge` | `tblFinancialProjectRegisterExport` | Project identity export for a separate evidence review workspace. |
 | `Integration Bridge` | `tblApprovedProjectEvidence` | Approved evidence links imported back as advisory context. |
+| `Integration Bridge` | `tblIntegrationBridgeConfig` | Local Integration repo path and approved evidence CSV relative path used by the Finance-owned import. |
 
 `tblFinancialProjectRegisterExport` uses this public-safe shape:
 
@@ -55,6 +56,8 @@ ProjectKey | EvidenceId | EvidenceType | EvidencePath | EvidenceName | Extension
 ```
 
 Approved evidence is advisory. It does not auto-create financial projects, does not update official project status from documentation text, and does not treat raw file paths as financial project keys.
+
+Power Query import is the normal path for approved evidence. `qBridge_ApprovedProjectEvidence` reads `<IntegrationRepoRoot>\data\exports\approved_project_evidence.csv` from `tblIntegrationBridgeConfig`, filters to `ReviewStatus = Approved`, and returns an empty typed table when the CSV is missing, empty, or header-only. Manual paste into `tblApprovedProjectEvidence` is fallback only. Refresh-on-open is not enabled by default; use the optional `RefreshApprovedEvidenceOnOpen = Yes/No` setting only when a workbook owner deliberately enables that behavior.
 
 ## Power Query Templates
 

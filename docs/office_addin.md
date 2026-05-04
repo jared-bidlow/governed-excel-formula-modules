@@ -130,7 +130,7 @@ The v0.5 data import bridge is part of both generated starter setup and blank-wo
 
 The add-in-created blank workbook path now creates both `tblPlanningTable` and `tblBudgetInput`, so the current-workbook Power Query adapter has the same source table contract as the generated starter.
 
-The generated starter and add-in-created blank workbook also create `Integration Bridge`. Its project register export derives `ProjectKey` as `Source ID & "-" & Job ID`; its approved evidence import is advisory context only and must not create official projects or update official workbook status.
+The generated starter and add-in-created blank workbook also create `Integration Bridge`. Its `tblFinancialProjectRegisterExport` project register export derives `ProjectKey` as `Source ID & "-" & Job ID`. Its approved evidence import is Finance-owned Power Query: `tblIntegrationBridgeConfig` points to the Integration output CSV, `qBridge_ApprovedProjectEvidence` loads approved rows into `tblApprovedProjectEvidence`, and manual paste is fallback only. Imported evidence is advisory context only and must not create official projects or update official workbook status. Refresh-on-open is not enabled by default.
 
 | Sheet | Cell | Formula |
 |---|---|---|

@@ -44,6 +44,24 @@ The Power Query template `samples/power-query/integration-bridge/qBridge_Financi
 
 ## Approved Evidence Import
 
+Power Query import is the normal path for approved evidence. The Finance workbook owns the import into `Integration Bridge!tblApprovedProjectEvidence`; the integration repo only generates `data\exports\approved_project_evidence.csv`.
+
+Configure `tblIntegrationBridgeConfig` with:
+
+| Setting | Purpose |
+|---|---|
+| `IntegrationRepoRoot` | Local path to the Integration repo or extracted operator package root. |
+| `ApprovedProjectEvidenceCsvRelativePath` | Relative path to the approved output. Default: `data\exports\approved_project_evidence.csv`. |
+| `RefreshApprovedEvidenceOnOpen` | Optional setting. Refresh-on-open is not enabled by default; the normal operator action is manual refresh after the Integration handoff completes. |
+
+The Power Query template `samples/power-query/integration-bridge/qBridge_ApprovedProjectEvidence.m` reads:
+
+```text
+<IntegrationRepoRoot>\data\exports\approved_project_evidence.csv
+```
+
+If the CSV is missing, empty, or header-only, the query returns an empty typed table with the approved-evidence headers so workbook refresh does not break. Manual paste into `tblApprovedProjectEvidence` is fallback only.
+
 Import approved rows into `tblApprovedProjectEvidence` with these columns:
 
 | Column |
@@ -66,7 +84,7 @@ Import approved rows into `tblApprovedProjectEvidence` with these columns:
 
 Only rows with `ReviewStatus = Approved` should be used as trusted advisory evidence. `StatusSignal` is documentation context only and must not change the official workbook status.
 
-The Power Query template `samples/power-query/integration-bridge/qBridge_ApprovedProjectEvidence.m` preserves the approved-evidence shape and filters to approved rows.
+The Power Query template preserves the approved-evidence shape and filters to approved rows.
 
 ## Refresh Safety
 
@@ -79,5 +97,6 @@ Candidate mappings, review decisions, and approved exports should remain separat
 1. Refresh or re-sync `tblBudgetInput`.
 2. Review `Integration Bridge` / `tblFinancialProjectRegisterExport`.
 3. Run the integration repo handoff command to write `tblFinancialProjectRegisterExport` as `financial_project_register.csv`.
-4. Bring approved rows back from `approved_project_evidence.csv` or paste them into `tblApprovedProjectEvidence`.
-5. Treat approved evidence rows as context for review, not as commands to create projects or update status.
+4. Refresh the Finance workbook Power Query import so `qBridge_ApprovedProjectEvidence` pulls `approved_project_evidence.csv` into `tblApprovedProjectEvidence`.
+5. Use manual paste only as a fallback when Power Query refresh is unavailable.
+6. Treat approved evidence rows as context for review, not as commands to create projects or update status.
